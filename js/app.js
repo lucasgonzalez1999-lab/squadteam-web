@@ -200,19 +200,24 @@ async function initApp(user) {
 function showCoachUI() {
   document.querySelectorAll('.coach-only').forEach(el => el.style.display = '');
   document.querySelectorAll('.athlete-only').forEach(el => el.style.display = 'none');
+  document.body.classList.remove('is-athlete');
+  const av = document.getElementById('top-av');
+  if (av) { av.title = ''; av.onclick = null; }
 }
 
 function showAthleteUI(user) {
-  // Hide coach-only nav items
   document.querySelectorAll('.coach-only').forEach(el => el.style.display = 'none');
   document.querySelectorAll('.athlete-only').forEach(el => el.style.display = '');
-  // Show athlete section
+  document.body.classList.add('is-athlete');
+  const av = document.getElementById('top-av');
+  if (av) { av.title = 'Cerrar sesión'; av.onclick = doLogout; }
   goSection('mi-rutina', null);
 }
 
 function doLogout() {
   DB.set('session', null);
   currentUser = null;
+  document.body.classList.remove('is-athlete');
   SQ_AUTH.signOut().catch(()=>{});
   const coachApp = document.getElementById('coach-app');
   const mobileNav = document.getElementById('mobile-nav');

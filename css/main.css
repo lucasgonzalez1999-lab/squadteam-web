@@ -849,6 +849,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
   .sidebar{position:fixed;left:0;top:0;height:100vh;transform:translateX(-100%);z-index:300;}
   .sidebar.open{transform:translateX(0);box-shadow:var(--shadow-lg);}
   .sidebar-tog{display:flex;}
+  body.is-athlete .sidebar-tog{display:none !important;}
   .content{padding:14px;padding-bottom:72px;}
   .stats-grid{grid-template-columns:repeat(2,1fr);}
   .dash-grid{grid-template-columns:1fr;}

@@ -159,6 +159,7 @@ function mrRender(cont){
 
     <!-- Exercises -->
     <div id="mr-exercises">
+      ${mrPrefillLastSession(byDay[_mrDay]||[]) || ''}
       ${mrRenderExercises(byDay[_mrDay]||[], _mrWeek, totalWeeks, color)}
     </div>
 
@@ -192,6 +193,9 @@ function mrRenderExercises(exercises, week, totalWeeks, color){
 
     // Last week reference
     const lastRef  = mrGetLastWeekRef(exName, week);
+
+    // Progressive overload suggestion
+    const overload = (typeof calcOverload==='function' && _mrAthId) ? calcOverload(_mrAthId, exName) : null;
 
     // Current inputs
     if(!_mrInputs[exName]) _mrInputs[exName] = {};
@@ -240,6 +244,16 @@ function mrRenderExercises(exercises, week, totalWeeks, color){
             ${planSeries} series · ${planReps} reps
             ${planRir?`· <span style="color:${rirColor};font-weight:600">${planRir}</span>`:''}
           </div>
+          ${overload?`<div style="margin-top:5px">
+            <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:6px;
+              background:${overload.color}18;border:1px solid ${overload.color}35;cursor:default"
+              title="${overload.reasoning}">
+              <span style="font-size:10px;font-weight:700;color:${overload.color}">
+                ${overload.action==='increase'?'↑':overload.action==='deload'?'↓':'='} ${overload.label} · ${overload.suggestedKg}kg
+              </span>
+            </span>
+          </div>`:''}
+
         </div>
         ${lastRef?`<div style="text-align:right;flex-shrink:0">
           <div style="font-size:10px;color:var(--sub2)">sem. anterior</div>
@@ -399,6 +413,34 @@ function mrWeekIsDone(week){
 function mrDayIsDone(day, week){
   const doneKey = `mr_done_${_mrAthId}_${week}_${day}`;
   return !!DB.get(doneKey);
+}
+
+// ── GET ALL SETS FROM MOST RECENT SESSION ──
+function mrGetLastSets(exName){
+  const ss = getAthSessions(_mrAthId).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  for(const s of ss){
+    const ex = (s.exercises||[]).find(e=>e.name===exName);
+    if(ex?.sets?.length) return ex.sets;
+  }
+  return null;
+}
+
+// ── PREFILL INPUTS FROM LAST SESSION ──
+function mrPrefillLastSession(exercises){
+  for(const item of (exercises||[])){
+    const exName = (item.ejercicio||item)?.name || item.name || item;
+    if(!exName) continue;
+    if(!_mrInputs[exName]) _mrInputs[exName] = {};
+    const hasData = Object.values(_mrInputs[exName]).some(v=>v.kg||v.reps);
+    if(hasData) continue;
+    const lastSets = mrGetLastSets(exName);
+    if(!lastSets) continue;
+    const wd = item.weekData?.['S'+_mrWeek] || {};
+    const planSeries = wd.series || item.series || 3;
+    for(let i=0; i<Math.min(planSeries, lastSets.length); i++){
+      _mrInputs[exName]['s'+(i+1)] = { kg: lastSets[i].kg||'', reps: lastSets[i].reps||'' };
+    }
+  }
 }
 
 // ── LAST WEEK REFERENCE ──

@@ -201,6 +201,8 @@ function showCoachUI() {
   document.querySelectorAll('.coach-only').forEach(el => el.style.display = '');
   document.querySelectorAll('.athlete-only').forEach(el => el.style.display = 'none');
   document.body.classList.remove('is-athlete');
+  const tog = document.querySelector('.sidebar-tog');
+  if (tog) tog.style.display = '';
   const av = document.getElementById('top-av');
   if (av) { av.title = ''; av.onclick = null; }
 }
@@ -209,6 +211,8 @@ function showAthleteUI(user) {
   document.querySelectorAll('.coach-only').forEach(el => el.style.display = 'none');
   document.querySelectorAll('.athlete-only').forEach(el => el.style.display = '');
   document.body.classList.add('is-athlete');
+  const tog = document.querySelector('.sidebar-tog');
+  if (tog) tog.style.display = 'none';
   const av = document.getElementById('top-av');
   if (av) { av.title = 'Cerrar sesión'; av.onclick = doLogout; }
   goSection('mi-rutina', null);

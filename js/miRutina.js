@@ -200,6 +200,8 @@ function mrRenderExercises(exercises, week, totalWeeks, color){
     // Current inputs
     if(!_mrInputs[exName]) _mrInputs[exName] = {};
     const inputs = _mrInputs[exName];
+    const athUnit = DB.get('units_'+_mrAthId) || getAth(_mrAthId)?.units || 'kg';
+    const inputStep = athUnit === 'lbs' ? 5 : 2.5;
 
     // Series rows
     let seriesHtml = '';
@@ -213,7 +215,7 @@ function mrRenderExercises(exercises, week, totalWeeks, color){
         <div style="flex:1;display:flex;gap:8px;align-items:center">
           <div style="flex:1">
             <div style="font-size:10px;color:var(--sub2);margin-bottom:3px">KG</div>
-            <input type="number" step="0.5" min="0" placeholder="${lastRef?lastRef.kg:'—'}"
+            <input type="number" step="${inputStep}" min="0" placeholder="${lastRef?lastRef.kg:'—'}"
               value="${val.kg||''}"
               id="mr-${ei}-${sKey}-kg"
               oninput="mrInput('${exName}','${sKey}','kg',this.value)"
@@ -249,7 +251,7 @@ function mrRenderExercises(exercises, week, totalWeeks, color){
               background:${overload.color}18;border:1px solid ${overload.color}35;cursor:default"
               title="${overload.reasoning}">
               <span style="font-size:10px;font-weight:700;color:${overload.color}">
-                ${overload.action==='increase'?'↑':overload.action==='deload'?'↓':'='} ${overload.label} · ${overload.suggestedKg}kg
+                ${overload.action==='increase'?'↑':overload.action==='deload'?'↓':'='} ${overload.label} · ${overload.suggestedKg}${overload.unit||'kg'}
               </span>
             </span>
           </div>`:''}

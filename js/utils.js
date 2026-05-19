@@ -40,6 +40,10 @@ function updateStreak(id){
 
 // ── OVERLOAD ALGORITHM ──
 function calcOverload(athId,exName){
+  const unit = DB.get('units_'+athId) || getAth(athId)?.units || 'kg';
+  const step = unit === 'lbs' ? 5 : 2.5;
+  const roundStep = v => Math.round(v/step)*step;
+
   const ss=getAthSessions(athId).sort((a,b)=>new Date(b.date)-new Date(a.date));
   const hist=[];
   for(const s of ss){ const ex=s.exercises.find(e=>e.name===exName);if(ex)hist.push(ex);if(hist.length>=3)break; }
@@ -54,25 +58,25 @@ function calcOverload(athId,exName){
   // Deload check
   if(hist.length>=3&&stagnant){
     const allSame=hist.every(h=>Math.max(...h.sets.filter(s=>s.kg>0).map(s=>s.kg)||[0])<=maxKg);
-    if(allSame) return{suggestedKg:Math.round(maxKg*.9*4)/4,action:'deload',icon:'😮‍💨',color:'var(--blue)',label:'DELOAD',reasoning:'3 sesiones sin progreso. Semana al 90%.',confidence:'alta'};
+    if(allSame) return{suggestedKg:roundStep(maxKg*.9),action:'deload',icon:'😮‍💨',color:'var(--blue)',label:'DELOAD',reasoning:'3 sesiones sin progreso. Semana al 90%.',confidence:'alta',unit};
   }
   let suggestedKg=maxKg,action='maintain',reasoning='',confidence='media';
   if(rir.includes('0-1')){
-    if(avgReps>=12){suggestedKg=maxKg+2.5;action='increase';reasoning='Al límite del RIR con buenas reps. Subí la carga.';confidence='alta';}
+    if(avgReps>=12){suggestedKg=maxKg+step;action='increase';reasoning='Al límite del RIR con buenas reps. Subí la carga.';confidence='alta';}
     else{action='maintain';reasoning='Mantené el peso y mejorá las reps.';confidence='alta';}
   }else if(rir.includes('1-2')){
-    if(avgReps>=12){suggestedKg=maxKg+2.5;action='increase';reasoning='Buen volumen con RIR 1-2. Podés subir.';confidence='alta';}
-    else if(avgReps>=8){suggestedKg=maxKg+1.25;action='increase';reasoning='Progreso sólido. Subida pequeña.';confidence='media';}
+    if(avgReps>=12){suggestedKg=maxKg+step;action='increase';reasoning='Buen volumen con RIR 1-2. Podés subir.';confidence='alta';}
+    else if(avgReps>=8){suggestedKg=maxKg+step;action='increase';reasoning='Progreso sólido. Subí un escalón.';confidence='media';}
     else{action='maintain';reasoning='Mejorá las reps antes de subir peso.';confidence='media';}
   }else{
-    if(avgReps>=10){suggestedKg=maxKg+5;action='increase';reasoning='Tenés margen. Subí más agresivo.';confidence='alta';}
-    else{suggestedKg=maxKg+2.5;action='increase';reasoning='Subida moderada para progresar.';confidence='media';}
+    if(avgReps>=10){suggestedKg=maxKg+step*2;action='increase';reasoning='Tenés margen. Subí más agresivo.';confidence='alta';}
+    else{suggestedKg=maxKg+step;action='increase';reasoning='Subida moderada para progresar.';confidence='media';}
   }
-  if(stagnant&&action==='maintain'){suggestedKg=maxKg+1.25;action='increase';reasoning='2 sesiones iguales. Probá una subida mínima.';confidence='baja';}
-  suggestedKg=Math.round(suggestedKg*4)/4;
+  if(stagnant&&action==='maintain'){suggestedKg=maxKg+step;action='increase';reasoning='2 sesiones iguales. Probá una subida mínima.';confidence:'baja';}
+  suggestedKg=roundStep(suggestedKg);
   const icons={increase:'📈',maintain:'✅',deload:'😮‍💨'};
   const colors={increase:'var(--green)',maintain:'var(--acc)',deload:'var(--blue)'};
-  return{suggestedKg,lastKg:maxKg,action,icon:icons[action],color:colors[action],label:{increase:'SUBIR',maintain:'MANTENER',deload:'DELOAD'}[action],reasoning,confidence};
+  return{suggestedKg,lastKg:maxKg,action,icon:icons[action],color:colors[action],label:{increase:'SUBIR',maintain:'MANTENER',deload:'DELOAD'}[action],reasoning,confidence,unit};
 }
 
 // ── CHART ──

@@ -652,6 +652,24 @@ function renderAthleteView(user) {
       </div>`);
     }
 
+    // ── CONFIGURACIÓN ──
+    const curUnit = DB.get('units_'+user.id) || 'kg';
+    parts.push(`
+    <div style="background:white;border:1px solid #e8eaed;border-radius:16px;padding:20px">
+      <div style="font-size:13px;font-weight:700;color:#0d1117;margin-bottom:12px">⚙️ Configuración</div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:13px;color:#374151">Unidad de peso</span>
+        <div style="display:flex;gap:4px;background:#f3f4f6;border-radius:8px;padding:3px">
+          <button onclick="setAthUnits('${user.id}','kg')" style="padding:5px 14px;border-radius:6px;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
+            background:${'kg'===curUnit?'white':'transparent'};color:${'kg'===curUnit?'#0d1117':'#6b7280'};
+            box-shadow:${'kg'===curUnit?'0 1px 3px rgba(0,0,0,.12)':'none'}">KG</button>
+          <button onclick="setAthUnits('${user.id}','lbs')" style="padding:5px 14px;border-radius:6px;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
+            background:${'lbs'===curUnit?'white':'transparent'};color:${'lbs'===curUnit?'#0d1117':'#6b7280'};
+            box-shadow:${'lbs'===curUnit?'0 1px 3px rgba(0,0,0,.12)':'none'}">LBS</button>
+        </div>
+      </div>
+    </div>`);
+
     parts.push('</div>');
     cont.innerHTML='<style>@keyframes sq-spin{to{transform:rotate(360deg)}}</style>'+parts.join('');
     // startLiveSessionPoller(user.id); // deshabilitado — usa REST sin auth, no necesario para atletas
@@ -660,6 +678,13 @@ function renderAthleteView(user) {
     const c2=document.getElementById('mi-perfil-content');
     if(c2) c2.innerHTML='<div style="padding:32px;text-align:center;color:#ef4444;font-size:13px">Error: '+err.message+'</div>';
   }
+}
+
+// ── ATHLETE UNITS SETTING ──
+function setAthUnits(athId, units){
+  DB.set('units_'+athId, units);
+  if(window.db) window.db.collection('athletes').doc(athId).set({units},{merge:true}).catch(()=>{});
+  if(currentUser&&currentUser.id===athId) renderAthleteView(currentUser);
 }
 
 // ── SAVE DAILY LOG ──

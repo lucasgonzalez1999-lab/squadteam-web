@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>SQUAD TEAM</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#09090b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SQUAD TEAM">
+<link rel="apple-touch-icon" href="/icons/icon-180.png">
+<script src="js/config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,900&family=Oswald:wght@700&display=swap" rel="stylesheet">
+<style>
+/* ── CRITICAL CSS (inline) ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; -webkit-font-smoothing: antialiased; }
+.hidden { display: none !important; }
+
+/* ── LOGIN v5 — Level 10 ── */
+#login-screen {
+  position: fixed; inset: 0; z-index: 1000;
+  background: #040404;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px 24px 10vh;
+  background-image:
+    linear-gradient(rgba(255,255,255,.008) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.008) 1px, transparent 1px),
+    radial-gradient(ellipse 120% 68% at 50% 122%, rgba(217,255,0,.034) 0%, rgba(217,255,0,.006) 55%, transparent 72%);
+  background-size: 64px 64px, 64px 64px, 100% 100%;
+  overflow: hidden;
+}
+/* Noise grain */
+#login-screen::before {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px; opacity: .028;
+}
+/* Ambient glow — flotante y orgánico */
+#login-screen::after {
+  content: '';
+  position: absolute; pointer-events: none; z-index: 0;
+  width: 860px; height: 400px;
+  bottom: -130px; left: 50%; transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgba(217,255,0,.038) 0%, rgba(217,255,0,.006) 48%, transparent 72%);
+  animation: glowFloat 12s ease-in-out infinite;
+}
+#login-screen > * { position: relative; z-index: 1; }
+
+/* ── LANDING ── */
+#sq-land {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  width: 100%; max-width: 380px;
+  animation: landBreath 22s ease-in-out 4s infinite;
+}
+.sq-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 15px; border: 1px solid rgba(255,255,255,.1); border-radius: 100px;
+  font-size: 10px; font-weight: 700; letter-spacing: 3px; color: #505050;
+  margin-bottom: 20px;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  animation: sqFadeUp .5s cubic-bezier(.16,1,.3,1) .07s both;
+}
+.sq-ey-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #d9ff00; flex-shrink: 0;
+  animation: dotPulse 4s ease-in-out infinite;
+}
+.sq-eyebrow span { color: #d9ff00; }
+
+/* Hero */
+.sq-hero-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900; font-style: italic;
+  font-size: clamp(100px, 25vw, 152px);
+  line-height: .84; color: #fff;
+  letter-spacing: -3px; margin-bottom: 22px;
+  text-shadow: 0 4px 80px rgba(0,0,0,.98), 0 1px 0 rgba(0,0,0,.6);
+  animation: sqFadeUp .6s cubic-bezier(.16,1,.3,1) .1s both, titleAmbient 20s ease-in-out 2.5s infinite;
+}
+/* TEAM — glow lima que respira */
+.sq-hero-title em {
+  color: #d9ff00; font-style: normal;
+  display: inline-block;
+  animation: emBreath 13s ease-in-out 2s infinite;
+}
+
+/* Tagline — frase insignia de marca */
+.sq-tagline {
+  font-size: 16px; font-weight: 400; color: #6a6a6a;
+  letter-spacing: .35px; margin-bottom: 48px; line-height: 1.5;
+  animation: sqFadeUp .5s cubic-bezier(.16,1,.3,1) .2s both;
+}
+.sq-tagline em { color: #d9ff00; font-style: normal; font-weight: 700; letter-spacing: .1px; }
+
+/* Cards con stagger individual */
+.sq-roles { display: flex; flex-direction: column; gap: 9px; width: 100%; }
+.sq-role {
+  display: flex; align-items: center; gap: 16px;
+  padding: 17px 20px;
+  background: rgba(255,255,255,.028);
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 14px;
+  cursor: pointer; text-align: left; width: 100%;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 1px 4px rgba(0,0,0,.35);
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    transform 200ms cubic-bezier(.16,1,.3,1),
+    box-shadow 200ms ease;
+  -webkit-tap-highlight-color: transparent;
+  will-change: transform;
+}
+/* Stagger de entrada */
+.sq-role:nth-child(1) { animation: sqFadeUp .48s cubic-bezier(.16,1,.3,1) .28s both; }
+.sq-role:nth-child(2) { animation: sqFadeUp .48s cubic-bezier(.16,1,.3,1) .36s both; }
+
+.sq-role:hover {
+  border-color: rgba(217,255,0,.3);
+  background: rgba(217,255,0,.032);
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 0 0 1px rgba(217,255,0,.09),
+    0 8px 28px rgba(0,0,0,.55),
+    0 2px 10px rgba(217,255,0,.06);
+}
+.sq-role:active { transform: scale(.984) translateY(0); transition-duration: 75ms; }
+.sq-role-ic {
+  width: 40px; height: 40px; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: #464646;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.09);
+  transition: border-color 150ms, background 150ms, color 150ms;
+}
+.sq-role:hover .sq-role-ic {
+  border-color: rgba(217,255,0,.22);
+  background: rgba(217,255,0,.09); color: #d9ff00;
+}
+.sq-role-texts { flex: 1; }
+.sq-role-name {
+  font-size: 15px; font-weight: 700; color: #c4c4ce; display: block;
+  transition: color 150ms; letter-spacing: -.1px;
+}
+.sq-role-desc {
+  font-size: 11px; color: #4a4a4a; display: block;
+  margin-top: 3px; transition: color 150ms; letter-spacing: .1px;
+}
+.sq-role:hover .sq-role-name { color: #f5f5f5; }
+.sq-role:hover .sq-role-desc { color: #565656; }
+.sq-role-arrow {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,.09); background: rgba(255,255,255,.04); color: #2e2e2e;
+  transition: color 150ms, border-color 150ms, background 150ms, transform 200ms cubic-bezier(.16,1,.3,1);
+}
+.sq-role:hover .sq-role-arrow {
+  color: #d9ff00; border-color: rgba(217,255,0,.22);
+  background: rgba(217,255,0,.1); transform: translateX(3px);
+}
+
+/* ── AUTH FORM ── */
+#sq-auth {
+  display: none; flex-direction: column;
+  width: 100%; max-width: 340px;
+}
+#sq-auth.sq-show {
+  display: flex;
+  animation: sqFadeUp .28s cubic-bezier(.16,1,.3,1) both;
+}
+/* Transición salida */
+.sq-land-exit { animation: sqFadeOut 160ms cubic-bezier(.4,0,1,1) both !important; }
+.sq-auth-exit { animation: sqFadeOut 140ms cubic-bezier(.4,0,1,1) both !important; }
+
+.sq-badge {
+  display: inline-flex; align-items: center; gap: 7px; align-self: flex-start;
+  padding: 5px 13px; border: 1px solid rgba(255,255,255,.09); border-radius: 100px;
+  font-size: 10px; font-weight: 700; letter-spacing: 2px;
+  margin-bottom: 28px; color: #454545;
+}
+.sq-badge-ic { display: flex; align-items: center; color: #d9ff00; }
+.sq-form-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900; font-style: italic;
+  font-size: 54px; line-height: .92; color: #fff;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 40px rgba(0,0,0,.9);
+}
+.sq-form-sub {
+  font-size: 13px; color: #545454; margin-bottom: 32px;
+  line-height: 1.55; letter-spacing: .05px;
+}
+.sq-field { margin-bottom: 12px; }
+.sq-label {
+  display: block; font-size: 10px; font-weight: 700;
+  letter-spacing: 2.5px; color: #4a4a4a; margin-bottom: 8px;
+}
+.sq-input {
+  width: 100%; padding: 15px 18px;
+  background: rgba(255,255,255,.036); border: 1px solid rgba(255,255,255,.1); border-radius: 12px;
+  color: #e8e8ec; font-size: 16px; font-family: inherit;
+  outline: none; transition: border-color 150ms, box-shadow 150ms;
+  -webkit-appearance: none; box-sizing: border-box;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+.sq-input:focus {
+  border-color: rgba(217,255,0,.4);
+  box-shadow: 0 0 0 1px rgba(217,255,0,.11), 0 0 20px rgba(217,255,0,.05), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.sq-input::placeholder { color: #333333; }
+.sq-input.sq-err-inp { border-color: rgba(239,68,68,.55); box-shadow: 0 0 0 1px rgba(239,68,68,.18); }
+.sq-err-msg {
+  display: none; font-size: 12px; color: #f87171;
+  padding: 10px 14px; background: rgba(239,68,68,.07);
+  border: 1px solid rgba(239,68,68,.15); border-radius: 10px;
+  margin-bottom: 14px; letter-spacing: .1px;
+}
+.sq-err-msg.sq-show { display: block; }
+.sq-btn {
+  width: 100%; padding: 16px;
+  background: #d9ff00; color: #040404;
+  border: none; border-radius: 12px;
+  font-size: 13px; font-weight: 900; letter-spacing: 2.5px;
+  cursor: pointer; font-family: inherit;
+  transition: background 130ms, transform 100ms, box-shadow 160ms;
+  margin-top: 8px;
+  box-shadow: 0 2px 12px rgba(217,255,0,.14), inset 0 1px 0 rgba(255,255,255,.22);
+}
+.sq-btn:hover {
+  background: #ddff00;
+  box-shadow: 0 0 28px rgba(217,255,0,.26), 0 4px 14px rgba(217,255,0,.12), inset 0 1px 0 rgba(255,255,255,.22);
+  transform: translateY(-1px);
+}
+.sq-btn:active { transform: scale(.985) translateY(0); transition-duration: 60ms; }
+.sq-btn.sq-loading { opacity: .44; pointer-events: none; letter-spacing: 5px; }
+.sq-back {
+  text-align: center; margin-top: 20px;
+  font-size: 12px; color: #363636; cursor: pointer;
+  transition: color 130ms; letter-spacing: .4px;
+  text-decoration: none;
+}
+.sq-back:hover { color: #5e5e5e; text-decoration: underline; text-decoration-color: rgba(255,255,255,.1); text-underline-offset: 3px; }
+
+/* ── ISOTIPO ── */
+.sq-isotipo {
+  width: 68px;
+  height: auto;
+  opacity: .94;
+  margin-bottom: 14px;
+  animation: sqFadeUp .5s cubic-bezier(.16,1,.3,1) 0s both;
+  flex-shrink: 0;
+}
+@media (max-width: 480px) {
+  .sq-isotipo { width: 56px; margin-bottom: 11px; }
+}
+
+/* ── ANIMATIONS ── */
+@keyframes sqFadeUp {
+  from { opacity: 0; transform: translateY(14px) scale(.975); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* Transición de salida — blur cinematográfico */
+@keyframes sqFadeOut {
+  from { opacity: 1; transform: translateY(0) scale(1); filter: blur(0px); }
+  to   { opacity: 0; transform: translateY(-10px) scale(.97); filter: blur(6px); }
+}
+@keyframes sqShake {
+  0%,100% { transform: translateX(0); }
+  20%,60%  { transform: translateX(-8px); }
+  40%,80%  { transform: translateX(8px); }
+}
+/* Dot — pulso orgánico */
+@keyframes dotPulse {
+  0%, 100% { opacity: .55; transform: scale(1); }
+  50%       { opacity: 1;  transform: scale(1.5); }
+}
+/* TEAM — glow que respira, ciclo más lento */
+@keyframes emBreath {
+  0%, 100% { text-shadow: 0 0 44px rgba(217,255,0,.12), 0 0 88px rgba(217,255,0,.04); }
+  50%       { text-shadow: 0 0 68px rgba(217,255,0,.22), 0 0 130px rgba(217,255,0,.08); }
+}
+/* SQUAD TEAM — micro respiración de profundidad */
+@keyframes titleAmbient {
+  0%, 100% { text-shadow: 0 4px 80px rgba(0,0,0,.98), 0 1px 0 rgba(0,0,0,.6); }
+  50%       { text-shadow: 0 6px 96px rgba(0,0,0,1), 0 2px 2px rgba(0,0,0,.7); }
+}
+/* Landing block — drift imperceptible */
+@keyframes landBreath {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-3px); }
+}
+/* Glow de fondo — flotante orgánico, más lento */
+@keyframes glowFloat {
+  0%, 100% { opacity: .55; transform: translateX(-50%) translateY(0px); }
+  50%       { opacity: .9;  transform: translateX(-50%) translateY(-20px); }
+}
+.sq-shake { animation: sqShake .35s cubic-bezier(.36,.07,.19,.97); }
+
+/* APP */
+#coach-app { display: none; }
+#coach-app.visible { display: flex; height: 100svh; overflow: hidden; background: #fafafa; }
+</style>
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/nutrition-export.css">
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+
+  <!-- LANDING -->
+  <div id="sq-land">
+    <!-- Isotipo SQUAD TEAM — letras sólidas rellenas -->
+    <svg class="sq-isotipo" viewBox="0 0 200 232" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Escudo: tabs angulares arriba, cuerpo rectangular, punta inferior -->
+      <path d="M4,4 L196,4 L196,27 L176,27 L176,172 L100,220 L24,172 L24,27 L4,27 Z"
+            stroke="white" stroke-width="4" fill="none"
+            stroke-linejoin="miter" stroke-linecap="square"/>
+      <!-- Barra superior (crossbar T + tope S) — ancho completo interior -->
+      <rect x="28" y="33" width="144" height="22" fill="white"/>
+      <!-- Stem de la T — baja por el lado derecho -->
+      <rect x="138" y="55" width="34" height="115" fill="white"/>
+      <!-- Conector superior-izquierdo de la S -->
+      <rect x="28" y="55" width="22" height="36" fill="white"/>
+      <!-- Barra media de la S -->
+      <rect x="28" y="91" width="110" height="22" fill="white"/>
+      <!-- Conector inferior-derecho de la S -->
+      <rect x="116" y="113" width="22" height="36" fill="white"/>
+      <!-- Barra inferior de la S -->
+      <rect x="28" y="149" width="110" height="21" fill="white"/>
+    </svg>
+    <div class="sq-eyebrow"><span class="sq-ey-dot"></span>COACH <span>OS</span> · SQUAD TEAM</div>
+    <div class="sq-hero-title">SQUAD<br><em>TEAM</em></div>
+    <div class="sq-tagline">Competí contra tu <em>versión anterior</em>.</div>
+    <div class="sq-roles">
+      <button class="sq-role" onclick="sqPickRole('coach')">
+        <div class="sq-role-ic">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <div class="sq-role-texts">
+          <span class="sq-role-name">Soy Coach</span>
+          <span class="sq-role-desc">Panel de operaciones</span>
+        </div>
+        <div class="sq-role-arrow">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+      </button>
+      <button class="sq-role" onclick="sqPickRole('athlete')">
+        <div class="sq-role-ic">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="12" x2="18" y2="12"/><rect x="1" y="10" width="4" height="4" rx="1"/><rect x="19" y="10" width="4" height="4" rx="1"/><rect x="5" y="8" width="2" height="8" rx=".5"/><rect x="17" y="8" width="2" height="8" rx=".5"/></svg>
+        </div>
+        <div class="sq-role-texts">
+          <span class="sq-role-name">Soy Alumno</span>
+          <span class="sq-role-desc">Mi plan y progreso</span>
+        </div>
+        <div class="sq-role-arrow">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <!-- AUTH FORM -->
+  <div id="sq-auth">
+    <div class="sq-badge" id="sq-badge">
+      <span class="sq-badge-ic"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>
+      COACH
+    </div>
+    <div class="sq-form-title" id="sq-form-title">Bienvenido.</div>
+    <div class="sq-form-sub" id="sq-form-sub">Ingresá tus credenciales.</div>
+    <div class="sq-field">
+      <label class="sq-label">USUARIO</label>
+      <input id="sq-user" class="sq-input" type="text" placeholder="tu nombre"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    </div>
+    <div class="sq-field">
+      <label class="sq-label">PIN</label>
+      <input id="sq-pin" class="sq-input" type="password" inputmode="numeric"
+        placeholder="••••" maxlength="4" autocomplete="current-password">
+    </div>
+    <div class="sq-err-msg" id="sq-err">Usuario o PIN incorrecto</div>
+    <button class="sq-btn" id="sq-btn" onclick="sqSubmit()">ENTRAR</button>
+    <div class="sq-back" onclick="sqBack()">← Volver</div>
+  </div>
+
+</div>
+
+<script>
+// Sin PINs — autenticación vía Firebase Auth
+var _USERS=[
+  {id:'lucas',  name:'Lucas',   role:'coach',   color:'#3b82f6'},
+  {id:'tomas',  name:'Tomás',   role:'coach',   color:'#8b5cf6'},
+  {id:'bruno',  name:'Bruno',   role:'athlete', color:'#22c55e'},
+  {id:'nicolas',name:'Nicolás', role:'athlete', color:'#06b6d4'},
+  {id:'maxi',   name:'Maxi',    role:'athlete', color:'#f59e0b'},
+  {id:'joaquin',name:'Joaquín', role:'athlete', color:'#a855f7'},
+  {id:'juan',   name:'Juan',    role:'athlete', color:'#10b981'},
+  {id:'alan',   name:'Alan',    role:'athlete', color:'#ec4899'},
+  {id:'adrian', name:'Adrián',  role:'athlete', color:'#f97316'},
+  {id:'demo',   name:'Demo',    role:'athlete', color:'#6366f1'},
+];
+var _sqRole=null;
+
+function sqNorm(s){ return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim(); }
+
+var _boltSvg='<span class="sq-badge-ic"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>';
+var _barbSvg='<span class="sq-badge-ic"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#d9ff00" stroke-width="2.5" stroke-linecap="round"><line x1="6" y1="12" x2="18" y2="12"/><rect x="1" y="10" width="4" height="4" rx="1"/><rect x="19" y="10" width="4" height="4" rx="1"/></svg></span>';
+
+function sqPickRole(role){
+  _sqRole=role;
+  var land=document.getElementById('sq-land');
+  land.classList.add('sq-land-exit');
+  setTimeout(function(){
+    land.style.display='none';
+    land.classList.remove('sq-land-exit');
+    var auth=document.getElementById('sq-auth');
+    auth.classList.add('sq-show');
+    if(role==='coach'){
+      document.getElementById('sq-badge').innerHTML=_boltSvg+'COACH';
+      document.getElementById('sq-form-title').textContent='Panel activo.';
+      document.getElementById('sq-form-sub').textContent='Accedé a tu sistema de operaciones.';
+    } else {
+      document.getElementById('sq-badge').innerHTML=_barbSvg+'ALUMNO';
+      document.getElementById('sq-form-title').textContent='Tu plan te espera.';
+      document.getElementById('sq-form-sub').textContent='Ingresá con tu nombre y PIN de 4 dígitos.';
+    }
+    var last=localStorage.getItem('sq_lu_'+role);
+    var userInp=document.getElementById('sq-user');
+    if(last){ userInp.value=last; document.getElementById('sq-pin').focus(); }
+    else { userInp.value=''; userInp.focus(); }
+    document.getElementById('sq-err').classList.remove('sq-show');
+  },155);
+}
+
+function sqBack(){
+  var auth=document.getElementById('sq-auth');
+  auth.classList.add('sq-auth-exit');
+  setTimeout(function(){
+    auth.classList.remove('sq-show','sq-auth-exit');
+    var land=document.getElementById('sq-land');
+    land.style.display='';
+    land.style.animation='none';
+    requestAnimationFrame(function(){ land.style.animation=''; });
+    document.getElementById('sq-user').value='';
+    document.getElementById('sq-pin').value='';
+    document.getElementById('sq-err').classList.remove('sq-show');
+    document.getElementById('sq-user').classList.remove('sq-err-inp');
+    document.getElementById('sq-pin').classList.remove('sq-err-inp');
+  },140);
+}
+
+function sqSubmit(){
+  var uname=document.getElementById('sq-user').value.trim();
+  var pin=document.getElementById('sq-pin').value;
+  var errEl=document.getElementById('sq-err');
+  var userInp=document.getElementById('sq-user');
+  var pinInp=document.getElementById('sq-pin');
+  if(!uname||!pin){ errEl.classList.add('sq-show'); return; }
+
+  // Buscar usuario por nombre (sin PIN — validación en Firebase Auth)
+  // _loginUsers se carga dinámicamente desde Firebase por renderLogin()
+  var match=(window._loginUsers||_USERS).find(function(u){
+    var nameOk=sqNorm(u.name)===sqNorm(uname)||u.id===sqNorm(uname);
+    var roleOk=_sqRole==='coach'?u.role==='coach':u.role==='athlete';
+    return nameOk&&roleOk;
+  });
+  if(!match){
+    errEl.classList.add('sq-show');
+    userInp.classList.add('sq-err-inp');
+    document.getElementById('sq-auth').classList.add('sq-shake');
+    setTimeout(function(){ document.getElementById('sq-auth').classList.remove('sq-shake'); userInp.classList.remove('sq-err-inp'); },400);
+    return;
+  }
+
+  var btn=document.getElementById('sq-btn');
+  btn.textContent='···'; btn.classList.add('sq-loading');
+  errEl.classList.remove('sq-show');
+
+  // Firebase Auth — contraseña = 'sq' + pin
+  var email=match.id+'@squadteam.uy';
+  window.auth.signInWithEmailAndPassword(email,'sq'+pin)
+    .then(function(cred){
+      return window.db.collection('users').doc(cred.user.uid).get();
+    })
+    .then(function(doc){
+      var profile=doc.exists?doc.data():match;
+      try{ localStorage.setItem('sq_lu_'+_sqRole, match.name); }catch(e){}
+      try{ localStorage.setItem('st_session',JSON.stringify(profile)); }catch(e){}
+      if(typeof initApp==='function') initApp(profile); else location.reload();
+    })
+    .catch(function(){
+      btn.textContent='ENTRAR'; btn.classList.remove('sq-loading');
+      errEl.classList.add('sq-show');
+      pinInp.classList.add('sq-err-inp');
+      document.getElementById('sq-auth').classList.add('sq-shake');
+      setTimeout(function(){ document.getElementById('sq-auth').classList.remove('sq-shake'); pinInp.classList.remove('sq-err-inp'); },400);
+      pinInp.value=''; pinInp.focus();
+    });
+}
+
+// Keyboard
+document.addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&document.getElementById('sq-auth').classList.contains('sq-show')) sqSubmit();
+});
+document.addEventListener('DOMContentLoaded',function(){
+  var u=document.getElementById('sq-user');
+  if(u) u.addEventListener('keydown',function(e){
+    if(e.key==='Enter'||e.key==='Tab'){ e.preventDefault(); document.getElementById('sq-pin').focus(); }
+  });
+});
+</script>
+
+<!-- COMMAND PALETTE -->
+<div id="cmd-overlay" onclick="cmdClose(event)">
+  <div class="cmd-box">
+    <div class="cmd-input-row">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="cmd-input" placeholder="Buscar alumno, sección, acción..." oninput="cmdSearch(this.value)" onkeydown="cmdKey(event)" autocomplete="off">
+      <span class="cmd-esc">ESC</span>
+    </div>
+    <div id="cmd-results"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="coach-app">
+  <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-logo">
+      <button id="sidebar-close-btn" onclick="closeSidebar()">✕</button>
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      </div>
+      <div>
+        <div class="logo-name">SQUAD TEAM</div>
+        <div class="logo-sub" id="logo-sub">Coach OS</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <!-- COACH NAV -->
+      <div class="nav-section coach-only">OPERAR</div>
+      <a class="nav-item on coach-only" data-tab="dashboard" onclick="goSection('dashboard',this)">
+        <span class="ni"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+        Panel
+      </a>
+      <a class="nav-item coach-only" data-tab="clases" onclick="goSection('clases',this)">
+        <span class="ni"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+        Clases
+      </a>
+<a class="nav-item coach-only" data-tab="alumnos" onclick="goSection('alumnos',this)">
+        <span class="ni"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+        Atletas
+      </a>
+      <a class="nav-item coach-only" data-tab="planilla" onclick="goSection('planilla',this)">
+        <span class="ni"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+        Planes
+      </a>
+      <div class="nav-section coach-only" style="margin-top:4px">ANÁLISIS</div>
+      <a class="nav-item coach-only" data-tab="nutricion" onclick="goSection('nutricion',this)">
+        <span class="ni"><svg viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg></span>
+        Nutrición
+      </a>
+      <a class="nav-item coach-only" data-tab="progreso" onclick="goSection('progreso',this)">
+        <span class="ni"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+        Progreso
+      </a>
+      <a class="nav-item coach-only" data-tab="iacoach" onclick="goSection('iacoach',this)">
+        <span class="ni"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+        Bot Coach
+      </a>
+      <a class="nav-item coach-only" data-tab="checkins" onclick="goSection('checkins',this)">
+        <span class="ni"><svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+        Seguimiento
+      </a>
+      <div class="nav-section coach-only" style="margin-top:4px">SISTEMA</div>
+      <a class="nav-item coach-only" data-tab="pagos" onclick="goSection('pagos',this)">
+        <span class="ni"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span>
+        Pagos
+        <span class="nav-badge" id="pay-badge" style="display:none">!</span>
+      </a>
+      <a class="nav-item coach-only" data-tab="admin" onclick="goSection('admin',this)">
+        <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></span>
+        Configuración
+      </a>
+      <!-- ATHLETE NAV -->
+      <a class="nav-item athlete-only" data-tab="mi-rutina" onclick="goSection('mi-rutina',this)">
+        <span class="ni"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+        Mi Rutina
+      </a>
+      <a class="nav-item athlete-only" data-tab="mi-perfil" onclick="goSection('mi-perfil',this)">
+        <span class="ni"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+        Mi plan
+      </a>
+      <a class="nav-item athlete-only" data-tab="checkins" onclick="goSection('checkins',this)">
+        <span class="ni"><svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+        Check-in
+      </a>
+      <a class="nav-item athlete-only" data-tab="mi-historial" onclick="goSection('mi-historial',this)">
+        <span class="ni"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+        Historial
+      </a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="foot-avatar" id="foot-av">L</div>
+      <div><div class="foot-name" id="foot-name">Lucas</div><div class="foot-role" id="foot-role">Coach</div></div>
+      <button class="btn-logout" onclick="doLogout()" title="Salir">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <div class="main-wrap">
+    <header class="topbar">
+      <div class="tb-left">
+        <button class="sidebar-tog" onclick="openSidebar()">
+          <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div><div class="tb-title" id="tb-title">SQUAD TEAM</div><div class="tb-date" id="tb-date"></div></div>
+      </div>
+      <div class="tb-right">
+        <button class="cmd-trigger coach-only" onclick="cmdOpen()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Buscar
+          <kbd class="cmd-kbd">⌘K</kbd>
+        </button>
+        <div class="top-av" id="top-av">L</div>
+      </div>
+    </header>
+
+    <div class="content" id="content">
+      <div class="sec on" id="sec-dashboard"><div id="dashboard-content"></div></div>
+      <div class="sec" id="sec-clases"><div id="clases-content"></div></div>
+      <div class="sec" id="sec-alumnos"><div id="alumnos-content"></div></div>
+      <div class="sec" id="sec-planilla"><div id="planilla-root"></div></div>
+      <div class="sec" id="sec-nutricion"><div id="nutricion-content"></div></div>
+      <div class="sec" id="sec-progreso"><div id="progreso-content"></div></div>
+      <div class="sec" id="sec-iacoach"><div id="iacoach-content"></div></div>
+      <div class="sec" id="sec-pagos"><div id="pagos-content"></div></div>
+      <div class="sec" id="sec-mi-rutina"><div id="mi-rutina-content"></div></div>
+      <div class="sec" id="sec-mi-perfil"><div id="mi-perfil-content"></div></div>
+      <div class="sec" id="sec-checkins"><div id="checkins-content"></div></div>
+      <div class="sec" id="sec-mi-historial"><div id="mi-historial-content"></div></div>
+      <div class="sec" id="sec-admin">
+        <div class="sub-tabs">
+          <button class="sub-tab on" id="adm-db" onclick="showAdm('db',this)">Firebase</button>
+          <button class="sub-tab" id="adm-sheets" onclick="showAdm('sheets',this)">Planilla</button>
+          <button class="sub-tab" id="adm-bot" onclick="showAdm('bot',this)">Bot</button>
+          <button class="sub-tab" id="adm-diag" onclick="showAdm('diag',this);renderDiag()">Diagnóstico</button>
+        </div>
+        <div class="adm-pnl on" id="adm-pnl-db"></div>
+        <div class="adm-pnl" id="adm-pnl-sheets"></div>
+        <div class="adm-pnl" id="adm-pnl-bot"></div>
+        <div class="adm-pnl" id="adm-pnl-diag"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<nav id="mobile-nav" class="mobile-nav hidden">
+  <button onclick="goSection('dashboard',this);mobActive(this)" class="mob-btn on coach-only" data-tab="dashboard">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Panel
+  </button>
+  <button onclick="goSection('clases',this);mobActive(this)" class="mob-btn coach-only" data-tab="clases">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Clases
+  </button>
+  <button onclick="goSection('alumnos',this);mobActive(this)" class="mob-btn coach-only" data-tab="alumnos">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Atletas
+  </button>
+  <button onclick="goSection('mi-rutina',this);mobActive(this)" class="mob-btn athlete-only" data-tab="mi-rutina">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+    Rutina
+  </button>
+  <button onclick="goSection('mi-perfil',this);mobActive(this)" class="mob-btn athlete-only" data-tab="mi-perfil">
+    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    Mi plan
+  </button>
+  <button onclick="goSection('pagos',this);mobActive(this)" class="mob-btn coach-only" data-tab="pagos">
+    <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+    Pagos
+  </button>
+  <button onclick="goSection('progreso',this);mobActive(this)" class="mob-btn coach-only" data-tab="progreso">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Progreso
+  </button>
+  <button onclick="goSection('planilla',this);mobActive(this)" class="mob-btn coach-only" data-tab="planilla">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    Planes
+  </button>
+  <button onclick="goSection('checkins',this);mobActive(this)" class="mob-btn" data-tab="checkins">
+    <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    Seguimiento
+  </button>
+  <button onclick="goSection('mi-historial',this);mobActive(this)" class="mob-btn athlete-only" data-tab="mi-historial">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Historial
+  </button>
+</nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script>
+firebase.initializeApp({apiKey:"AIzaSyA9I05xscqMsotp_Ke7D9sbHw2pqHP9DQY",authDomain:"squadteam-55dea.firebaseapp.com",projectId:"squadteam-55dea",storageBucket:"squadteam-55dea.firebasestorage.app",messagingSenderId:"87384506862",appId:"1:87384506862:web:e8c02392cae58952490eff"});
+window.db   = firebase.firestore();
+window.auth = firebase.auth();
+</script>
+<script src="js/routineBuilder.js"></script>
+<script src="js/nutrition/foodDatabase.js"></script>
+<script src="js/nutrition/macroCalculator.js"></script>
+<script src="js/nutrition/nutritionExport.js"></script>
+<script src="js/nutrition/mealBuilder.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/data.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
+<script src="js/coach.js"></script>
+<script src="js/clases.js"></script>
+<script src="js/sheetSync.js"></script>
+<script src="js/athlete.js"></script>
+<script src="js/miRutina.js"></script>
+<script src="js/pagos.js"></script>
+<script src="js/sheetStats.js"></script>
+<script src="js/checkin.js"></script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>

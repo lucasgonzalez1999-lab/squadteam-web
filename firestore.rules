@@ -1,0 +1,89 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // users — datos de auth, máxima protección
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false; // solo Admin SDK / onboarding con secondary app
+    }
+
+    // Coaches autenticados tienen acceso total
+    match /{document=**} {
+      allow read, write: if isCoach();
+    }
+
+    // Bot (servidor Node sin auth) y atletas autenticados
+    // El bot usa REST sin token — colecciones operativas abiertas
+    match /config/{doc} {
+      allow read, write: if true;
+    }
+    match /templates/{doc} {
+      allow read: if true;
+    }
+    match /schedules/{athId} {
+      allow read: if true;
+      allow write: if isOwner(athId) || isCoach();
+    }
+    match /sessions/{athId} {
+      allow read, write: if true; // bot lee/escribe sesiones
+    }
+    match /activeSessions/{athId} {
+      allow read, write: if true; // bot gestiona sesiones live
+    }
+    match /plans/{athId} {
+      allow read: if true;
+      allow write: if isCoach(); // solo coach sube planes
+    }
+    match /diets/{athId} {
+      allow read: if isOwner(athId);
+      allow write: if true; // bot actualiza dietas desde planilla
+    }
+    match /prs/{athId} {
+      allow read, write: if true; // bot detecta y guarda PRs
+    }
+    match /attendance/{athId} {
+      allow read, write: if true; // bot registra asistencia
+    }
+    match /nutritionPlans/{athId} {
+      allow read, write: if true;
+    }
+    match /botLog/{doc} {
+      allow read, write: if true;
+    }
+    match /spreadsheetStats/{athId} {
+      allow read: if isOwner(athId);
+    }
+    match /checkins/{athId} {
+      allow read, write: if isOwner(athId);
+    }
+    match /weeklyCheckins/{athId} {
+      allow read, write: if isOwner(athId);
+    }
+    match /clases/{doc} {
+      allow read: if request.auth != null;
+    }
+
+    // Daily logs y food logs — el atleta escribe su propio registro
+    match /dailyLogs/{docId} {
+      allow write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.id ==
+        request.resource.data.athleteId;
+    }
+    match /foodlogs/{docId} {
+      allow write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.id ==
+        request.resource.data.athId;
+    }
+
+    function isCoach() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'coach';
+    }
+
+    function isOwner(athId) {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.id == athId;
+    }
+  }
+}

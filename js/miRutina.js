@@ -209,9 +209,13 @@ function mrRenderExercises(exercises, week, totalWeeks, color){
       const sKey = 's'+s;
       const val  = inputs[sKey] || {};
       const ordinals = ['1º','2º','3º','4º','5º','6º'];
+      const done = !!val.done;
       seriesHtml += `
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div style="font-size:12px;font-weight:600;color:var(--sub);width:28px;flex-shrink:0">${ordinals[s-1]||s+'º'}</div>
+      <div id="mr-row-${ei}-${sKey}" style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);
+        transition:background .2s;background:${done?color+'18':''}">
+        <div id="mr-ord-${ei}-${sKey}" style="font-size:12px;font-weight:600;width:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:${done?color:'var(--sub)'}">
+          ${done?`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`:ordinals[s-1]||s+'º'}
+        </div>
         <div style="flex:1;display:flex;gap:8px;align-items:center">
           <div style="flex:1">
             <div style="font-size:10px;color:var(--sub2);margin-bottom:3px">KG</div>
@@ -233,6 +237,12 @@ function mrRenderExercises(exercises, week, totalWeeks, color){
               onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor=this.value?'${color}':'var(--border)'">
           </div>
         </div>
+        <button id="mr-chk-${ei}-${sKey}" onclick="mrCheckSet('${exName.replace(/'/g,"\\'")}','${sKey}',${ei})"
+          style="width:34px;height:34px;border-radius:50%;border:2px solid ${done?color:'var(--border2)'};
+          background:${done?color:'transparent'};display:flex;align-items:center;justify-content:center;
+          flex-shrink:0;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;margin-top:14px">
+          ${done?`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`:''}
+        </button>
       </div>`;
     }
 
@@ -295,6 +305,42 @@ function mrRenderSaveBtn(color){
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
     Guardar entrenamiento
   </button>`;
+}
+
+// ── CHECK SET ──
+function mrCheckSet(exName, sKey, ei){
+  if(!_mrInputs[exName]) _mrInputs[exName] = {};
+  if(!_mrInputs[exName][sKey]) _mrInputs[exName][sKey] = {};
+  const done = !_mrInputs[exName][sKey].done;
+  _mrInputs[exName][sKey].done = done;
+  mrSaveDraft();
+  mrAutoSaveDebounced();
+
+  const color = getAth(_mrAthId)?.color || 'var(--acc)';
+  const ordinals = ['1º','2º','3º','4º','5º','6º'];
+  const sNum = parseInt(sKey.replace('s','')) - 1;
+
+  const row = document.getElementById('mr-row-'+ei+'-'+sKey);
+  const ord = document.getElementById('mr-ord-'+ei+'-'+sKey);
+  const btn = document.getElementById('mr-chk-'+ei+'-'+sKey);
+
+  if(row) row.style.background = done ? color+'18' : '';
+  if(ord){
+    ord.style.color = done ? color : 'var(--sub)';
+    ord.innerHTML = done
+      ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`
+      : ordinals[sNum]||sNum+1+'º';
+  }
+  if(btn){
+    btn.style.background = done ? color : 'transparent';
+    btn.style.borderColor = done ? color : 'var(--border2)';
+    btn.innerHTML = done
+      ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`
+      : '';
+  }
+
+  const saveArea = document.getElementById('mr-save-area');
+  if(saveArea) saveArea.innerHTML = mrRenderSaveBtn(color);
 }
 
 // ── INPUT HANDLER ──

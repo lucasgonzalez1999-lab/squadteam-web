@@ -267,10 +267,17 @@ function mrRenderExercises(exercises, week, totalWeeks, color){
           </div>`:''}
 
         </div>
-        ${lastRef?`<div style="text-align:right;flex-shrink:0">
-          <div style="font-size:10px;color:var(--sub2)">sem. anterior</div>
-          <div style="font-size:13px;font-weight:700;color:var(--sub)">${lastRef.kg}kg × ${lastRef.reps}</div>
-        </div>`:''}
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+          ${lastRef?`<div style="text-align:right">
+            <div style="font-size:10px;color:var(--sub2)">sem. anterior</div>
+            <div style="font-size:13px;font-weight:700;color:var(--sub)">${lastRef.kg}kg × ${lastRef.reps}</div>
+          </div>`:''}
+          <button onclick="showProgressChart('${_mrAthId}','${exName.replace(/'/g,"\\'")}')"
+            title="Ver progreso"
+            style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 8px;cursor:pointer;font-size:14px;color:var(--sub);line-height:1">
+            📊
+          </button>
+        </div>
       </div>
       <!-- Series inputs -->
       <div style="padding:4px 14px 10px">

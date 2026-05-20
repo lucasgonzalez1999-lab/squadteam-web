@@ -219,16 +219,18 @@ function pbRenderEditor(cont){
     <div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px;align-items:center">
       ${days.map(day=>{
         const active=day===_pb.activeDay;
-        return `<button onclick="_pb.activeDay='${day}';pbRefreshEditor()"
-          style="flex-shrink:0;display:flex;align-items:center;gap:8px;padding:9px 12px 9px 16px;border-radius:10px;
-          border:1.5px solid ${active?color:'var(--border)'};background:${active?color+'18':'var(--surf)'};
-          color:${active?color:'var(--text)'};font-size:13px;font-weight:${active?700:500};cursor:pointer;font-family:inherit">
-          ${day}
-          <span onclick="event.stopPropagation();pbRemoveDay('${day.replace(/'/g,"\\'")}'")"
-            style="display:inline-flex;align-items:center;justify-content:center;
-            width:22px;height:22px;border-radius:50%;font-size:13px;line-height:1;cursor:pointer;
-            background:rgba(255,255,255,.08);color:inherit;opacity:.7" title="Eliminar día">×</span>
-        </button>`;
+        const safeDay=day.replace(/'/g,"\\'");
+        return `<div style="flex-shrink:0;display:flex;align-items:center;border-radius:10px;
+          border:1.5px solid ${active?color:'var(--border)'};background:${active?color+'18':'var(--surf)'}">
+          <button onclick="_pb.activeDay='${safeDay}';pbRefreshEditor()"
+            style="padding:9px 6px 9px 14px;background:none;border:none;
+            color:${active?color:'var(--text)'};font-size:13px;font-weight:${active?700:500};cursor:pointer;font-family:inherit;white-space:nowrap">
+            ${day}
+          </button>
+          <button onclick="pbRemoveDay('${safeDay}')"
+            style="padding:9px 12px 9px 4px;background:none;border:none;cursor:pointer;
+            color:${active?color:'var(--sub)'};font-size:16px;line-height:1;font-family:inherit">×</button>
+        </div>`;
       }).join('')}
       <button onclick="pbAddDay()"
         style="flex-shrink:0;padding:9px 14px;border-radius:10px;border:1.5px dashed var(--border);
@@ -349,7 +351,6 @@ function pbAddDay(){
 
 function pbRemoveDay(day){
   if(Object.keys(_pb.plan.byDay).length<=1) return;
-  if(!confirm(`¿Eliminar ${day} y todos sus ejercicios?`)) return;
   delete _pb.plan.byDay[day];
   if(_pb.activeDay===day) _pb.activeDay=Object.keys(_pb.plan.byDay)[0];
   pbRefreshEditor();

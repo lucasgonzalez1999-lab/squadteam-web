@@ -242,25 +242,35 @@ async function exportProgressIG(athId, exName){
   drawChart(chartCanvas,data,color,true,chartW,chartH);
   ctx.drawImage(chartCanvas,30,138,chartW,chartH);
 
-  // Logo
+  // Logo + brand — pill container bottom right
   await new Promise(res=>{
     const img=new Image();
     img.onload=()=>{
-      const lh=32, lw=Math.round(img.naturalWidth*lh/img.naturalHeight);
-      ctx.globalAlpha=.7;
-      ctx.drawImage(img,W-lw-20,H-lh-16,lw,lh);
+      const lh=52, lw=Math.round(img.naturalWidth*lh/img.naturalHeight);
+      const label='SQUAD TEAM';
+      ctx.font='800 18px system-ui,sans-serif';
+      const tw=ctx.measureText(label).width;
+      const gap=10, pad=16;
+      const pillW=lw+gap+tw+pad*2, pillH=lh+16;
+      const px2=W-pillW-20, py2=H-pillH-16;
+      // Pill background
+      pcRoundRect(ctx,px2,py2,pillW,pillH,pillH/2);
+      ctx.fillStyle='rgba(255,255,255,0.10)';ctx.fill();
+      pcRoundRect(ctx,px2,py2,pillW,pillH,pillH/2);
+      ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=1.5;ctx.stroke();
+      // Logo icon
       ctx.globalAlpha=1;
+      ctx.drawImage(img,px2+pad,py2+(pillH-lh)/2,lw,lh);
+      // Text
+      ctx.font='800 18px system-ui,sans-serif';
+      ctx.fillStyle='rgba(255,255,255,0.9)';
+      ctx.textAlign='left';
+      ctx.fillText(label,px2+pad+lw+gap,py2+pillH/2+7);
       res();
     };
     img.onerror=res;
     img.src='icons/logo-transparent.png';
   });
-
-  // Brand text
-  ctx.font='700 13px system-ui,sans-serif';
-  ctx.fillStyle='rgba(255,255,255,.3)';
-  ctx.textAlign='right';
-  ctx.fillText('SQUAD TEAM',W-62,H-20);
 
   // Download
   offscreen.toBlob(blob=>{

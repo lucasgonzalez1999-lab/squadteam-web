@@ -250,7 +250,7 @@ function goSection(id, el) {
   document.querySelectorAll(`[data-tab="${id}"]`).forEach(b => b.classList.add('on'));
   currentSection = id;
   if (id==='dashboard') renderDashboard();
-  if (id==='clases')    renderClases();
+  if (id==='clases')    { _clLoaded = false; renderClases(); }
   if (id==='live')      renderLivePicker();
   if (id==='alumnos')   renderAlumnos();
   if (id==='planilla')  renderPlanilla();

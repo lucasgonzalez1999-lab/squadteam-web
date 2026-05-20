@@ -64,10 +64,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
 }
 .logo-mark{
   width:42px;height:42px;border-radius:10px;
-  background:#000;
+  background:transparent;
   display:flex;align-items:center;justify-content:center;
   flex-shrink:0;overflow:hidden;
 }
+.logo-mark img{mix-blend-mode:screen;}
 .logo-mark svg{width:16px;height:16px;}
 .logo-name{
   font-family:var(--FD);font-weight:900;font-style:italic;

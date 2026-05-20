@@ -490,7 +490,7 @@ async function pbHandleFile(input){
   const prev=document.getElementById('pb-import-preview');
   prev.innerHTML='<div style="color:var(--sub);font-size:13px;text-align:center;padding:12px">Procesando...</div>';
   try{
-    let rows;
+    let rows=[];
     if(file.name.toLowerCase().endsWith('.csv')){
       rows=pbParseCSV(await file.text());
     }else{
@@ -500,8 +500,14 @@ async function pbHandleFile(input){
       }
       const buf=await file.arrayBuffer();
       const wb=XLSX.read(buf,{type:'array'});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      rows=pbParseCSV(XLSX.utils.sheet_to_csv(ws));
+      // Read ALL sheets — each sheet = one training day
+      wb.SheetNames.forEach((name,idx)=>{
+        const ws=wb.Sheets[name];
+        const csv=XLSX.utils.sheet_to_csv(ws);
+        const dayName=pbSheetToDay(name,idx);
+        const sheetRows=pbParseCSV(csv,dayName);
+        rows.push(...sheetRows);
+      });
     }
     pbShowImportPreview(rows);
   }catch(e){
@@ -517,17 +523,42 @@ async function pbFetchGoogleSheet(){
   try{
     const id=(url.match(/spreadsheets\/d\/([a-zA-Z0-9\-_]+)/)||[])[1];
     if(!id) throw new Error('Link inválido. Pegá la URL completa de Google Sheets.');
-    const csvUrl=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv`;
-    let resp;
-    try{ resp=await fetch(csvUrl); }catch(fe){ throw new Error('No se pudo conectar. Intentá descargar como CSV y subir el archivo.'); }
-    if(!resp.ok) throw new Error('Acceso denegado. Asegurate que el archivo esté compartido públicamente.');
-    pbShowImportPreview(pbParseCSV(await resp.text()));
+
+    // Fetch all sheets by index until one fails or returns empty
+    const allRows=[];
+    for(let i=0;i<10;i++){
+      let resp;
+      try{ resp=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${i}`); }
+      catch(fe){ if(i===0) throw new Error('No se pudo conectar. Intentá descargar como CSV y subir el archivo.'); break; }
+      if(!resp.ok) break;
+      const text=await resp.text();
+      if(!text.trim()||text.length<10) break;
+      const dayName=pbSheetToDay(null,i);
+      const rows=pbParseCSV(text,dayName);
+      if(!rows.length&&i>0) break; // empty sheet = end of tabs
+      allRows.push(...rows);
+      prev.innerHTML=`<div style="color:var(--sub);font-size:13px;text-align:center;padding:12px">Leyendo hoja ${i+1}...</div>`;
+    }
+    if(!allRows.length) throw new Error('Acceso denegado o sin ejercicios. Asegurate que el archivo esté compartido públicamente.');
+    pbShowImportPreview(allRows);
   }catch(e){
     prev.innerHTML=`<div style="color:var(--red);font-size:13px;padding:10px;background:var(--surf);border-radius:8px;line-height:1.6">
       ${e.message}<br><br>
-      <b>Alternativa:</b> En Google Sheets → Archivo → Descargar → CSV, y subí ese archivo arriba.
+      <b>Alternativa:</b> En Google Sheets → Archivo → Descargar → Excel y subí el archivo arriba.
     </div>`;
   }
+}
+
+// ── SHEET NAME → DAY LABEL ──
+function pbSheetToDay(sheetName, idx){
+  if(sheetName){
+    const n=sheetName.trim();
+    // If sheet name already looks like a day label, use it
+    if(/^d[íi]a\s*[a-z0-9]/i.test(n)) return n.charAt(0).toUpperCase()+n.slice(1).toLowerCase().replace(/d[íi]a/i,'Día');
+    if(/^[a-z]$/i.test(n)) return `Día ${n.toUpperCase()}`;
+    if(n.length<=12) return n; // short custom name, keep as-is
+  }
+  return `Día ${String.fromCharCode(65+idx)}`; // Día A, Día B, Día C...
 }
 
 // ── SMART CSV PARSER ──
@@ -588,7 +619,7 @@ function _pbRirFromRow(line){
   return null;
 }
 
-function pbParseCSV(text){
+function pbParseCSV(text, dayOverride=null){
   if(!text||!text.trim()) return [];
   const parseLine=line=>{
     const cols=[];let cur='',inQ=false;
@@ -616,8 +647,8 @@ function pbParseCSV(text){
   if(ci.ex===-1) ci.ex=0;
 
   const rows=[];
-  let currentDay='Día A';
-  let lastRow=null; // tracks last real exercise row to attach serie kg
+  let currentDay=dayOverride||'Día A';
+  let lastRow=null;
 
   for(let i=1;i<lines.length;i++){
     const line=lines[i];
@@ -627,14 +658,16 @@ function pbParseCSV(text){
     const exVal=(line[ci.ex]||'').trim();
     const nonEmpty=line.filter(c=>c).length;
 
-    // Day header detection
-    const dayLabel=dayVal||exVal;
-    if(nonEmpty<=2&&dayLabel&&(/d[íi]a\s*[a-z0-9]/i.test(dayLabel)||/^[a-z]$/i.test(dayLabel)||/day\s*[a-z]/i.test(dayLabel))){
-      currentDay=/d[íi]a/i.test(dayLabel)?dayLabel:`Día ${dayLabel.toUpperCase().trim()}`;
-      continue;
-    }
-    if(dayVal&&dayVal.toLowerCase()!==currentDay.toLowerCase()&&(/d[íi]a/i.test(dayVal)||/^[a-d]$/i.test(dayVal))){
-      currentDay=/d[íi]a/i.test(dayVal)?dayVal:`Día ${dayVal.toUpperCase().trim()}`;
+    // Day header detection — only when no override
+    if(!dayOverride){
+      const dayLabel=dayVal||exVal;
+      if(nonEmpty<=2&&dayLabel&&(/d[íi]a\s*[a-z0-9]/i.test(dayLabel)||/^[a-z]$/i.test(dayLabel)||/day\s*[a-z]/i.test(dayLabel))){
+        currentDay=/d[íi]a/i.test(dayLabel)?dayLabel:`Día ${dayLabel.toUpperCase().trim()}`;
+        continue;
+      }
+      if(dayVal&&dayVal.toLowerCase()!==currentDay.toLowerCase()&&(/d[íi]a/i.test(dayVal)||/^[a-d]$/i.test(dayVal))){
+        currentDay=/d[íi]a/i.test(dayVal)?dayVal:`Día ${dayVal.toUpperCase().trim()}`;
+      }
     }
 
     if(!exVal) continue;

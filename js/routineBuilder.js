@@ -554,10 +554,16 @@ const _PB_SKIP=[
 function _pbSkip(n){ return _PB_SKIP.some(r=>r.test(n.trim())); }
 function _pbIsSerie(n){ return /^[0-9]+[ºoaª°]?\s*serie/i.test(n.trim()); }
 function _pbKgFromRow(line){
-  // pick first numeric value between 5 and 500 from any column
   for(const c of line){
     const v=parseFloat(c);
     if(!isNaN(v)&&v>=5&&v<=500) return v;
+  }
+  return null;
+}
+function _pbRirFromRow(line){
+  for(const c of line){
+    if(/rir\s*[0-9]/i.test(c)) return c.trim();
+    if(/^[0-9]\s*[-–]\s*[0-9]$/.test(c.trim())) return 'RIR '+c.trim();
   }
   return null;
 }
@@ -613,11 +619,15 @@ function pbParseCSV(text){
 
     if(!exVal) continue;
 
-    // SERIE row → extract kg and attach to last exercise
+    // SERIE row → extract kg and RIR, attach to last exercise
     if(_pbIsSerie(exVal)){
       if(lastRow){
         const kg=_pbKgFromRow(line);
         if(kg) lastRow._serieKgs.push(kg);
+        if(!lastRow._rirFound){
+          const rir=_pbRirFromRow(line);
+          if(rir){lastRow.rir=pbNormRIR(rir);lastRow._rirFound=true;}
+        }
       }
       continue;
     }
@@ -639,8 +649,8 @@ function pbParseCSV(text){
       kg:ci.kg>=0&&line[ci.kg]?parseFloat(line[ci.kg])||'':'',
       note:ci.note>=0?(line[ci.note]||''):'',
       _serieKgs:[],
+      _rirFound:!!(ci.rir>=0&&line[ci.rir]),
     };
-    // if kg already in the exercise row, seed _serieKgs
     if(row.kg) row._serieKgs.push(parseFloat(row.kg));
     rows.push(row);
     lastRow=row;
@@ -652,6 +662,7 @@ function pbParseCSV(text){
       r.startKg=Math.round(r._serieKgs.reduce((s,v)=>s+v,0)/r._serieKgs.length*10)/10;
     }
     delete r._serieKgs;
+    delete r._rirFound;
   });
 
   return rows;

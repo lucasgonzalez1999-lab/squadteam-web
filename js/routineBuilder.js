@@ -217,19 +217,18 @@ function pbRenderEditor(cont){
 
     <!-- Day tabs -->
     <div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px;align-items:center">
-      ${days.map(day=>{
+      ${days.map((day,di)=>{
         const active=day===_pb.activeDay;
-        const safeDay=day.replace(/'/g,"\\'");
         return `<div style="flex-shrink:0;display:flex;align-items:center;border-radius:10px;
           border:1.5px solid ${active?color:'var(--border)'};background:${active?color+'18':'var(--surf)'}">
-          <button onclick="_pb.activeDay='${safeDay}';pbRefreshEditor()"
+          <button onclick="pbSelectDay(${di})"
             style="padding:9px 6px 9px 14px;background:none;border:none;
             color:${active?color:'var(--text)'};font-size:13px;font-weight:${active?700:500};cursor:pointer;font-family:inherit;white-space:nowrap">
             ${day}
           </button>
-          <button onclick="pbRemoveDay('${safeDay}')"
+          <button onclick="pbRemoveDay(${di})"
             style="padding:9px 12px 9px 4px;background:none;border:none;cursor:pointer;
-            color:${active?color:'var(--sub)'};font-size:16px;line-height:1;font-family:inherit">×</button>
+            color:${active?color:'var(--sub)'};font-size:18px;line-height:1;font-family:inherit">×</button>
         </div>`;
       }).join('')}
       <button onclick="pbAddDay()"
@@ -349,8 +348,15 @@ function pbAddDay(){
   pbRefreshEditor();
 }
 
-function pbRemoveDay(day){
-  if(Object.keys(_pb.plan.byDay).length<=1) return;
+function pbSelectDay(idx){
+  const day=Object.keys(_pb.plan.byDay)[idx];
+  if(day){_pb.activeDay=day;pbRefreshEditor();}
+}
+function pbRemoveDay(idx){
+  const days=Object.keys(_pb.plan.byDay);
+  if(days.length<=1) return;
+  const day=days[idx];
+  if(!day) return;
   delete _pb.plan.byDay[day];
   if(_pb.activeDay===day) _pb.activeDay=Object.keys(_pb.plan.byDay)[0];
   pbRefreshEditor();

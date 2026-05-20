@@ -64,9 +64,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
 }
 .logo-mark{
   width:30px;height:30px;border-radius:8px;
-  background:var(--acc);
+  background:#000;
   display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;
+  flex-shrink:0;overflow:hidden;
 }
 .logo-mark svg{width:16px;height:16px;}
 .logo-name{

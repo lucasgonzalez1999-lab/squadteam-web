@@ -532,6 +532,7 @@ async function pbFetchGoogleSheet(){
 
 // ── SMART CSV PARSER ──
 const _PB_SKIP=[
+  // Serie / estructura
   /^[0-9]+[ºoaª°]?\s*serie/i,
   /^rir\s*[\(\[«]/i,
   /^tiempo\s+de\s+pausa/i,
@@ -550,6 +551,25 @@ const _PB_SKIP=[
   /^\s*[-–—x×]+\s*$/,
   /^min(utos?)?\s*[0-9]/i,
   /^[0-9]+\s*min/i,
+  // Feedback / encuesta
+  /\?/,                          // cualquier pregunta
+  /^¿/,                          // pregunta en español
+  /^\(/,                         // nota entre paréntesis
+  /sensacion/i,
+  /motivaci[oó]n/i,
+  /recuperaci[oó]n/i,
+  /puntuar/i,
+  /comentario/i,
+  /intensidad/i,
+  /ganas\s+de/i,
+  /sientes/i,
+  /crees\s+haber/i,
+  /anterior\s+ses/i,
+  /bienestar/i,
+  /observaci[oó]n/i,
+  /valoraci[oó]n/i,
+  /feedback/i,
+  /encuesta/i,
 ];
 function _pbSkip(n){ return _PB_SKIP.some(r=>r.test(n.trim())); }
 function _pbIsSerie(n){ return /^[0-9]+[ºoaª°]?\s*serie/i.test(n.trim()); }

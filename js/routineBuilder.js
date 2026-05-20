@@ -220,12 +220,14 @@ function pbRenderEditor(cont){
       ${days.map(day=>{
         const active=day===_pb.activeDay;
         return `<button onclick="_pb.activeDay='${day}';pbRefreshEditor()"
-          style="flex-shrink:0;display:flex;align-items:center;gap:6px;padding:9px 16px;border-radius:10px;
+          style="flex-shrink:0;display:flex;align-items:center;gap:8px;padding:9px 12px 9px 16px;border-radius:10px;
           border:1.5px solid ${active?color:'var(--border)'};background:${active?color+'18':'var(--surf)'};
           color:${active?color:'var(--text)'};font-size:13px;font-weight:${active?700:500};cursor:pointer;font-family:inherit">
           ${day}
           <span onclick="event.stopPropagation();pbRemoveDay('${day.replace(/'/g,"\\'")}'")"
-            style="opacity:.45;font-size:12px;line-height:1;cursor:pointer" title="Eliminar día">✕</span>
+            style="display:inline-flex;align-items:center;justify-content:center;
+            width:22px;height:22px;border-radius:50%;font-size:13px;line-height:1;cursor:pointer;
+            background:rgba(255,255,255,.08);color:inherit;opacity:.7" title="Eliminar día">×</span>
         </button>`;
       }).join('')}
       <button onclick="pbAddDay()"
@@ -749,19 +751,27 @@ function pbShowImportPreview(rows){
               ${r.original!==r.exercise?`<span style="color:var(--blue);font-size:10px">(original: ${r.original})</span>`:''}
             </div>`).join('')}
         </div>`).join('')}
-      <button onclick="pbConfirmImport()"
-        style="width:100%;padding:12px;background:var(--acc);color:#000;border:none;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;margin-top:6px">
-        Importar al plan →
-      </button>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button onclick="pbConfirmImport(true)"
+          style="flex:1;padding:12px;background:var(--acc);color:#000;border:none;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">
+          Reemplazar plan →
+        </button>
+        <button onclick="pbConfirmImport(false)"
+          style="flex:1;padding:12px;background:var(--surf);color:var(--text);border:1.5px solid var(--border);border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">
+          Agregar al plan
+        </button>
+      </div>
     </div>`;
 }
 
-function pbConfirmImport(){
+function pbConfirmImport(replace=true){
   const rows=window._pbImportRows||[];
   if(!rows.length||!_pb.plan) return;
   const byDay={};
   rows.forEach(r=>{if(!byDay[r.day])byDay[r.day]=[];byDay[r.day].push(r);});
   const wl=pbWeekLabels(_pb.plan.weeks||6);
+  // Replace: wipe existing days and rebuild from import
+  if(replace) _pb.plan.byDay={};
   Object.entries(byDay).forEach(([dayName,exs])=>{
     if(!_pb.plan.byDay[dayName]) _pb.plan.byDay[dayName]=[];
     exs.forEach(r=>{

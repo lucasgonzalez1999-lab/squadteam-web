@@ -531,6 +531,37 @@ async function pbFetchGoogleSheet(){
 }
 
 // ── SMART CSV PARSER ──
+const _PB_SKIP=[
+  /^[0-9]+[ºoaª°]?\s*serie/i,
+  /^rir\s*[\(\[«]/i,
+  /^tiempo\s+de\s+pausa/i,
+  /^entrada\s+en\s+calor/i,
+  /^calentamiento/i,
+  /^pausa\s/i,
+  /^descanso\b/i,
+  /^ejercicios?$/i,
+  /^series?$/i,
+  /^repeticiones?$/i,
+  /^carga$/i,
+  /^peso$/i,
+  /^d[íi]a\s+[0-9]/i,
+  /^semana\s+[0-9]/i,
+  /^bloque\s+[0-9]/i,
+  /^\s*[-–—x×]+\s*$/,
+  /^min(utos?)?\s*[0-9]/i,
+  /^[0-9]+\s*min/i,
+];
+function _pbSkip(n){ return _PB_SKIP.some(r=>r.test(n.trim())); }
+function _pbIsSerie(n){ return /^[0-9]+[ºoaª°]?\s*serie/i.test(n.trim()); }
+function _pbKgFromRow(line){
+  // pick first numeric value between 5 and 500 from any column
+  for(const c of line){
+    const v=parseFloat(c);
+    if(!isNaN(v)&&v>=5&&v<=500) return v;
+  }
+  return null;
+}
+
 function pbParseCSV(text){
   if(!text||!text.trim()) return [];
   const parseLine=line=>{
@@ -557,37 +588,72 @@ function pbParseCSV(text){
     note: hdr.findIndex(h=>/nota|note|obs|cue/.test(h)),
   };
   if(ci.ex===-1) ci.ex=0;
+
   const rows=[];
   let currentDay='Día A';
+  let lastRow=null; // tracks last real exercise row to attach serie kg
+
   for(let i=1;i<lines.length;i++){
     const line=lines[i];
     if(!line||!line.some(c=>c)) continue;
+
     const dayVal=ci.day>=0?(line[ci.day]||'').trim():'';
     const exVal=(line[ci.ex]||'').trim();
     const nonEmpty=line.filter(c=>c).length;
-    // Detect day-header rows (1-2 non-empty cells, looks like day label)
-    if(nonEmpty<=2){
-      const label=dayVal||exVal;
-      if(label&&(/d[íi]a\s*[a-z]/i.test(label)||/^[a-z]$/i.test(label)||/day\s*[a-z]/i.test(label))){
-        currentDay=/d[íi]a/i.test(label)?label:`Día ${label.toUpperCase().trim()}`;
-        continue;
-      }
+
+    // Day header detection
+    const dayLabel=dayVal||exVal;
+    if(nonEmpty<=2&&dayLabel&&(/d[íi]a\s*[a-z0-9]/i.test(dayLabel)||/^[a-z]$/i.test(dayLabel)||/day\s*[a-z]/i.test(dayLabel))){
+      currentDay=/d[íi]a/i.test(dayLabel)?dayLabel:`Día ${dayLabel.toUpperCase().trim()}`;
+      continue;
     }
-    if(dayVal&&dayVal.toLowerCase()!==currentDay.toLowerCase()){
+    if(dayVal&&dayVal.toLowerCase()!==currentDay.toLowerCase()&&(/d[íi]a/i.test(dayVal)||/^[a-d]$/i.test(dayVal))){
       currentDay=/d[íi]a/i.test(dayVal)?dayVal:`Día ${dayVal.toUpperCase().trim()}`;
     }
+
     if(!exVal) continue;
-    rows.push({
+
+    // SERIE row → extract kg and attach to last exercise
+    if(_pbIsSerie(exVal)){
+      if(lastRow){
+        const kg=_pbKgFromRow(line);
+        if(kg) lastRow._serieKgs.push(kg);
+      }
+      continue;
+    }
+
+    // Skip known non-exercise labels
+    if(_pbSkip(exVal)) continue;
+
+    // Skip rows where exVal is clearly not an exercise (all uppercase short label, no match in DB)
+    const matched=pbFuzzyMatchEx(exVal);
+    if(matched===exVal&&exVal.length<4) continue;
+
+    const row={
       day:currentDay,
-      exercise:pbFuzzyMatchEx(exVal),
+      exercise:matched,
       original:exVal,
       sets:ci.sets>=0&&line[ci.sets]?line[ci.sets]:'3',
       reps:ci.reps>=0&&line[ci.reps]?line[ci.reps]:'8-12',
       rir:pbNormRIR(ci.rir>=0?line[ci.rir]:''),
-      kg:ci.kg>=0?(line[ci.kg]||''):'',
+      kg:ci.kg>=0&&line[ci.kg]?parseFloat(line[ci.kg])||'':'',
       note:ci.note>=0?(line[ci.note]||''):'',
-    });
+      _serieKgs:[],
+    };
+    // if kg already in the exercise row, seed _serieKgs
+    if(row.kg) row._serieKgs.push(parseFloat(row.kg));
+    rows.push(row);
+    lastRow=row;
   }
+
+  // Compute startKg from serie data
+  rows.forEach(r=>{
+    if(r._serieKgs.length){
+      r.startKg=Math.round(r._serieKgs.reduce((s,v)=>s+v,0)/r._serieKgs.length*10)/10;
+    }
+    delete r._serieKgs;
+  });
+
   return rows;
 }
 
@@ -615,6 +681,7 @@ function pbShowImportPreview(rows){
               <span style="font-weight:700;color:var(--text)">${r.exercise}</span>
               <span style="color:var(--sub)">${r.sets}×${r.reps}</span>
               <span style="color:var(--sub)">${r.rir}</span>
+              ${r.startKg?`<span style="color:var(--green);font-weight:600">${r.startKg}kg</span>`:''}
               ${r.original!==r.exercise?`<span style="color:var(--blue);font-size:10px">(original: ${r.original})</span>`:''}
             </div>`).join('')}
         </div>`).join('')}
@@ -639,7 +706,9 @@ function pbConfirmImport(){
         const isDL=wk==='DL';
         weekData[wk]={series:parseInt(r.sets)||3,reps:isDL?'12-15':r.reps||'8-12',rir:isDL?'DELOAD':r.rir||getRIR(i+1,wl.length)};
       });
-      _pb.plan.byDay[dayName].push({name:r.exercise,notes:r.note||'',weekData});
+      const ex={name:r.exercise,notes:r.note||'',weekData};
+      if(r.startKg) ex.startKg=r.startKg;
+      _pb.plan.byDay[dayName].push(ex);
     });
   });
   _pb.plan.diasSemana=Object.keys(_pb.plan.byDay).length;

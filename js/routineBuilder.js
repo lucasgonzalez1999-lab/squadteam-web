@@ -176,6 +176,10 @@ function pbRenderEditor(cont){
         <div style="font-size:11px;font-weight:600;color:var(--sub);letter-spacing:.5px">PLAN PARA</div>
         <div style="font-size:17px;font-weight:800;color:var(--text)">${ath?.name||_pb.athId}</div>
       </div>
+      <button onclick="pbImportModal()"
+        style="padding:10px 16px;background:var(--surf);color:var(--text);border:1.5px solid var(--border);border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">
+        📥 Importar
+      </button>
       <button onclick="pbSave()" id="pb-save-btn"
         style="padding:10px 22px;background:${color};color:#000;border:none;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;letter-spacing:.3px">
         💾 Guardar plan
@@ -411,4 +415,237 @@ async function pbSave(){
   }finally{
     if(btn) btn.disabled=false;
   }
+}
+
+// ── IMPORT FROM SPREADSHEET ──
+
+function pbFuzzyMatchEx(name){
+  if(!name||!name.trim()) return name;
+  const all=pbAllEx();
+  const n=name.toLowerCase().trim();
+  let m=all.find(e=>e.name.toLowerCase()===n); if(m) return m.name;
+  m=all.find(e=>e.name.toLowerCase().includes(n)); if(m) return m.name;
+  m=all.find(e=>n.includes(e.name.toLowerCase())); if(m) return m.name;
+  const words=n.split(/[\s\-_/]+/).filter(w=>w.length>3);
+  m=all.find(e=>words.some(w=>e.name.toLowerCase().includes(w))); if(m) return m.name;
+  return name;
+}
+
+function pbNormRIR(val){
+  if(!val) return 'RIR 2-3';
+  const v=String(val).trim();
+  if(v.toUpperCase().startsWith('RIR')) return v;
+  if(/^\d/.test(v)) return 'RIR '+v;
+  if(v.toLowerCase()==='deload') return 'DELOAD';
+  return 'RIR 2-3';
+}
+
+function pbImportModal(){
+  if(document.getElementById('pb-import-modal')){document.getElementById('pb-import-modal').remove();return;}
+  const m=document.createElement('div');
+  m.id='pb-import-modal';
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px';
+  m.innerHTML=`
+  <div style="background:var(--bg);border-radius:16px;padding:20px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:800;color:var(--text)">Importar rutina</div>
+      <button onclick="document.getElementById('pb-import-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--sub);line-height:1">×</button>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.4px;margin-bottom:8px">SUBIR ARCHIVO</div>
+      <label style="display:block;border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:.15s"
+        onmouseover="this.style.borderColor='var(--acc)'" onmouseout="this.style.borderColor='var(--border)'">
+        <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="pbHandleFile(this)">
+        <div style="font-size:24px;margin-bottom:6px">📂</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text)">Subí tu Excel o CSV</div>
+        <div style="font-size:11px;color:var(--sub);margin-top:2px">.xlsx · .xls · .csv</div>
+      </label>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin:12px 0">
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <span style="font-size:11px;color:var(--sub)">o</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.4px;margin-bottom:8px">GOOGLE SHEETS</div>
+      <input id="pb-gs-url" type="url" placeholder="Pegá el link de tu Google Sheet..."
+        style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surf);color:var(--text);font-size:13px;box-sizing:border-box;font-family:inherit;outline:none"
+        onfocus="this.style.borderColor='var(--acc)'" onblur="this.style.borderColor='var(--border)'">
+      <div style="font-size:11px;color:var(--sub);margin-top:5px;line-height:1.5">
+        Debe estar compartido como <b>público</b> o publicado en la web (Archivo → Publicar en la web)
+      </div>
+      <button onclick="pbFetchGoogleSheet()"
+        style="margin-top:8px;width:100%;padding:10px;background:var(--surf);color:var(--text);border:1.5px solid var(--border);border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">
+        Importar desde Google Sheets
+      </button>
+    </div>
+    <div id="pb-import-preview" style="margin-top:14px"></div>
+  </div>`;
+  document.body.appendChild(m);
+  m.addEventListener('click',e=>{if(e.target===m)m.remove();});
+}
+
+async function pbHandleFile(input){
+  const file=input.files[0]; if(!file) return;
+  const prev=document.getElementById('pb-import-preview');
+  prev.innerHTML='<div style="color:var(--sub);font-size:13px;text-align:center;padding:12px">Procesando...</div>';
+  try{
+    let rows;
+    if(file.name.toLowerCase().endsWith('.csv')){
+      rows=pbParseCSV(await file.text());
+    }else{
+      if(!window.XLSX){
+        prev.innerHTML='<div style="color:var(--sub);font-size:13px;text-align:center;padding:12px">Cargando librería Excel...</div>';
+        await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+      }
+      const buf=await file.arrayBuffer();
+      const wb=XLSX.read(buf,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      rows=pbParseCSV(XLSX.utils.sheet_to_csv(ws));
+    }
+    pbShowImportPreview(rows);
+  }catch(e){
+    prev.innerHTML=`<div style="color:var(--red);font-size:13px;padding:10px;background:var(--surf);border-radius:8px">Error: ${e.message}</div>`;
+  }
+}
+
+async function pbFetchGoogleSheet(){
+  const url=(document.getElementById('pb-gs-url')?.value||'').trim();
+  if(!url){toast('Pegá el link del Google Sheet');return;}
+  const prev=document.getElementById('pb-import-preview');
+  prev.innerHTML='<div style="color:var(--sub);font-size:13px;text-align:center;padding:12px">Conectando...</div>';
+  try{
+    const id=(url.match(/spreadsheets\/d\/([a-zA-Z0-9\-_]+)/)||[])[1];
+    if(!id) throw new Error('Link inválido. Pegá la URL completa de Google Sheets.');
+    const csvUrl=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv`;
+    let resp;
+    try{ resp=await fetch(csvUrl); }catch(fe){ throw new Error('No se pudo conectar. Intentá descargar como CSV y subir el archivo.'); }
+    if(!resp.ok) throw new Error('Acceso denegado. Asegurate que el archivo esté compartido públicamente.');
+    pbShowImportPreview(pbParseCSV(await resp.text()));
+  }catch(e){
+    prev.innerHTML=`<div style="color:var(--red);font-size:13px;padding:10px;background:var(--surf);border-radius:8px;line-height:1.6">
+      ${e.message}<br><br>
+      <b>Alternativa:</b> En Google Sheets → Archivo → Descargar → CSV, y subí ese archivo arriba.
+    </div>`;
+  }
+}
+
+// ── SMART CSV PARSER ──
+function pbParseCSV(text){
+  if(!text||!text.trim()) return [];
+  const parseLine=line=>{
+    const cols=[];let cur='',inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+      else if(c===','&&!inQ){cols.push(cur.trim());cur='';}
+      else cur+=c;
+    }
+    cols.push(cur.trim());
+    return cols;
+  };
+  const lines=text.trim().split('\n').map(parseLine);
+  if(lines.length<2) return [];
+  const hdr=lines[0].map(h=>h.toLowerCase().replace(/["\s]+/g,' ').trim());
+  const ci={
+    day:  hdr.findIndex(h=>/d[íi]a|day|bloque|block|split/.test(h)),
+    ex:   hdr.findIndex(h=>/ejercicio|exercise|nombre|name/.test(h)),
+    sets: hdr.findIndex(h=>/series|sets?\b/.test(h)),
+    reps: hdr.findIndex(h=>/reps?|repetici/.test(h)),
+    kg:   hdr.findIndex(h=>/^kg$|peso|weight|carga/.test(h)),
+    rir:  hdr.findIndex(h=>/rir/.test(h)),
+    note: hdr.findIndex(h=>/nota|note|obs|cue/.test(h)),
+  };
+  if(ci.ex===-1) ci.ex=0;
+  const rows=[];
+  let currentDay='Día A';
+  for(let i=1;i<lines.length;i++){
+    const line=lines[i];
+    if(!line||!line.some(c=>c)) continue;
+    const dayVal=ci.day>=0?(line[ci.day]||'').trim():'';
+    const exVal=(line[ci.ex]||'').trim();
+    const nonEmpty=line.filter(c=>c).length;
+    // Detect day-header rows (1-2 non-empty cells, looks like day label)
+    if(nonEmpty<=2){
+      const label=dayVal||exVal;
+      if(label&&(/d[íi]a\s*[a-z]/i.test(label)||/^[a-z]$/i.test(label)||/day\s*[a-z]/i.test(label))){
+        currentDay=/d[íi]a/i.test(label)?label:`Día ${label.toUpperCase().trim()}`;
+        continue;
+      }
+    }
+    if(dayVal&&dayVal.toLowerCase()!==currentDay.toLowerCase()){
+      currentDay=/d[íi]a/i.test(dayVal)?dayVal:`Día ${dayVal.toUpperCase().trim()}`;
+    }
+    if(!exVal) continue;
+    rows.push({
+      day:currentDay,
+      exercise:pbFuzzyMatchEx(exVal),
+      original:exVal,
+      sets:ci.sets>=0&&line[ci.sets]?line[ci.sets]:'3',
+      reps:ci.reps>=0&&line[ci.reps]?line[ci.reps]:'8-12',
+      rir:pbNormRIR(ci.rir>=0?line[ci.rir]:''),
+      kg:ci.kg>=0?(line[ci.kg]||''):'',
+      note:ci.note>=0?(line[ci.note]||''):'',
+    });
+  }
+  return rows;
+}
+
+// ── PREVIEW & CONFIRM ──
+function pbShowImportPreview(rows){
+  const prev=document.getElementById('pb-import-preview');
+  if(!rows.length){
+    prev.innerHTML='<div style="color:var(--red);font-size:13px;padding:10px;background:var(--surf);border-radius:8px">No encontré ejercicios. Verificá el formato del archivo — necesito columnas de Ejercicio, Series y Reps.</div>';
+    return;
+  }
+  const byDay={};
+  rows.forEach(r=>{if(!byDay[r.day])byDay[r.day]=[];byDay[r.day].push(r);});
+  const days=Object.keys(byDay);
+  window._pbImportRows=rows;
+  prev.innerHTML=`
+    <div style="border-top:1px solid var(--border);padding-top:14px">
+      <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:10px">
+        ✓ Encontré ${rows.length} ejercicios en ${days.length} día${days.length!==1?'s':''}
+      </div>
+      ${days.map(d=>`
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;font-weight:700;color:var(--acc);margin-bottom:5px;letter-spacing:.4px">${d}</div>
+          ${byDay[d].map(r=>`
+            <div style="font-size:12px;padding:5px 8px;background:var(--surf);border-radius:6px;margin-bottom:3px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <span style="font-weight:700;color:var(--text)">${r.exercise}</span>
+              <span style="color:var(--sub)">${r.sets}×${r.reps}</span>
+              <span style="color:var(--sub)">${r.rir}</span>
+              ${r.original!==r.exercise?`<span style="color:var(--blue);font-size:10px">(original: ${r.original})</span>`:''}
+            </div>`).join('')}
+        </div>`).join('')}
+      <button onclick="pbConfirmImport()"
+        style="width:100%;padding:12px;background:var(--acc);color:#000;border:none;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;margin-top:6px">
+        Importar al plan →
+      </button>
+    </div>`;
+}
+
+function pbConfirmImport(){
+  const rows=window._pbImportRows||[];
+  if(!rows.length||!_pb.plan) return;
+  const byDay={};
+  rows.forEach(r=>{if(!byDay[r.day])byDay[r.day]=[];byDay[r.day].push(r);});
+  const wl=pbWeekLabels(_pb.plan.weeks||6);
+  Object.entries(byDay).forEach(([dayName,exs])=>{
+    if(!_pb.plan.byDay[dayName]) _pb.plan.byDay[dayName]=[];
+    exs.forEach(r=>{
+      const weekData={};
+      wl.forEach((wk,i)=>{
+        const isDL=wk==='DL';
+        weekData[wk]={series:parseInt(r.sets)||3,reps:isDL?'12-15':r.reps||'8-12',rir:isDL?'DELOAD':r.rir||getRIR(i+1,wl.length)};
+      });
+      _pb.plan.byDay[dayName].push({name:r.exercise,notes:r.note||'',weekData});
+    });
+  });
+  _pb.plan.diasSemana=Object.keys(_pb.plan.byDay).length;
+  _pb.activeDay=Object.keys(_pb.plan.byDay)[0];
+  window._pbImportRows=null;
+  document.getElementById('pb-import-modal')?.remove();
+  pbRefreshEditor();
+  toast('✓ Rutina importada');
 }

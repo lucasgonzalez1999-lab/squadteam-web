@@ -832,7 +832,8 @@ function _mrDownloadImage(dataUrl, suffix){
 }
 
 // ══════════════════════════════════════════
-// STORY EXPORT — Estilo Strava / Nike / Cinematic
+// STORY EXPORT — HUD Overlay Transparente
+// PNG transparente para superponer en Instagram Stories
 // ══════════════════════════════════════════
 
 function mrShowStoryOptions(){
@@ -840,28 +841,29 @@ function mrShowStoryOptions(){
   if(ov){ ov.remove(); return; }
   ov = document.createElement('div');
   ov.id = 'mr-story-ov';
-  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.8);backdrop-filter:blur(10px);display:flex;align-items:flex-end;justify-content:center;padding:16px';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);backdrop-filter:blur(14px);display:flex;align-items:flex-end;justify-content:center;padding:16px';
   ov.onclick = e=>{ if(e.target===ov) ov.remove(); };
   ov.innerHTML = `
   <div style="width:100%;max-width:420px;background:var(--surf);border:1px solid var(--border2);border-radius:20px 20px 14px 14px;overflow:hidden">
     <div style="padding:20px 22px 12px;border-bottom:1px solid var(--border)">
-      <div style="font-size:10px;font-weight:700;color:var(--sub);letter-spacing:6px;margin-bottom:4px">EXPORTAR</div>
-      <div style="font-size:17px;font-weight:900;color:var(--text);letter-spacing:-.3px">Story 9:16</div>
-      <div style="font-size:12px;color:var(--sub);margin-top:3px">Formato vertical para Instagram Stories</div>
+      <div style="font-size:10px;font-weight:700;color:var(--sub);letter-spacing:6px;margin-bottom:6px">EXPORTAR</div>
+      <div style="font-size:17px;font-weight:900;color:var(--text)">Story HUD</div>
+      <div style="font-size:12px;color:var(--sub);margin-top:3px">Overlay transparente · Superponelo a tu foto en IG</div>
     </div>
     <div style="padding:16px 22px 22px;display:flex;flex-direction:column;gap:10px">
-      <button onclick="_mrStoryPickPhoto()"
+      <button onclick="document.getElementById('mr-story-ov').remove();mrExportStory(null,false)"
         style="padding:16px 20px;background:var(--acc);border:none;border-radius:12px;font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;
-               display:flex;align-items:center;gap:10px;color:#000;width:100%;letter-spacing:.4px">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+               display:flex;align-items:center;gap:12px;color:#000;width:100%;letter-spacing:.4px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="2" width="20" height="20" rx="3" stroke-dasharray="4 2"/><circle cx="12" cy="12" r="4"/></svg>
         <div style="text-align:left">
-          <div>CON FOTO DE FONDO</div>
-          <div style="font-size:10px;font-weight:500;opacity:.6;letter-spacing:.1px;margin-top:1px">Seleccioná una foto del entreno</div>
+          <div>OVERLAY TRANSPARENTE</div>
+          <div style="font-size:10px;font-weight:500;opacity:.65;margin-top:1px">PNG · Importalo en IG Stories sobre tu foto</div>
         </div>
       </button>
-      <button onclick="document.getElementById('mr-story-ov').remove();mrExportStory(null,false)"
-        style="padding:14px 20px;background:none;border:1.5px solid var(--border2);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text);width:100%">
-        Generar sin foto
+      <button onclick="_mrStoryPickPhoto()"
+        style="padding:14px 20px;background:none;border:1.5px solid var(--border2);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text);width:100%;display:flex;align-items:center;gap:8px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Combinar con foto
       </button>
     </div>
   </div>`;
@@ -885,335 +887,349 @@ async function mrExportStory(photoFile, isDemo){
   const ath      = getAth(_mrAthId)||(typeof COACHES!=='undefined'&&COACHES[_mrAthId])||currentUser;
   const rawColor = ath?.color||'#3b82f6';
   const accent   = rawColor.startsWith('var(')?'#3b82f6':rawColor;
+  const [ar,ag,ab] = _mrHexRgb(accent);
 
   let exItems, dayLabel, weekNum, athName;
   if(isDemo){
-    athName  = (ath?.name||'ATHLETE').toUpperCase();
-    dayLabel = 'PUSH A'; weekNum = 3;
-    exItems  = [
-      {name:'Press Banca',       sets:[{kg:80,reps:8},{kg:82.5,reps:7},{kg:82.5,reps:6}]},
+    athName='ATHLETE'; dayLabel='PUSH A'; weekNum=3;
+    exItems=[
+      {name:'Press Banca',       sets:[{kg:82.5,reps:8},{kg:82.5,reps:7},{kg:80,reps:6}]},
       {name:'Press Inclinado',   sets:[{kg:65,reps:9},{kg:67.5,reps:8},{kg:67.5,reps:7}]},
       {name:'Press Militar',     sets:[{kg:52.5,reps:8},{kg:52.5,reps:8},{kg:50,reps:9}]},
       {name:'Fondos con Lastre', sets:[{kg:20,reps:10},{kg:20,reps:9},{kg:17.5,reps:9}]},
       {name:'Extensión Tríceps', sets:[{kg:30,reps:12},{kg:30,reps:11},{kg:27.5,reps:12}]},
       {name:'Lateral Raises',    sets:[{kg:12,reps:15},{kg:12,reps:14},{kg:10,reps:15}]},
     ];
+    athName=(ath?.name||'ATHLETE').toUpperCase();
   } else {
-    const session = getAthSessions(_mrAthId).find(s=>s.dia===_mrDay&&s.week===_mrWeek&&s.date===today());
-    exItems = [];
+    const session=getAthSessions(_mrAthId).find(s=>s.dia===_mrDay&&s.week===_mrWeek&&s.date===today());
+    exItems=[];
     (session?.exercises||[]).forEach(ex=>{
       if(!ex.name||!ex.sets?.length) return;
       const sets=ex.sets.filter(s=>s.kg||s.reps);
       if(sets.length) exItems.push({name:ex.name,sets});
     });
     if(!exItems.length){ toast('Guardá el entrenamiento antes de exportar'); return; }
-    athName  = (ath?.name||_mrAthId||'').toUpperCase();
-    dayLabel = _mrDay; weekNum = _mrWeek;
+    athName=(ath?.name||_mrAthId||'').toUpperCase();
+    dayLabel=_mrDay; weekNum=_mrWeek;
   }
 
-  // Load photo
-  let bgImg = null;
+  // Load photo if provided
+  let bgImg=null;
   if(photoFile instanceof File){
-    bgImg = await new Promise(res=>{
+    bgImg=await new Promise(res=>{
       const r=new FileReader();
       r.onload=e=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>res(null); i.src=e.target.result; };
       r.onerror=()=>res(null); r.readAsDataURL(photoFile);
     });
   }
 
-  const W=1080, H=1920, M=72;
+  const W=1080, H=1920, M=58;
   const canvas=document.createElement('canvas');
   canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext('2d');
+  // Canvas starts fully transparent — no background fill
 
-  // ─ 1. BACKGROUND ─
-  ctx.fillStyle='#07070a';
-  ctx.fillRect(0,0,W,H);
-
+  // ── PHOTO BASE ──
   if(bgImg){
     const s=Math.max(W/bgImg.width,H/bgImg.height);
     const pw=bgImg.width*s, ph=bgImg.height*s;
     ctx.drawImage(bgImg,(W-pw)/2,(H-ph)/2,pw,ph);
-    // Darken + cinematic overlay
-    ctx.fillStyle='rgba(0,0,0,0.52)'; ctx.fillRect(0,0,W,H);
-    const gv=ctx.createLinearGradient(0,0,0,H);
-    gv.addColorStop(0,  'rgba(7,7,10,.96)');
-    gv.addColorStop(0.12,'rgba(7,7,10,.45)');
-    gv.addColorStop(0.42,'rgba(7,7,10,.08)');
-    gv.addColorStop(0.68,'rgba(7,7,10,.35)');
-    gv.addColorStop(1,  'rgba(7,7,10,.98)');
-    ctx.fillStyle=gv; ctx.fillRect(0,0,W,H);
-    const vig=ctx.createRadialGradient(W/2,H/2,H*0.22,W/2,H/2,H*0.72);
-    vig.addColorStop(0,'rgba(0,0,0,0)'); vig.addColorStop(1,'rgba(0,0,0,.55)');
-    ctx.fillStyle=vig; ctx.fillRect(0,0,W,H);
-  } else {
-    // Procedural dark gym atmosphere
-    const sp=ctx.createRadialGradient(W*.5,H*.35,0,W*.5,H*.35,W*.75);
-    sp.addColorStop(0,'rgba(18,14,36,.85)'); sp.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=sp; ctx.fillRect(0,0,W,H);
-    const cl=ctx.createRadialGradient(0,H*.4,0,0,H*.4,W*.55);
-    cl.addColorStop(0,'rgba(14,28,60,.3)'); cl.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=cl; ctx.fillRect(0,0,W,H);
-    const [ar,ag,ab]=_mrHexRgb(accent);
-    const ar2=ctx.createRadialGradient(W,H*.3,0,W,H*.3,W*.45);
-    ar2.addColorStop(0,`rgba(${ar},${ag},${ab},0.07)`); ar2.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=ar2; ctx.fillRect(0,0,W,H);
-    // Gym light bars
-    for(let i=0;i<5;i++){
-      const ly=H*.2+i*H*.13;
-      const lb=ctx.createLinearGradient(0,ly,W,ly);
-      lb.addColorStop(0,'rgba(255,255,255,0)'); lb.addColorStop(.4,'rgba(255,255,255,.025)');
-      lb.addColorStop(.5,'rgba(255,255,255,.04)'); lb.addColorStop(.6,'rgba(255,255,255,.025)');
-      lb.addColorStop(1,'rgba(255,255,255,0)');
-      ctx.fillStyle=lb; ctx.fillRect(0,ly-1,W,2);
-    }
+    ctx.fillStyle='rgba(0,0,0,0.48)'; ctx.fillRect(0,0,W,H);
   }
 
-  // Grain
-  const gd=ctx.getImageData(0,0,W,H); const gb=gd.data;
-  for(let i=0;i<gb.length;i+=4){
-    const n=(Math.random()-.5)*11;
-    gb[i]=Math.min(255,Math.max(0,gb[i]+n));
-    gb[i+1]=Math.min(255,Math.max(0,gb[i+1]+n));
-    gb[i+2]=Math.min(255,Math.max(0,gb[i+2]+n));
-  }
-  ctx.putImageData(gd,0,0);
+  // ── DARK GRADIENT ZONES (top 580px + bottom 560px) ──
+  const topFade=ctx.createLinearGradient(0,0,0,580);
+  topFade.addColorStop(0,  'rgba(0,0,0,0.90)');
+  topFade.addColorStop(0.5,'rgba(0,0,0,0.50)');
+  topFade.addColorStop(1,  'rgba(0,0,0,0)');
+  ctx.fillStyle=topFade; ctx.fillRect(0,0,W,580);
 
-  // Grid (very subtle)
-  ctx.strokeStyle='rgba(255,255,255,.022)'; ctx.lineWidth=1;
-  for(let x=0;x<W;x+=90){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke(); }
-  for(let y=0;y<H;y+=90){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
+  const botFade=ctx.createLinearGradient(0,1360,0,H);
+  botFade.addColorStop(0,  'rgba(0,0,0,0)');
+  botFade.addColorStop(0.3,'rgba(0,0,0,0.55)');
+  botFade.addColorStop(1,  'rgba(0,0,0,0.92)');
+  ctx.fillStyle=botFade; ctx.fillRect(0,1360,W,H-1360);
 
-  // ─ 2. HEADER ─
-  ctx.fillStyle=accent; ctx.fillRect(0,0,W,4);
-
-  ctx.fillStyle='rgba(255,255,255,.2)';
-  ctx.font='700 18px Inter,system-ui,sans-serif';
-  ctx.letterSpacing='7px'; ctx.fillText('SQUAD TEAM',M,68); ctx.letterSpacing='0px';
-
-  ctx.beginPath(); ctx.arc(M+5,98,5,0,Math.PI*2);
-  ctx.fillStyle=accent; ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,.4)';
-  ctx.font='600 13px Inter,system-ui,sans-serif';
-  ctx.letterSpacing='3px'; ctx.fillText('TRAINING LOG',M+18,103); ctx.letterSpacing='0px';
-
-  // False coordinates (top right)
-  const fLat=`${(Math.random()*8+26).toFixed(4)}°S`;
-  const fLon=`${(Math.random()*8+55).toFixed(4)}°O`;
-  ctx.fillStyle='rgba(255,255,255,.16)';
-  ctx.font='500 13px Inter,system-ui,sans-serif';
-  ctx.textAlign='right'; ctx.fillText(`${fLat}  ${fLon}`,W-M,68); ctx.textAlign='left';
-
-  ctx.strokeStyle='rgba(255,255,255,.07)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(M,138); ctx.lineTo(W-M,138); ctx.stroke();
-
-  // ─ 3. WAVEFORM (hero zone, centered ~y=600) ─
-  const allSets=[];
-  exItems.forEach(ex=>ex.sets.forEach(s=>allSets.push({kg:s.kg||0,reps:s.reps||0})));
-  const maxKg=Math.max(...allSets.map(s=>s.kg),1);
-
-  const WVY=600, WVA=155;
-  const wvPts=allSets.map((s,i)=>({
-    x: (i/(allSets.length-1||1))*W,
-    y: WVY-(s.kg/maxKg)*WVA
-  }));
-  // Pad with baseline anchors at edges
-  const wavePts=[{x:-10,y:WVY},...wvPts,{x:W+10,y:WVY}];
-
-  function _wave(pts,lw,alpha){
-    ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
-    for(let i=0;i<pts.length-1;i++){
-      const cpx=(pts[i].x+pts[i+1].x)/2;
-      ctx.bezierCurveTo(cpx,pts[i].y,cpx,pts[i+1].y,pts[i+1].x,pts[i+1].y);
+  // Grain in gradient zones only
+  const applyGrain=(x,y,w,h,strength)=>{
+    const gd=ctx.getImageData(x,y,w,h); const gb=gd.data;
+    for(let i=0;i<gb.length;i+=4){
+      if(gb[i+3]<8) continue;
+      const n=(Math.random()-.5)*strength;
+      gb[i]=Math.min(255,Math.max(0,gb[i]+n));
+      gb[i+1]=Math.min(255,Math.max(0,gb[i+1]+n));
+      gb[i+2]=Math.min(255,Math.max(0,gb[i+2]+n));
     }
-    ctx.strokeStyle=accent; ctx.lineWidth=lw; ctx.globalAlpha=alpha; ctx.stroke(); ctx.globalAlpha=1;
-  }
-  _wave(wavePts,28,0.03); _wave(wavePts,14,0.055); _wave(wavePts,7,0.1); _wave(wavePts,3,0.22);
-  ctx.save(); ctx.shadowColor=accent; ctx.shadowBlur=18; _wave(wavePts,1.5,0.95); ctx.restore();
+    ctx.putImageData(gd,x,y);
+  };
+  applyGrain(0,0,W,580,9);
+  applyGrain(0,1360,W,H-1360,9);
 
-  // Dots at each set
-  const [ar,ag,ab]=_mrHexRgb(accent);
-  wvPts.forEach(p=>{
-    ctx.beginPath(); ctx.arc(p.x,p.y,7,0,Math.PI*2);
-    ctx.strokeStyle=accent; ctx.lineWidth=1.5; ctx.globalAlpha=0.35; ctx.stroke();
-    ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2);
-    ctx.fillStyle=accent; ctx.globalAlpha=0.85; ctx.fill(); ctx.globalAlpha=1;
-  });
+  // ── ACCENT TOP LINE ──
+  ctx.save(); ctx.shadowColor=accent; ctx.shadowBlur=10;
+  ctx.fillStyle=`rgba(${ar},${ag},${ab},0.7)`; ctx.fillRect(0,0,W,3); ctx.restore();
 
-  // Exercise abbreviations above first set of each exercise
-  let si=0;
-  exItems.forEach(ex=>{
-    const p=wvPts[si];
-    if(p){
-      const abbr=ex.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,3);
-      ctx.fillStyle='rgba(255,255,255,.32)'; ctx.font='700 17px Inter,system-ui,sans-serif';
-      ctx.textAlign='center'; ctx.fillText(abbr,p.x,p.y-18); ctx.textAlign='left';
-    }
-    si+=ex.sets.length;
-  });
+  // ── CORNER BRACKETS ──
+  const bracket=(x,y,sz,dir,clr,a)=>{
+    ctx.save(); ctx.strokeStyle=clr; ctx.lineWidth=1.5; ctx.globalAlpha=a;
+    ctx.beginPath();
+    if(dir==='tl'){ctx.moveTo(x,y+sz);ctx.lineTo(x,y);ctx.lineTo(x+sz,y);}
+    if(dir==='tr'){ctx.moveTo(x-sz,y);ctx.lineTo(x,y);ctx.lineTo(x,y+sz);}
+    if(dir==='bl'){ctx.moveTo(x,y-sz);ctx.lineTo(x,y);ctx.lineTo(x+sz,y);}
+    if(dir==='br'){ctx.moveTo(x-sz,y);ctx.lineTo(x,y);ctx.lineTo(x,y-sz);}
+    ctx.stroke(); ctx.restore();
+  };
+  bracket(28,28,44,'tl','white',0.28);
+  bracket(W-28,28,44,'tr','white',0.28);
+  bracket(28,H-28,44,'bl',accent,0.55);
+  bracket(W-28,H-28,44,'br',accent,0.55);
 
-  // Baseline tick
-  ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(M,WVY+22); ctx.lineTo(W-M,WVY+22); ctx.stroke();
+  // ── HEADER (y: 0-130) ──
+  ctx.fillStyle='rgba(255,255,255,0.28)';
+  ctx.font='700 16px Inter,system-ui,sans-serif';
+  ctx.letterSpacing='8px'; ctx.textAlign='center';
+  ctx.fillText('SQUAD TEAM',W/2,46); ctx.letterSpacing='0px'; ctx.textAlign='left';
 
-  // ─ 4. ATHLETE + DAY CHIPS ─
-  const ATH_Y=780;
-  ctx.fillStyle='rgba(255,255,255,.45)';
-  ctx.font='600 21px Inter,system-ui,sans-serif'; ctx.letterSpacing='4px';
-  ctx.fillText(athName,M,ATH_Y); ctx.letterSpacing='0px';
+  ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(M,64); ctx.lineTo(W-M,64); ctx.stroke();
 
-  const chips=[dayLabel.toUpperCase(),`SEM ${weekNum}`];
-  let cx=M, cy=ATH_Y+14;
-  chips.forEach(lbl=>{
+  // Day + week chips
+  let chx=M; const chy=80;
+  [[dayLabel.toUpperCase(),false],[`SEM ${weekNum}`,false]].forEach(([lbl])=>{
     ctx.font='700 15px Inter,system-ui,sans-serif';
-    const tw=ctx.measureText(lbl).width, cw=tw+24, ch=32;
-    ctx.fillStyle='rgba(255,255,255,.08)'; ctx.beginPath();
-    ctx.roundRect(cx,cy,cw,ch,ch/2); ctx.fill();
-    ctx.strokeStyle='rgba(255,255,255,.13)'; ctx.lineWidth=1; ctx.stroke();
-    ctx.fillStyle='rgba(255,255,255,.65)'; ctx.fillText(lbl,cx+12,cy+21);
-    cx+=cw+8;
+    const tw=ctx.measureText(lbl).width, cw=tw+22, ch2=30;
+    ctx.fillStyle='rgba(255,255,255,0.1)'; ctx.beginPath(); ctx.roundRect(chx,chy,cw,ch2,ch2/2); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.8)'; ctx.fillText(lbl,chx+11,chy+20); chx+=cw+8;
   });
 
-  // ─ 5. MAIN LIFT ─
-  const ML_Y=900;
+  // False coords top-right
+  ctx.fillStyle='rgba(255,255,255,0.16)'; ctx.font='500 13px Inter,system-ui,sans-serif';
+  ctx.textAlign='right';
+  ctx.fillText(`${(Math.random()*8+27).toFixed(4)}°S  ${(Math.random()*8+56).toFixed(4)}°O`,W-M,46);
+  ctx.textAlign='left';
+
+  // ── MAIN LIFT — EXERCISE NAME (y~170) ──
   const mainEx=_mrStoryMainLift(exItems);
   const mSets=mainEx?.sets||[];
   const mMaxKg=Math.max(...mSets.map(s=>s.kg||0),0);
   const mMaxReps=mSets.find(s=>s.kg===mMaxKg)?.reps||0;
-  const isPR=mainEx&&!isDemo&&_mrStoryIsPR(mainEx.name,mMaxKg);
 
-  ctx.fillStyle=`rgba(${ar},${ag},${ab},0.35)`;
-  ctx.fillRect(M,ML_Y,52,2);
-  ctx.fillStyle='rgba(255,255,255,.3)'; ctx.font='600 13px Inter,system-ui,sans-serif';
-  ctx.letterSpacing='7px'; ctx.fillText('PRINCIPAL',M,ML_Y+28); ctx.letterSpacing='0px';
+  const exLabel=(mainEx?.name||dayLabel).toUpperCase();
+  ctx.save(); ctx.shadowColor='rgba(0,0,0,1)'; ctx.shadowBlur=20;
+  ctx.fillStyle='rgba(255,255,255,0.88)';
+  let efs=72; ctx.font=`900 italic ${efs}px "Barlow Condensed",Impact,sans-serif`;
+  while(ctx.measureText(exLabel).width>W-M*2-20&&efs>36){efs-=4;ctx.font=`900 italic ${efs}px "Barlow Condensed",Impact,sans-serif`;}
+  ctx.fillText(exLabel,M,188); ctx.restore();
 
-  if(isPR){
-    ctx.save(); ctx.shadowColor=accent; ctx.shadowBlur=22;
-    const prW=150, prH=40;
-    ctx.fillStyle=accent; ctx.beginPath();
-    ctx.roundRect(W-M-prW,ML_Y+2,prW,prH,prH/2); ctx.fill(); ctx.restore();
-    ctx.fillStyle='#000'; ctx.font='800 16px Inter,system-ui,sans-serif';
-    ctx.letterSpacing='3px'; ctx.textAlign='center';
-    ctx.fillText('NEW PR',W-M-prW/2,ML_Y+26); ctx.textAlign='left'; ctx.letterSpacing='0px';
+  // ── WEIGHT GLOW SPHERE ──
+  const glowSphere=ctx.createRadialGradient(W/2,360,0,W/2,360,320);
+  glowSphere.addColorStop(0,`rgba(${ar},${ag},${ab},0.22)`);
+  glowSphere.addColorStop(0.45,`rgba(${ar},${ag},${ab},0.07)`);
+  glowSphere.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=glowSphere; ctx.fillRect(0,100,W,520);
+
+  // ── WEIGHT NUMBER — ENORMOUS (y~390) ──
+  const numStr=String(mMaxKg);
+  let wfs=196; ctx.font=`900 italic ${wfs}px "Barlow Condensed",Impact,sans-serif`;
+  while(ctx.measureText(numStr).width>W-M*2-170&&wfs>80){wfs-=4;ctx.font=`900 italic ${wfs}px "Barlow Condensed",Impact,sans-serif`;}
+
+  ctx.save(); ctx.shadowColor=`rgba(${ar},${ag},${ab},0.75)`; ctx.shadowBlur=44;
+  ctx.fillStyle='#ffffff'; ctx.fillText(numStr,M,396); ctx.restore();
+
+  const numW=ctx.measureText(numStr).width;
+  const kgFs=Math.round(wfs*0.3);
+  ctx.save(); ctx.shadowColor=`rgba(${ar},${ag},${ab},0.9)`; ctx.shadowBlur=22;
+  ctx.fillStyle=accent; ctx.font=`900 italic ${kgFs}px "Barlow Condensed",Impact,sans-serif`;
+  ctx.fillText('KG',M+numW+12,316); ctx.restore();
+
+  ctx.fillStyle='rgba(255,255,255,0.32)';
+  ctx.font=`700 italic ${Math.round(wfs*0.26)}px "Barlow Condensed",Impact,sans-serif`;
+  ctx.fillText(`× ${mMaxReps}`,M+numW+12,375);
+
+  // ── BADGES ROW (y~418) ──
+  const isPR=!isDemo&&mainEx&&_mrStoryIsPR(mainEx.name,mMaxKg);
+  const badges=[];
+  if(isPR) badges.push({t:'● NEW PR',s:'pr'});
+  if(!isDemo){
+    const prevS=getAthSessions(_mrAthId).filter(s=>!(s.dia===_mrDay&&s.week===_mrWeek&&s.date===today()));
+    const thisVol=exItems.reduce((t,ex)=>t+ex.sets.reduce((ss,s)=>ss+(s.kg||0)*(s.reps||0),0),0);
+    const recent=prevS.slice(0,6);
+    if(recent.length>=2){
+      const avgVol=recent.reduce((t,s)=>t+(s.exercises||[]).reduce((et,e)=>et+(e.sets||[]).reduce((st,s2)=>st+(s2.kg||0)*(s2.reps||0),0),0),0)/recent.length;
+      const pct=Math.round((thisVol/avgVol-1)*100);
+      if(pct>=5) badges.push({t:`+${pct}% VOL`,s:'vol'});
+    }
+    const streak=_mrCalcStreak();
+    if(streak>=3) badges.push({t:`${streak} DAY STREAK`,s:'streak'});
   }
 
-  if(mainEx){
-    const exLabel=mainEx.name.toUpperCase();
-    ctx.fillStyle='#ffffff'; let efs=100;
-    ctx.font=`900 italic ${efs}px "Barlow Condensed",Impact,sans-serif`;
-    while(ctx.measureText(exLabel).width>W-M*2-16&&efs>46){ efs-=4; ctx.font=`900 italic ${efs}px "Barlow Condensed",Impact,sans-serif`; }
-    ctx.fillText(exLabel,M,ML_Y+140);
-
-    // Weight (accent + glow)
-    ctx.save(); ctx.shadowColor=accent; ctx.shadowBlur=32;
-    ctx.fillStyle=accent; ctx.font='900 italic 84px "Barlow Condensed",Impact,sans-serif';
-    ctx.fillText(`${mMaxKg}KG`,M,ML_Y+238); ctx.restore();
-
-    // × reps (subtle)
-    ctx.font='900 italic 84px "Barlow Condensed",Impact,sans-serif';
-    const kw=ctx.measureText(`${mMaxKg}KG`).width;
-    ctx.fillStyle='rgba(255,255,255,.45)'; ctx.font='700 46px "Barlow Condensed",Impact,sans-serif';
-    ctx.fillText(`× ${mMaxReps}`,M+kw+14,ML_Y+238);
-
-    // Set breakdown pills
-    const brkY=ML_Y+278; let bx=M;
-    mSets.forEach(s=>{
-      const lbl=`${s.kg}×${s.reps}`;
-      ctx.font='600 19px Inter,system-ui,sans-serif';
-      const tw=ctx.measureText(lbl).width, bw=tw+18, bh=30;
-      const isTop=s.kg===mMaxKg;
-      ctx.fillStyle=isTop?`rgba(${ar},${ag},${ab},0.2)`:'rgba(255,255,255,.06)';
-      ctx.beginPath(); ctx.roundRect(bx,brkY,bw,bh,6); ctx.fill();
-      ctx.strokeStyle=isTop?`rgba(${ar},${ag},${ab},0.45)`:'rgba(255,255,255,.1)'; ctx.lineWidth=1; ctx.stroke();
-      ctx.fillStyle=isTop?accent:'rgba(255,255,255,.55)';
-      ctx.fillText(lbl,bx+9,brkY+21); bx+=bw+7;
-    });
-
-    // Mini progress bar (volume of main lift vs total)
-    const mainVol=mSets.reduce((t,s)=>t+(s.kg||0)*(s.reps||0),0);
-    const totalVol=exItems.reduce((t,ex)=>t+ex.sets.reduce((ss,s)=>ss+(s.kg||0)*(s.reps||0),0),0);
-    const progRatio=totalVol?Math.min(1,mainVol/totalVol):0;
-    const barY=ML_Y+322, barW=W-M*2, barH=3;
-    ctx.fillStyle='rgba(255,255,255,.07)'; ctx.beginPath(); ctx.roundRect(M,barY,barW,barH,2); ctx.fill();
-    ctx.fillStyle=accent; ctx.globalAlpha=0.55; ctx.beginPath(); ctx.roundRect(M,barY,barW*progRatio,barH,2); ctx.fill(); ctx.globalAlpha=1;
-  }
-
-  // ─ 6. STATS 2×2 GRID ─
-  const ST_Y=ML_Y+360;
-  ctx.strokeStyle='rgba(255,255,255,.07)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(M,ST_Y); ctx.lineTo(W-M,ST_Y); ctx.stroke();
-
-  const totalVol2=exItems.reduce((t,ex)=>t+ex.sets.reduce((ss,s)=>ss+(s.kg||0)*(s.reps||0),0),0);
-  const totalSets=exItems.reduce((t,ex)=>t+ex.sets.length,0);
-  const stats=[
-    {lbl:'VOLUMEN TOTAL', val:totalVol2>=1000?(totalVol2/1000).toFixed(1)+'T':totalVol2.toLocaleString('es')+'KG', sub:'kilogramos'},
-    {lbl:'EJERCICIOS',    val:String(exItems.length), sub:'movimientos'},
-    {lbl:'SERIES',        val:String(totalSets), sub:'completadas'},
-    {lbl:'PICO',          val:maxKg+'KG', sub:'carga máxima'},
-  ];
-  const cW=(W-M*2)/2, cH=148;
-  stats.forEach((s,i)=>{
-    const col=i%2, row=Math.floor(i/2);
-    const sx=M+col*cW, sy=ST_Y+18+row*cH;
-    if(col===1&&row===0){ ctx.strokeStyle='rgba(255,255,255,.055)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(M+cW,ST_Y+10); ctx.lineTo(M+cW,ST_Y+cH*2); ctx.stroke(); }
-    if(row===1&&col===0){ ctx.strokeStyle='rgba(255,255,255,.055)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(M,ST_Y+18+cH); ctx.lineTo(W-M,ST_Y+18+cH); ctx.stroke(); }
-    ctx.fillStyle='rgba(255,255,255,.28)'; ctx.font='600 12px Inter,system-ui,sans-serif';
-    ctx.letterSpacing='4px'; ctx.fillText(s.lbl,sx+4,sy+26); ctx.letterSpacing='0px';
-    ctx.fillStyle='#ffffff'; let vfs=62;
-    ctx.font=`900 italic ${vfs}px "Barlow Condensed",Impact,sans-serif`;
-    while(ctx.measureText(s.val).width>cW-20&&vfs>28){ vfs-=4; ctx.font=`900 italic ${vfs}px "Barlow Condensed",Impact,sans-serif`; }
-    ctx.fillText(s.val,sx+4,sy+90);
-    ctx.fillStyle='rgba(255,255,255,.18)'; ctx.font='500 14px Inter,system-ui,sans-serif';
-    ctx.fillText(s.sub,sx+4,sy+114);
+  let bx=M;
+  badges.slice(0,3).forEach(b=>{
+    ctx.font='700 16px Inter,system-ui,sans-serif';
+    const tw=ctx.measureText(b.t).width, bw=tw+22, bh=30;
+    const ispr=b.s==='pr';
+    if(ispr){ ctx.save(); ctx.shadowColor=accent; ctx.shadowBlur=16; }
+    ctx.fillStyle=ispr?accent:'rgba(255,255,255,0.1)';
+    ctx.beginPath(); ctx.roundRect(bx,418,bw,bh,bh/2); ctx.fill();
+    if(ispr) ctx.restore();
+    if(!ispr){ ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.lineWidth=1; ctx.stroke(); }
+    ctx.fillStyle=ispr?'#000':'rgba(255,255,255,0.88)';
+    ctx.save(); if(ispr){ctx.shadowColor=accent;ctx.shadowBlur=8;}
+    ctx.fillText(b.t,bx+11,418+20); ctx.restore(); bx+=bw+8;
   });
 
-  // ─ 7. MUSCLE FOCUS + FOOTER ─
-  const FT_Y=ST_Y+cH*2+32;
-  ctx.strokeStyle='rgba(255,255,255,.07)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(M,FT_Y); ctx.lineTo(W-M,FT_Y); ctx.stroke();
+  // Accent micro-line after badges
+  ctx.save(); ctx.strokeStyle=accent; ctx.lineWidth=1; ctx.globalAlpha=0.35;
+  ctx.beginPath(); ctx.moveTo(M,460); ctx.lineTo(M+160,460); ctx.stroke(); ctx.restore();
 
+  // ── ATMOSPHERIC WAVEFORM (y~505, reduced) ──
+  const allSets2=[];
+  exItems.forEach(ex=>ex.sets.forEach(s=>allSets2.push(s.kg||0)));
+  const maxKgAll=Math.max(...allSets2,1);
+  const WVY=510, WVA=36;
+  const wvP=allSets2.map((kg,i)=>({x:(i/(allSets2.length-1||1))*W, y:WVY-(kg/maxKgAll)*WVA}));
+  const wvFull=[{x:-6,y:WVY},...wvP,{x:W+6,y:WVY}];
+  const drawWv=(pts,lw,a)=>{
+    ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+    for(let i=0;i<pts.length-1;i++){const cpx=(pts[i].x+pts[i+1].x)/2;ctx.bezierCurveTo(cpx,pts[i].y,cpx,pts[i+1].y,pts[i+1].x,pts[i+1].y);}
+    ctx.strokeStyle=accent; ctx.lineWidth=lw; ctx.globalAlpha=a; ctx.stroke(); ctx.globalAlpha=1;
+  };
+  drawWv(wvFull,10,0.05); drawWv(wvFull,4,0.1);
+  ctx.save(); ctx.shadowColor=accent; ctx.shadowBlur=10; drawWv(wvFull,1.2,0.55); ctx.restore();
+  // Set dots
+  wvP.forEach(p=>{ ctx.beginPath(); ctx.arc(p.x,p.y,2.5,0,Math.PI*2); ctx.fillStyle=accent; ctx.globalAlpha=0.6; ctx.fill(); ctx.globalAlpha=1; });
+
+  // ── SIDE METRICS (y: 660-1020, hugging edges) ──
+  const sideLine=(x,y1,y2)=>{
+    ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(x,y1); ctx.lineTo(x,y2); ctx.stroke();
+    for(let ty=y1+10;ty<y2;ty+=80){ ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.beginPath(); ctx.moveTo(x,ty); ctx.lineTo(x+(x<W/2?10:-10),ty); ctx.stroke(); }
+  };
+  sideLine(M,650,1050); sideLine(W-M,650,1050);
+
+  const drawMetric=(x,y,lbl,val,sub,align)=>{
+    const a=align==='right';
+    ctx.save(); ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=12; ctx.textAlign=align;
+    ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.font='600 11px Inter,system-ui,sans-serif';
+    ctx.letterSpacing='4px'; ctx.fillText(lbl,x,y); ctx.letterSpacing='0px';
+    ctx.fillStyle='rgba(255,255,255,0.92)'; ctx.font=`900 italic 44px "Barlow Condensed",Impact,sans-serif`;
+    ctx.fillText(val,x,y+38);
+    ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.font='500 12px Inter,system-ui,sans-serif';
+    ctx.fillText(sub,x,y+58); ctx.textAlign='left'; ctx.restore();
+  };
+
+  const totalVol=exItems.reduce((t,ex)=>t+ex.sets.reduce((ss,s)=>ss+(s.kg||0)*(s.reps||0),0),0);
+  const volStr=totalVol>=1000?(totalVol/1000).toFixed(1)+'T':totalVol+'KG';
+  const totalSets=exItems.reduce((t,ex)=>t+ex.sets.length,0);
+
+  drawMetric(M+20,700,'VOLUMEN',volStr,'total','left');
+  drawMetric(M+20,820,'PICO',maxKgAll+'KG','max set','left');
+  drawMetric(W-M-20,700,'SERIES',String(totalSets),'completadas','right');
+  drawMetric(W-M-20,820,'EJERC.',String(exItems.length),'movimientos','right');
+
+  // ── SEPARATOR ──
+  ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(M,1390); ctx.lineTo(W-M,1390); ctx.stroke();
+
+  // ── MUSCLE PILLS (y~1420) ──
   const muscles=_mrStoryMuscles(exItems);
-  ctx.fillStyle='rgba(255,255,255,.22)'; ctx.font='600 12px Inter,system-ui,sans-serif';
-  ctx.letterSpacing='5px'; ctx.fillText('GRUPO MUSCULAR',M,FT_Y+36); ctx.letterSpacing='0px';
+  let mpx=M;
+  (muscles.length?muscles:['FULL BODY']).forEach(m=>{
+    ctx.font='700 15px Inter,system-ui,sans-serif';
+    const tw=ctx.measureText(m).width, bw=tw+20, bh=30;
+    ctx.fillStyle=`rgba(${ar},${ag},${ab},0.14)`; ctx.beginPath(); ctx.roundRect(mpx,1420,bw,bh,4); ctx.fill();
+    ctx.strokeStyle=`rgba(${ar},${ag},${ab},0.45)`; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle=accent; ctx.fillText(m,mpx+10,1420+20); mpx+=bw+8;
+  });
 
-  const mStr=muscles.length?muscles.join('  ·  '):'FULL BODY';
-  ctx.fillStyle='rgba(255,255,255,.78)'; let mfs=40;
-  ctx.font=`700 italic ${mfs}px "Barlow Condensed",Impact,sans-serif`;
-  while(ctx.measureText(mStr).width>W-M*2&&mfs>22){ mfs-=2; ctx.font=`700 italic ${mfs}px "Barlow Condensed",Impact,sans-serif`; }
-  ctx.fillText(mStr,M,FT_Y+78);
+  // ── MINI STATS ROW (y~1490) ──
+  const miniS=[{l:'TOTAL',v:volStr},{l:'MAX',v:maxKgAll+'KG'},{l:'SETS',v:String(totalSets)},{l:'EJERC',v:String(exItems.length)}];
+  const msW=(W-M*2)/miniS.length;
+  miniS.forEach((s,i)=>{
+    const sx=M+i*msW;
+    if(i>0){ ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(sx,1492); ctx.lineTo(sx,1548); ctx.stroke(); }
+    ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.font='600 11px Inter,system-ui,sans-serif';
+    ctx.letterSpacing='3px'; ctx.fillText(s.l,sx+4,1508); ctx.letterSpacing='0px';
+    ctx.fillStyle='rgba(255,255,255,0.88)'; ctx.font=`900 italic 36px "Barlow Condensed",Impact,sans-serif`;
+    ctx.fillText(s.v,sx+4,1546);
+  });
 
-  // Accent micro-line
-  ctx.save(); ctx.shadowColor=accent; ctx.shadowBlur=12; ctx.strokeStyle=accent;
-  ctx.lineWidth=1; ctx.globalAlpha=0.35;
-  ctx.beginPath(); ctx.moveTo(M,FT_Y+94); ctx.lineTo(M+200,FT_Y+94); ctx.stroke();
-  ctx.restore(); ctx.globalAlpha=1;
+  // ── PERFORMANCE BADGE (y~1580) ──
+  if(!isDemo){
+    const prevS2=getAthSessions(_mrAthId).filter(s=>!(s.dia===_mrDay&&s.week===_mrWeek&&s.date===today()));
+    const recent2=prevS2.slice(0,5);
+    if(recent2.length>=2){
+      const avg2=recent2.reduce((t,s)=>t+(s.exercises||[]).reduce((et,e)=>et+(e.sets||[]).reduce((st,s2)=>st+(s2.kg||0)*(s2.reps||0),0),0),0)/recent2.length;
+      const pct=Math.round((totalVol/avg2-1)*100);
+      const pstr=(pct>=0?`+${pct}%`:`${pct}%`)+' VS PROMEDIO';
+      ctx.save();
+      ctx.shadowColor=pct>=0?'rgba(74,222,128,0.6)':'rgba(248,113,113,0.5)'; ctx.shadowBlur=14;
+      ctx.fillStyle=pct>=0?'rgba(74,222,128,0.92)':'rgba(248,113,113,0.82)';
+      ctx.font='700 italic 28px "Barlow Condensed",Impact,sans-serif';
+      ctx.letterSpacing='2px'; ctx.fillText(pstr,M,1590); ctx.letterSpacing='0px'; ctx.restore();
+    }
+  }
 
-  const dtStr=new Date().toLocaleDateString('es-UY',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}).toUpperCase();
-  ctx.fillStyle='rgba(255,255,255,.18)'; ctx.font='400 15px Inter,system-ui,sans-serif';
-  ctx.fillText(dtStr,M,FT_Y+120);
+  // ── MOTIVATIONAL PHRASE (y~1650) ──
+  const phrases=['DISCIPLINA > MOTIVACIÓN','CONSISTENCY WINS','BUILT THROUGH REPETITION','TRUST THE PROCESS','SIN EXCUSAS','EARNED NOT GIVEN','THE PROCESS IS THE PRIZE','EVERY REP COUNTS'];
+  const phrase=phrases[(athName.charCodeAt(0)||0)%phrases.length];
+  ctx.fillStyle='rgba(255,255,255,0.20)'; ctx.font='800 italic 36px "Barlow Condensed",Impact,sans-serif';
+  ctx.letterSpacing='1px'; ctx.fillText(phrase,M,1652); ctx.letterSpacing='0px';
 
-  // Micro floating data
-  ctx.fillStyle='rgba(255,255,255,.14)'; ctx.font='500 13px Inter,system-ui,sans-serif';
-  ctx.textAlign='right'; ctx.fillText(`V·${totalVol2.toLocaleString('es')}`,W-M,FT_Y+36);
-  ctx.fillText(`S·${totalSets}`,W-M,FT_Y+56); ctx.textAlign='left';
+  // Set breakdown of main lift (y~1720)
+  if(mSets.length){
+    ctx.fillStyle='rgba(255,255,255,0.18)'; ctx.font='600 12px Inter,system-ui,sans-serif';
+    ctx.letterSpacing='4px'; ctx.fillText('SERIES',M,1702); ctx.letterSpacing='0px';
+    let sx2=M; const sbY=1730;
+    mSets.forEach(s=>{
+      const lbl=`${s.kg}×${s.reps}`; ctx.font='600 19px Inter,system-ui,sans-serif';
+      const tw=ctx.measureText(lbl).width, bw=tw+16, bh=28;
+      const top=s.kg===mMaxKg;
+      ctx.fillStyle=top?`rgba(${ar},${ag},${ab},0.2)`:'rgba(255,255,255,0.06)';
+      ctx.beginPath(); ctx.roundRect(sx2,sbY,bw,bh,5); ctx.fill();
+      ctx.strokeStyle=top?`rgba(${ar},${ag},${ab},0.5)`:'rgba(255,255,255,0.1)'; ctx.lineWidth=1; ctx.stroke();
+      ctx.fillStyle=top?accent:'rgba(255,255,255,0.55)'; ctx.fillText(lbl,sx2+8,sbY+20); sx2+=bw+6;
+    });
+  }
 
-  // Watermark
-  ctx.fillStyle='rgba(255,255,255,.07)'; ctx.font='700 15px Inter,system-ui,sans-serif';
-  ctx.letterSpacing='5px'; ctx.textAlign='center'; ctx.fillText('SQUAD TEAM · COACH OS',W/2,H-50);
+  // ── DATE + WATERMARK ──
+  const dtStr=new Date().toLocaleDateString('es-UY',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
+  ctx.fillStyle='rgba(255,255,255,0.18)'; ctx.font='400 14px Inter,system-ui,sans-serif';
+  ctx.textAlign='right'; ctx.fillText(dtStr,W-M,1810); ctx.textAlign='left';
+
+  ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.font='700 14px Inter,system-ui,sans-serif';
+  ctx.letterSpacing='5px'; ctx.textAlign='center'; ctx.fillText('SQUAD TEAM · COACH OS',W/2,H-44);
   ctx.letterSpacing='0px'; ctx.textAlign='left';
 
-  ctx.fillStyle=accent; ctx.fillRect(0,H-4,W,4);
+  // Bottom accent strip
+  ctx.save(); ctx.shadowColor=`rgba(${ar},${ag},${ab},0.6)`; ctx.shadowBlur=10;
+  ctx.fillStyle=`rgba(${ar},${ag},${ab},0.75)`; ctx.fillRect(0,H-4,W,4); ctx.restore();
 
-  // ─ EXPORT ─
-  const dataUrl=canvas.toDataURL('image/png');
-  const sfx=isDemo?'demo':`story_${dayLabel}_s${weekNum}`;
+  // ── EXPORT ──
+  const dataUrl=canvas.toDataURL('image/png'); // PNG preserves transparency
+  const sfx=isDemo?'hud_demo':`hud_${dayLabel}_s${weekNum}`;
   if(!isDemo&&navigator.canShare?.({files:[new File([],'t.png',{type:'image/png'})]})){
     const blob=await(await fetch(dataUrl)).blob();
-    const file2=new File([blob],`squad_${sfx}.png`,{type:'image/png'});
-    try{ await navigator.share({files:[file2],title:`${dayLabel} · Semana ${weekNum}`}); }
+    const f2=new File([blob],`squad_${sfx}.png`,{type:'image/png'});
+    try{ await navigator.share({files:[f2],title:`${dayLabel} · Semana ${weekNum}`}); }
     catch(e){ if(e.name!=='AbortError') _mrDownloadImage(dataUrl,sfx); }
   } else { _mrDownloadImage(dataUrl,sfx); }
-  toast(isDemo?'📸 Story demo generada':'📸 Story generada');
+  toast(isDemo?'📸 HUD demo generado':'📸 HUD generado');
+}
+
+function _mrCalcStreak(){
+  const sessions=getAthSessions(_mrAthId);
+  if(!sessions.length) return 0;
+  const dates=new Set(sessions.map(s=>s.date));
+  let streak=0; const d=new Date(); d.setHours(0,0,0,0);
+  while(true){
+    const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    if(!dates.has(ds)) break;
+    streak++; d.setDate(d.getDate()-1);
+  }
+  return streak;
 }
 
 function _mrStoryMainLift(exItems){
@@ -1223,7 +1239,7 @@ function _mrStoryMainLift(exItems){
 }
 
 function _mrStoryIsPR(exName,kg){
-  if(!kg||kg<=0) return false;
+  if(!kg||kg<=0||!_mrAthId) return false;
   const prev=getAthSessions(_mrAthId).filter(s=>!(s.dia===_mrDay&&s.week===_mrWeek&&s.date===today()));
   const mx=prev.reduce((m,s)=>{ const e=(s.exercises||[]).find(e=>e.name===exName); if(!e) return m; return Math.max(m,...(e.sets||[]).map(st=>st.kg||0)); },0);
   return kg>mx&&mx>0;
@@ -1231,17 +1247,17 @@ function _mrStoryIsPR(exName,kg){
 
 function _mrStoryMuscles(exItems){
   const MAP=[
-    {keys:['banca','pecho','chest','pec','inclinado'],    label:'PECTORALES'},
-    {keys:['militar','hombro','shoulder','lateral'],      label:'HOMBROS'},
-    {keys:['tríceps','triceps','fondos','extensión'],     label:'TRÍCEPS'},
-    {keys:['espalda','remo','dominada','jalón'],          label:'ESPALDA'},
-    {keys:['bíceps','biceps','curl'],                     label:'BÍCEPS'},
-    {keys:['sentadilla','squat','prensa','pierna','leg'], label:'PIERNAS'},
-    {keys:['peso muerto','deadlift'],                     label:'CADENA P.'},
-    {keys:['abdomen','abs','core'],                       label:'CORE'},
+    {k:['banca','pecho','chest','pec','inclinado'],   l:'PECTORALES'},
+    {k:['militar','hombro','shoulder','lateral'],     l:'HOMBROS'},
+    {k:['tríceps','triceps','fondos','extensión'],    l:'TRÍCEPS'},
+    {k:['espalda','remo','dominada','jalón'],         l:'ESPALDA'},
+    {k:['bíceps','biceps','curl'],                   l:'BÍCEPS'},
+    {k:['sentadilla','squat','prensa','pierna','leg'],l:'PIERNAS'},
+    {k:['peso muerto','deadlift'],                   l:'CADENA P.'},
+    {k:['abdomen','abs','core'],                     l:'CORE'},
   ];
   const found=new Set();
-  exItems.forEach(ex=>{ const n=ex.name.toLowerCase(); MAP.forEach(m=>{ if(m.keys.some(k=>n.includes(k))) found.add(m.label); }); });
+  exItems.forEach(ex=>{ const n=ex.name.toLowerCase(); MAP.forEach(m=>{if(m.k.some(k=>n.includes(k))) found.add(m.l);}); });
   return [...found].slice(0,3);
 }
 

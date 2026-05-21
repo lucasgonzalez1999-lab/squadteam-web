@@ -214,8 +214,34 @@ function showAthleteUI(user) {
   const tog = document.querySelector('.sidebar-tog');
   if (tog) tog.style.display = 'none';
   const av = document.getElementById('top-av');
-  if (av) { av.title = 'Cerrar sesión'; av.onclick = doLogout; }
+  if (av) { av.title = 'Cerrar sesión'; av.onclick = confirmLogout; }
   goSection('mi-rutina', null);
+}
+
+function confirmLogout() {
+  let ov = document.getElementById('logout-confirm-ov');
+  if (ov) return;
+  ov = document.createElement('div');
+  ov.id = 'logout-confirm-ov';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML = `
+    <div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:24px;max-width:280px;width:100%;text-align:center">
+      <div style="font-size:28px;margin-bottom:12px">👋</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px">¿Cerrar sesión?</div>
+      <div style="font-size:13px;color:var(--sub);margin-bottom:20px">Vas a tener que volver a ingresar tu PIN.</div>
+      <div style="display:flex;gap:10px">
+        <button onclick="document.getElementById('logout-confirm-ov').remove()"
+          style="flex:1;padding:11px 0;background:none;border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+          Cancelar
+        </button>
+        <button onclick="document.getElementById('logout-confirm-ov').remove();doLogout()"
+          style="flex:1;padding:11px 0;background:#ef4444;border:none;border-radius:10px;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+          Cerrar sesión
+        </button>
+      </div>
+    </div>`;
+  ov.onclick = e => { if (e.target === ov) ov.remove(); };
+  document.body.appendChild(ov);
 }
 
 function doLogout() {

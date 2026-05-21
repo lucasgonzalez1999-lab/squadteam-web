@@ -1038,19 +1038,87 @@ function editDiet(id){
   const a=athletes.find(x=>x.id===id);
   if(!a)return;
   const diet=getDiet(id)||{prot:0,carbs:0,fat:0};
-  const prot=prompt(`Proteína (g) para ${a.name}:`,diet.prot||0);
-  if(prot===null)return;
-  const carbs=prompt(`Carbohidratos (g):`,diet.carbs||0);
-  if(carbs===null)return;
-  const fat=prompt(`Grasas (g):`,diet.fat||0);
-  if(fat===null)return;
-  const p=parseInt(prot)||0,c=parseInt(carbs)||0,f=parseInt(fat)||0;
+  const color=athColor(id);
+
+  let ov=document.getElementById('diet-edit-ov');
+  if(ov) ov.remove();
+  ov=document.createElement('div');
+  ov.id='diet-edit-ov';
+  ov.style.cssText='position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML=`
+    <div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:360px;overflow:hidden">
+      <div style="padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:15px;font-weight:800;color:var(--text)">Macros de ${a.name}</div>
+          <div style="font-size:12px;color:var(--sub);margin-top:2px">Gramos por día</div>
+        </div>
+        <button onclick="document.getElementById('diet-edit-ov').remove()"
+          style="background:none;border:none;color:var(--sub);font-size:20px;cursor:pointer;line-height:1;padding:4px">×</button>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.4px;display:block;margin-bottom:6px">PROTEÍNA (g)</label>
+          <input id="de-prot" type="number" min="0" value="${diet.prot||0}"
+            oninput="dietEditCalc()"
+            style="width:100%;padding:10px 12px;border:1.5px solid var(--border2);border-radius:10px;font-size:16px;font-weight:700;font-family:inherit;background:var(--surf2);color:var(--text);outline:none;box-sizing:border-box"
+            onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor='var(--border2)'">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.4px;display:block;margin-bottom:6px">CARBOHIDRATOS (g)</label>
+          <input id="de-carbs" type="number" min="0" value="${diet.carbs||0}"
+            oninput="dietEditCalc()"
+            style="width:100%;padding:10px 12px;border:1.5px solid var(--border2);border-radius:10px;font-size:16px;font-weight:700;font-family:inherit;background:var(--surf2);color:var(--text);outline:none;box-sizing:border-box"
+            onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor='var(--border2)'">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.4px;display:block;margin-bottom:6px">GRASAS (g)</label>
+          <input id="de-fat" type="number" min="0" value="${diet.fat||0}"
+            oninput="dietEditCalc()"
+            style="width:100%;padding:10px 12px;border:1.5px solid var(--border2);border-radius:10px;font-size:16px;font-weight:700;font-family:inherit;background:var(--surf2);color:var(--text);outline:none;box-sizing:border-box"
+            onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor='var(--border2)'">
+        </div>
+        <div id="de-kcal" style="text-align:center;padding:10px;background:${color}12;border-radius:10px;border:1px solid ${color}25">
+          <span style="font-size:13px;color:var(--sub)">Total: </span>
+          <span id="de-kcal-val" style="font-size:18px;font-weight:800;color:${color}">${diet.kcal||Math.round((diet.prot||0)*4+(diet.carbs||0)*4+(diet.fat||0)*9)}</span>
+          <span style="font-size:13px;color:var(--sub)"> kcal</span>
+        </div>
+      </div>
+      <div style="padding:0 20px 20px;display:flex;gap:10px">
+        <button onclick="document.getElementById('diet-edit-ov').remove()"
+          style="flex:1;padding:12px 0;background:none;border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+          Cancelar
+        </button>
+        <button onclick="saveDietEdit('${id}')"
+          style="flex:2;padding:12px 0;background:${color};border:none;border-radius:10px;color:white;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">
+          Guardar macros
+        </button>
+      </div>
+    </div>`;
+  ov.onclick=e=>{if(e.target===ov)ov.remove();};
+  document.body.appendChild(ov);
+  document.getElementById('de-prot')?.focus();
+}
+
+function dietEditCalc(){
+  const p=parseInt(document.getElementById('de-prot')?.value)||0;
+  const c=parseInt(document.getElementById('de-carbs')?.value)||0;
+  const f=parseInt(document.getElementById('de-fat')?.value)||0;
+  const el=document.getElementById('de-kcal-val');
+  if(el) el.textContent=Math.round(p*4+c*4+f*9);
+}
+
+function saveDietEdit(id){
+  const a=athletes.find(x=>x.id===id);
+  if(!a)return;
+  const p=parseInt(document.getElementById('de-prot')?.value)||0;
+  const c=parseInt(document.getElementById('de-carbs')?.value)||0;
+  const f=parseInt(document.getElementById('de-fat')?.value)||0;
   const kcal=Math.round(p*4+c*4+f*9);
   const newDiet={prot:p,carbs:c,fat:f,kcal};
   DB.set('diet_'+id,newDiet);
-  // Save to Firebase
   window.db?.collection('diets').doc(id).set(newDiet).catch(()=>{});
-  toast(`Dieta de ${a.name} actualizada — ${kcal} kcal`);
+  document.getElementById('diet-edit-ov')?.remove();
+  toast(`✓ Dieta de ${a.name} actualizada — ${kcal} kcal`);
   renderNutricion();
 }
 

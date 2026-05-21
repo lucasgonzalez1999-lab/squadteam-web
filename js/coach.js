@@ -534,7 +534,7 @@ function renderAlumnos(){
                 ${athAvatar(a)}
                 <div>
                   <div class="ath-nm">${a.name}</div>
-                  <div class="ath-subs">${ss.length} sesiones${pay.amount?' · $'+pay.amount+' USD':''}</div>
+                  <div class="ath-subs">${ss.length} sesiones${pay.amount?' · $'+pay.amount+' USD':''} · <span class="pin-reveal" title="Click para ver PIN" onclick="event.stopPropagation();this.dataset.shown=this.dataset.shown==='1'?'0':'1';this.textContent=this.dataset.shown==='1'?'PIN: ${a.pin||'—'}':'PIN: ••••'" data-shown="0">PIN: ••••</span></div>
                 </div>
               </div>
             </td>

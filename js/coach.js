@@ -66,7 +66,7 @@ function cmdSearch(q){
   const sections=[
     {id:'dashboard',label:'Panel',sub:'Vista principal del equipo',tag:'Nav'},
     {id:'live',label:'En Vivo',sub:'Sesiones en curso',tag:'Nav'},
-    {id:'alumnos',label:'Atletas',sub:'Lista de alumnos',tag:'Nav'},
+    {id:'alumnos',label:'Alumnos',sub:'Lista de alumnos',tag:'Nav'},
     {id:'planilla',label:'Planes',sub:'Rutinas y planillas',tag:'Nav'},
     {id:'nutricion',label:'Nutrición',sub:'Dietas y macros',tag:'Nav'},
     {id:'progreso',label:'Progreso',sub:'Estadísticas y PRs',tag:'Nav'},
@@ -219,7 +219,7 @@ function renderDashboard(){
   } else if(trainedToday===athletes.length&&athletes.length>0){
     heroBadgeClass='ok';heroBadgeText='EQUIPO COMPLETO';
     heroHeadline='EQUIPO <span>AL DÍA</span>';
-    heroSub='Todos los atletas entrenaron hoy';
+    heroSub='Todos los alumnos entrenaron hoy';
   } else if(trainedToday>0){
     heroBadgeClass='ok';heroBadgeText='SISTEMA ACTIVO';
     heroHeadline=`${trainedToday} DE ${athletes.length} <span>ATLETAS HOY</span>`;
@@ -293,7 +293,7 @@ function renderDashboard(){
   <div class="stats-grid" style="margin-bottom:16px">
     <div class="stat-card">
       <div class="stat-top">
-        <div class="stat-label">Atletas</div>
+        <div class="stat-label">Alumnos</div>
         <div class="stat-icon-sq green">${ico.users}</div>
       </div>
       <div class="stat-val">${athletes.length}</div>
@@ -554,7 +554,7 @@ function renderAlumnos(){
                 <button class="btn-icon" title="Ver perfil" onclick="openAthProfile('${a.id}')">👤</button>
                 <button class="btn-icon" title="Planilla" onclick="openAthPlanilla('${a.id}')">📋</button>
                 <button class="btn-icon" title="Dieta" onclick="openAthDiet('${a.id}')">🥗</button>
-                <button class="btn-icon" title="Editar atleta" onclick="openEditAthleteModal('${a.id}')">✏️</button>
+                <button class="btn-icon" title="Editar alumno" onclick="openEditAthleteModal('${a.id}')">✏️</button>
                 <button class="btn-icon green-fill" title="Iniciar sesión" onclick="startLiveFor('${a.id}')">▶</button>
               </div>
             </td>
@@ -606,7 +606,7 @@ function _naRenderStep(step, data){
   const header = `
     <div style="padding:20px 22px 16px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--border)">
       <div>
-        <div style="font-size:15px;font-weight:800;color:var(--text)">Nuevo atleta</div>
+        <div style="font-size:15px;font-weight:800;color:var(--text)">Nuevo alumno</div>
         <div style="font-size:12px;color:var(--sub);margin-top:2px">Paso ${step} de 3 — ${stepLabel}</div>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
@@ -703,7 +703,7 @@ function _naRenderStep(step, data){
     footer=`
       <div style="padding:0 22px 20px;display:flex;gap:8px">
         <button onclick="_naRenderStep(2,window._naDraft)" id="na-back-btn" style="flex:1;padding:10px 0;background:none;border:1px solid var(--border);border-radius:10px;color:var(--sub);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">← Volver</button>
-        <button onclick="_naConfirm()" id="na-confirm-btn" style="flex:2;padding:10px 0;background:var(--acc);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Crear atleta</button>
+        <button onclick="_naConfirm()" id="na-confirm-btn" style="flex:2;padding:10px 0;background:var(--acc);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Crear alumno</button>
       </div>`;
   }
 
@@ -799,7 +799,7 @@ async function _naConfirm(){
     renderAlumnos();
     toast(`✅ ${data.name} creado — PIN ${data.pin}`);
   } catch(e){
-    btn.disabled=false; btn.textContent='Crear atleta'; backBtn.disabled=false;
+    btn.disabled=false; btn.textContent='Crear alumno'; backBtn.disabled=false;
     const msg=e.code==='auth/email-already-in-use'?'Ya existe una cuenta con ese nombre (ID duplicado). Cambiá el nombre ligeramente.'
       :e.code==='auth/weak-password'?'PIN inválido para la contraseña.'
       :`Error: ${e.message}`;
@@ -828,7 +828,7 @@ function openEditAthleteModal(id){
     <div style="padding:20px 22px 16px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--border)">
       <div>
         <div style="font-size:15px;font-weight:800;color:var(--text)">Editar — ${a.name}</div>
-        <div style="font-size:12px;color:var(--sub);margin-top:2px">Modificá datos del atleta</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:2px">Modificá datos del alumno</div>
       </div>
       <button onclick="document.getElementById('edit-ath-ov').remove()" style="background:none;border:1px solid var(--border);border-radius:8px;width:30px;height:30px;cursor:pointer;color:var(--sub);font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0">×</button>
     </div>
@@ -1411,7 +1411,7 @@ async function renderDiag(){
   checks.push({ label:'Bot Telegram', ok:botOk, detail:botDetail });
 
   // 5. Reglas Firestore — test de lectura sin auth (debe fallar = reglas activas)
-  checks.push({ label:'Reglas Firestore', ok:true, detail:'Deployadas · atletas protegidos por rol' });
+  checks.push({ label:'Reglas Firestore', ok:true, detail:'Deployadas · alumnos protegidos por rol' });
 
   // ── RENDER ──
   const dot = ok => `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${ok?'#22c55e':'#ef4444'};flex-shrink:0;margin-top:3px"></span>`;
@@ -1436,12 +1436,12 @@ async function renderDiag(){
   </div>
 
   <div class="section-card">
-    <div class="section-head"><div class="section-title">Atletas</div></div>
+    <div class="section-head"><div class="section-title">Alumnos</div></div>
     <div class="section-body">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead>
           <tr style="color:var(--sub);border-bottom:1px solid var(--border)">
-            <th style="text-align:left;padding:6px 8px">Atleta</th>
+            <th style="text-align:left;padding:6px 8px">Alumno</th>
             <th style="text-align:center;padding:6px 4px">Sesiones</th>
             <th style="text-align:center;padding:6px 4px">Plan</th>
             <th style="text-align:center;padding:6px 4px">Dieta</th>

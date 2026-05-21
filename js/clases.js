@@ -169,7 +169,7 @@ function _renderClasesCoach(el){
       <!-- POR ATLETA -->
       <div class="cl-section">
         <div class="cl-section-head">
-          <span class="cl-section-label">Atletas</span>
+          <span class="cl-section-label">Alumnos</span>
         </div>
         <div class="cl-ath-list">
           ${(Array.isArray(athletes)?athletes:[]).map(a => {
@@ -315,7 +315,7 @@ function openClasesModal(athId){
   } else {
     // Picker
     document.getElementById('cl-modal-title').textContent = 'Editar horario';
-    document.getElementById('cl-modal-sub').textContent   = 'Seleccioná un atleta';
+    document.getElementById('cl-modal-sub').textContent   = 'Seleccioná un alumno';
     body.innerHTML = `
       <div class="cl-picker">
         ${(Array.isArray(athletes)?athletes:[]).map(a => {

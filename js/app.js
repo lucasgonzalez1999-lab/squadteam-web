@@ -953,7 +953,7 @@ function openPreviewPicker() {
     <div style="background:var(--surf);border:1px solid var(--border2);border-radius:18px;width:100%;max-width:360px;overflow:hidden">
       <div style="padding:20px 22px 14px;border-bottom:1px solid var(--border)">
         <div style="font-size:15px;font-weight:800;color:var(--text)">Ver como alumno</div>
-        <div style="font-size:12px;color:var(--sub);margin-top:4px">Elegí un atleta para previsualizar su vista</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:4px">Elegí un alumno para previsualizar su vista</div>
       </div>
       <div style="padding:10px;max-height:60vh;overflow-y:auto">
         ${ath.map(a => {
@@ -1000,7 +1000,7 @@ function enterSelfAthleteMode() {
     if (el) { el.textContent = athInitial(profile.name); el.style.background = profile.color + '20'; el.style.color = profile.color; }
   });
   const fn = document.getElementById('foot-name'); if (fn) fn.textContent = profile.name;
-  const fr = document.getElementById('foot-role'); if (fr) fr.textContent = 'Coach · Atleta';
+  const fr = document.getElementById('foot-role'); if (fr) fr.textContent = 'Coach · Alumno';
   const tit = document.getElementById('tb-title'); if (tit) tit.textContent = profile.name.toUpperCase();
   const sub = document.getElementById('logo-sub'); if (sub) sub.textContent = 'Mi Entreno';
   _showPreviewBanner('💪 Mi Entrenamiento');

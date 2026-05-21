@@ -54,9 +54,15 @@ async function mrLoadPlan(athId){
   try{
     const doc = await window.db.collection('plans').doc(athId).get();
     if(!doc.exists) return null;
-    const raw = doc.data()?.data;
-    if(!raw) return null;
-    const plan = JSON.parse(raw);
+    const docData = doc.data();
+    // Support both legacy format ({data: JSON string}) and direct object format
+    let plan;
+    if(typeof docData?.data === 'string') {
+      plan = JSON.parse(docData.data);
+    } else {
+      plan = docData;
+    }
+    if(!plan) return null;
     if(plan.dias && !plan.byDay) plan.byDay = plan.dias;
     return plan;
   }catch(e){ return null; }

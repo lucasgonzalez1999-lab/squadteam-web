@@ -937,6 +937,79 @@ function exportAthleteCard(athId){
   toast('📸 Story exportada!');
 }
 
+// ── PREVIEW MODE ──
+let _previewCoachProfile = null;
+window._prevAthMap = {};
+
+function openPreviewPicker() {
+  const ath = Array.isArray(athletes) ? athletes.filter(a => !a.inactive) : [];
+  window._prevAthMap = {};
+  ath.forEach(a => { window._prevAthMap[a.id] = a; });
+  let ov = document.getElementById('preview-picker-ov');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'preview-picker-ov'; document.body.appendChild(ov); }
+  ov.onclick = e => { if (e.target === ov) ov.remove(); };
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML = `
+    <div style="background:var(--surf);border:1px solid var(--border2);border-radius:18px;width:100%;max-width:360px;overflow:hidden">
+      <div style="padding:20px 22px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:15px;font-weight:800;color:var(--text)">Ver como alumno</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:4px">Elegí un atleta para previsualizar su vista</div>
+      </div>
+      <div style="padding:10px;max-height:60vh;overflow-y:auto">
+        ${ath.map(a => {
+          const color = a.color || athColor(a.id);
+          return `<button onclick="enterPreviewMode('${a.id}');document.getElementById('preview-picker-ov')?.remove()"
+            style="width:100%;display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;border:none;background:none;cursor:pointer;text-align:left;font-family:inherit;-webkit-tap-highlight-color:transparent"
+            onmouseover="this.style.background='var(--surf2)'" onmouseout="this.style.background='none'">
+            <div style="width:36px;height:36px;border-radius:10px;background:${color}22;color:${color};font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${(a.name||'?')[0].toUpperCase()}</div>
+            <div style="font-size:14px;font-weight:600;color:var(--text)">${a.name}</div>
+          </button>`;
+        }).join('')}
+        ${!ath.length ? '<div style="padding:20px;text-align:center;color:var(--sub);font-size:13px">No hay atletas cargados</div>' : ''}
+      </div>
+    </div>`;
+}
+
+function enterPreviewMode(athId) {
+  const a = window._prevAthMap[athId] || (Array.isArray(athletes) ? athletes.find(x => x.id === athId) : null);
+  if (!a) return;
+  const profile = { id: a.id, name: a.name, role: 'athlete', color: a.color || athColor(a.id) };
+  _previewCoachProfile = currentUser;
+  currentUser = profile;
+  showAthleteUI(profile);
+  ['foot-av','top-av'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = athInitial(profile.name); el.style.background = profile.color + '20'; el.style.color = profile.color; }
+  });
+  const fn = document.getElementById('foot-name'); if (fn) fn.textContent = profile.name;
+  const fr = document.getElementById('foot-role'); if (fr) fr.textContent = 'Previsualización';
+  const tit = document.getElementById('tb-title'); if (tit) tit.textContent = profile.name.toUpperCase();
+  const sub = document.getElementById('logo-sub'); if (sub) sub.textContent = 'Preview';
+  const banner = document.getElementById('preview-banner');
+  if (banner) { document.getElementById('preview-banner-name').textContent = profile.name; banner.style.display = 'flex'; }
+  toast('👁 Vista de ' + profile.name);
+}
+
+function exitPreviewMode() {
+  if (!_previewCoachProfile) return;
+  currentUser = _previewCoachProfile;
+  _previewCoachProfile = null;
+  const banner = document.getElementById('preview-banner');
+  if (banner) banner.style.display = 'none';
+  showCoachUI();
+  const u = currentUser;
+  ['foot-av','top-av'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = athInitial(u.name); el.style.background = (u.color || athColor(u.id)) + '20'; el.style.color = u.color || athColor(u.id); }
+  });
+  const fn = document.getElementById('foot-name'); if (fn) fn.textContent = u.name;
+  const fr = document.getElementById('foot-role'); if (fr) fr.textContent = 'Entrenador';
+  const tit = document.getElementById('tb-title'); if (tit) tit.textContent = 'SQUAD TEAM';
+  const sub = document.getElementById('logo-sub'); if (sub) sub.textContent = 'Coach OS';
+  goSection('dashboard', null);
+  toast('✅ De vuelta al panel');
+}
+
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', () => {
   const dat = document.getElementById('tb-date');

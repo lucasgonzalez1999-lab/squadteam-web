@@ -148,6 +148,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
 }
 .sidebar-tog:hover{color:var(--text);background:var(--surf2);}
 .sidebar-tog svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;}
+.tb-logo{width:32px;height:32px;object-fit:contain;flex-shrink:0;}
 .tb-title{font-size:14px;font-weight:700;color:var(--text);}
 .tb-date{font-size:11px;color:var(--sub);margin-top:1px;}
 .tb-right{display:flex;align-items:center;gap:8px;}

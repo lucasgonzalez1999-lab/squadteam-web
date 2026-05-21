@@ -24,10 +24,18 @@ async function renderMiRutina(){
 
   _mrPlan = await mrLoadPlan(_mrAthId);
   if(!_mrPlan){
-    cont.innerHTML = `<div style="padding:24px;text-align:center">
-      <div style="font-size:32px;margin-bottom:12px">📋</div>
-      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">Sin rutina asignada</div>
-      <div style="font-size:13px;color:var(--sub)">Tu coach todavía no cargó tu plan. Consultale por Telegram.</div>
+    const isSelfCoach = typeof _previewCoachProfile !== 'undefined' && _previewCoachProfile !== null && _previewCoachProfile.id === user.id;
+    cont.innerHTML = `<div style="padding:32px 24px;text-align:center;max-width:340px;margin:0 auto">
+      <div style="font-size:40px;margin-bottom:14px">📋</div>
+      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:8px">Sin rutina asignada</div>
+      ${isSelfCoach
+        ? `<div style="font-size:13px;color:var(--sub);margin-bottom:20px;line-height:1.6">Todavía no tenés un plan cargado para vos. Creá uno desde el panel.</div>
+           <button onclick="exitPreviewMode();setTimeout(()=>{goSection('planilla',document.querySelector('[data-tab=planilla]'));pbSelectAth('${user.id}')},80)"
+             style="background:#e8ff00;color:#0a0a0a;border:none;border-radius:12px;padding:14px 28px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.3px">
+             ⚡ Crear mi plan
+           </button>`
+        : `<div style="font-size:13px;color:var(--sub)">Tu coach todavía no cargó tu plan. Consultale por Telegram.</div>`
+      }
     </div>`;
     return;
   }

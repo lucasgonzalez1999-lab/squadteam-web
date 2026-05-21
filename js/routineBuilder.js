@@ -140,6 +140,8 @@ function pbRenderList(cont){
 }
 
 // ── SELECT ATHLETE ──
+function _pbGetAth(id){ return getAth(id)||(typeof COACHES!=='undefined'&&COACHES[id])||null; }
+
 async function pbSelectAth(athId){
   _pb.athId=athId; _pb.plan=null;
   const cont=document.getElementById('planilla-root');
@@ -149,7 +151,7 @@ async function pbSelectAth(athId){
     if(doc.exists&&doc.data()?.byDay) _pb.plan=JSON.parse(JSON.stringify(doc.data()));
   }catch(e){}
   if(!_pb.plan){
-    const ath=getAth(athId);
+    const ath=_pbGetAth(athId);
     _pb.plan={nombre:`Plan ${ath?.name||athId}`,nivel:'intermedio',diasSemana:3,weeks:6,
       startDate:new Date().toISOString().slice(0,10),byDay:{'Día A':[],'Día B':[],'Día C':[]}};
   }
@@ -159,7 +161,7 @@ async function pbSelectAth(athId){
 
 // ── MAIN EDITOR ──
 function pbRenderEditor(cont){
-  const plan=_pb.plan, ath=getAth(_pb.athId);
+  const plan=_pb.plan, ath=_pbGetAth(_pb.athId);
   const color=ath?.color||'var(--acc)';
   const days=Object.keys(plan.byDay);
   const wl=pbWeekLabels(plan.weeks||6);

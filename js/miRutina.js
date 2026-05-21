@@ -122,7 +122,10 @@ function mrRender(cont){
   const byDay  = plan.byDay || {};
   const days   = Object.keys(byDay);
   const totalWeeks = (plan.weeks || plan.duracion || 6) + 1;
-  const color  = getAth(_mrAthId)?.color || 'var(--acc)';
+  const color  = getAth(_mrAthId)?.color
+    || (typeof COACHES!=='undefined' && COACHES[_mrAthId]?.color)
+    || currentUser?.color
+    || 'var(--acc)';
   const isDeload = _mrWeek === totalWeeks;
 
   cont.innerHTML = `
@@ -151,7 +154,7 @@ function mrRender(cont){
           </button>`;
         }).join('')}
       </div>
-      ${isDeload?`<div style="font-size:11px;color:#ca8a04;font-weight:700;flex-shrink:0;background:#fef9c3;padding:3px 8px;border-radius:10px">DELOAD 60%</div>`:''}
+      ${isDeload?`<div style="font-size:11px;color:#f59e0b;font-weight:700;flex-shrink:0;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);padding:3px 8px;border-radius:10px">DELOAD 60%</div>`:''}
     </div>
 
     <!-- Day tabs -->
@@ -225,36 +228,36 @@ function mrRenderExercises(exercises, week, totalWeeks, color){
       const ordinals = ['1º','2º','3º','4º','5º','6º'];
       const done = !!val.done;
       seriesHtml += `
-      <div id="mr-row-${ei}-${sKey}" style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);
-        transition:background .2s;background:${done?color+'18':''}">
-        <div id="mr-ord-${ei}-${sKey}" style="font-size:12px;font-weight:600;width:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:${done?color:'var(--sub)'}">
+      <div id="mr-row-${ei}-${sKey}" style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06);
+        transition:background .2s;background:${done?color+'15':''}">
+        <div id="mr-ord-${ei}-${sKey}" style="font-size:12px;font-weight:700;width:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:${done?color:'var(--text2)'}">
           ${done?`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`:ordinals[s-1]||s+'º'}
         </div>
         <div style="flex:1;display:flex;gap:8px;align-items:center">
           <div style="flex:1">
-            <div style="font-size:10px;color:var(--sub2);margin-bottom:3px">KG</div>
-            <input type="number" step="${inputStep}" min="0" placeholder="${lastRef?lastRef.kg:'—'}"
+            <div style="font-size:10px;font-weight:600;color:var(--text2);margin-bottom:4px;letter-spacing:.4px">KG</div>
+            <input type="number" step="${inputStep}" min="0" placeholder="${lastRef?lastRef.kg:'0'}"
               value="${val.kg||''}"
               id="mr-${ei}-${sKey}-kg"
               oninput="mrInput('${exName}','${sKey}','kg',this.value)"
-              style="width:100%;padding:9px 10px;border:1.5px solid ${val.kg?color:'var(--border)'};border-radius:8px;font-size:15px;font-weight:700;font-family:inherit;background:var(--surf);color:var(--text);outline:none;transition:border .15s"
-              onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor=this.value?'${color}':'var(--border)'">
+              style="width:100%;padding:10px 12px;border:1.5px solid ${val.kg?color:'rgba(255,255,255,.18)'};border-radius:10px;font-size:16px;font-weight:700;font-family:inherit;background:var(--surf2);color:var(--text);outline:none;transition:border .15s"
+              onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor=this.value?'${color}':'rgba(255,255,255,.18)'">
           </div>
-          <div style="font-size:16px;color:var(--sub2);flex-shrink:0;padding-top:14px">×</div>
+          <div style="font-size:18px;color:var(--text2);flex-shrink:0;padding-top:18px;font-weight:300">×</div>
           <div style="flex:1">
-            <div style="font-size:10px;color:var(--sub2);margin-bottom:3px">REPS</div>
+            <div style="font-size:10px;font-weight:600;color:var(--text2);margin-bottom:4px;letter-spacing:.4px">REPS</div>
             <input type="number" min="1" placeholder="${planReps?.split('-')[0]||'?'}"
               value="${val.reps||''}"
               id="mr-${ei}-${sKey}-reps"
               oninput="mrInput('${exName}','${sKey}','reps',this.value)"
-              style="width:100%;padding:9px 10px;border:1.5px solid ${val.reps?color:'var(--border)'};border-radius:8px;font-size:15px;font-weight:700;font-family:inherit;background:var(--surf);color:var(--text);outline:none;transition:border .15s"
-              onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor=this.value?'${color}':'var(--border)'">
+              style="width:100%;padding:10px 12px;border:1.5px solid ${val.reps?color:'rgba(255,255,255,.18)'};border-radius:10px;font-size:16px;font-weight:700;font-family:inherit;background:var(--surf2);color:var(--text);outline:none;transition:border .15s"
+              onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor=this.value?'${color}':'rgba(255,255,255,.18)'">
           </div>
         </div>
         <button id="mr-chk-${ei}-${sKey}" onclick="mrCheckSet('${exName.replace(/'/g,"\\'")}','${sKey}',${ei})"
-          style="width:34px;height:34px;border-radius:50%;border:2px solid ${done?color:'var(--border2)'};
-          background:${done?color:'transparent'};display:flex;align-items:center;justify-content:center;
-          flex-shrink:0;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;margin-top:14px">
+          style="width:36px;height:36px;border-radius:50%;border:2px solid ${done?color:'rgba(255,255,255,.3)'};
+          background:${done?color:'rgba(255,255,255,.05)'};display:flex;align-items:center;justify-content:center;
+          flex-shrink:0;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;margin-top:18px">
           ${done?`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`:''}
         </button>
       </div>`;
@@ -337,7 +340,7 @@ function mrCheckSet(exName, sKey, ei){
   mrSaveDraft();
   mrAutoSaveDebounced();
 
-  const color = getAth(_mrAthId)?.color || 'var(--acc)';
+  const color = getAth(_mrAthId)?.color || (typeof COACHES!=='undefined'&&COACHES[_mrAthId]?.color) || currentUser?.color || 'var(--acc)';
   const ordinals = ['1º','2º','3º','4º','5º','6º'];
   const sNum = parseInt(sKey.replace('s','')) - 1;
 
@@ -345,16 +348,16 @@ function mrCheckSet(exName, sKey, ei){
   const ord = document.getElementById('mr-ord-'+ei+'-'+sKey);
   const btn = document.getElementById('mr-chk-'+ei+'-'+sKey);
 
-  if(row) row.style.background = done ? color+'18' : '';
+  if(row) row.style.background = done ? color+'15' : '';
   if(ord){
-    ord.style.color = done ? color : 'var(--sub)';
+    ord.style.color = done ? color : 'var(--text2)';
     ord.innerHTML = done
       ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`
       : ordinals[sNum]||sNum+1+'º';
   }
   if(btn){
-    btn.style.background = done ? color : 'transparent';
-    btn.style.borderColor = done ? color : 'var(--border2)';
+    btn.style.background = done ? color : 'rgba(255,255,255,.05)';
+    btn.style.borderColor = done ? color : 'rgba(255,255,255,.3)';
     btn.innerHTML = done
       ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`
       : '';
@@ -371,7 +374,7 @@ function mrInput(exName, sKey, field, value){
   _mrInputs[exName][sKey][field] = value ? parseFloat(value) || value : '';
   mrSaveDraft();
   mrAutoSaveDebounced();
-  const color = getAth(_mrAthId)?.color || 'var(--acc)';
+  const color = getAth(_mrAthId)?.color || (typeof COACHES!=='undefined'&&COACHES[_mrAthId]?.color) || currentUser?.color || 'var(--acc)';
   const saveArea = document.getElementById('mr-save-area');
   if(saveArea) saveArea.innerHTML = mrRenderSaveBtn(color);
 }

@@ -626,15 +626,36 @@ function renderAthleteView(user) {
     </div>`);
 
     // ── DIETA ──
-    if(diet && (diet.meals||diet.text||diet.plan||typeof diet==='string')) {
+    if(diet && (diet.kcal||diet.prot||diet.carbs||diet.fat) && !diet.meals) {
+      // Simple macros format saved by coach via editDiet modal
+      const macros = [
+        {label:'Proteína', val:diet.prot||0, unit:'g', color:'#3b82f6'},
+        {label:'Carbos',   val:diet.carbs||0,unit:'g', color:'#f59e0b'},
+        {label:'Grasas',   val:diet.fat||0,  unit:'g', color:'#ef4444'},
+      ];
+      parts.push(`
+      <div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div style="font-size:14px;font-weight:800;color:var(--text)">🥗 Mis macros</div>
+          <div style="font-size:20px;font-weight:800;color:${color}">${diet.kcal||Math.round((diet.prot||0)*4+(diet.carbs||0)*4+(diet.fat||0)*9)}<span style="font-size:12px;font-weight:500;color:var(--sub);margin-left:3px">kcal</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          ${macros.map(m=>`
+          <div style="background:${m.color}12;border:1px solid ${m.color}25;border-radius:12px;padding:12px;text-align:center">
+            <div style="font-size:20px;font-weight:800;color:${m.color}">${m.val}<span style="font-size:12px;font-weight:500">${m.unit}</span></div>
+            <div style="font-size:11px;color:var(--sub);margin-top:3px">${m.label}</div>
+          </div>`).join('')}
+        </div>
+      </div>`);
+    } else if(diet && (diet.meals||diet.text||diet.plan||typeof diet==='string')) {
       const dietContent = typeof diet==='string' ? diet
         : diet.text||diet.plan
         ? (diet.text||diet.plan)
         : Object.entries(diet).filter(([k])=>k!=='id').map(([k,v])=>'<b>'+k+':</b> '+v).join('<br>');
       parts.push(`
-      <div style="background:white;border:1px solid #e8eaed;border-radius:16px;padding:20px">
-        <div style="font-size:13px;font-weight:700;color:#0d1117;margin-bottom:12px">🥗 Mi dieta</div>
-        <div style="font-size:13px;color:#374151;line-height:1.8">${dietContent}</div>
+      <div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:20px">
+        <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:12px">🥗 Mi dieta</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.8">${dietContent}</div>
       </div>`);
     }
 

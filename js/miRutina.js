@@ -132,9 +132,18 @@ function mrRender(cont){
   <div style="max-width:700px;margin:0 auto;padding:16px">
 
     <!-- Header -->
-    <div style="margin-bottom:16px">
-      <div style="font-size:18px;font-weight:800;color:var(--text)">Mi Rutina</div>
-      <div style="font-size:13px;color:var(--sub);margin-top:2px">${plan.nivel||'intermedio'} · ${plan.diasSemana||days.length} días/sem · ${totalWeeks-1} semanas</div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:10px">
+      <div>
+        <div style="font-size:18px;font-weight:800;color:var(--text)">Mi Rutina</div>
+        <div style="font-size:13px;color:var(--sub);margin-top:2px">${plan.nivel||'intermedio'} · ${plan.diasSemana||days.length} días/sem · ${totalWeeks-1} semanas</div>
+      </div>
+      ${(typeof _previewCoachProfile!=='undefined'&&_previewCoachProfile!==null&&_previewCoachProfile.id===_mrAthId)
+        ? `<button onclick="exitPreviewMode();setTimeout(()=>{goSection('planilla',document.querySelector('[data-tab=planilla]'));pbSelectAth('${_mrAthId}')},80)"
+            style="flex-shrink:0;padding:7px 14px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;
+            color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
+            ✏️ Editar plan
+          </button>`
+        : ''}
     </div>
 
     <!-- Week selector -->

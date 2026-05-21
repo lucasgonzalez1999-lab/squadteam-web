@@ -985,9 +985,34 @@ function enterPreviewMode(athId) {
   const fr = document.getElementById('foot-role'); if (fr) fr.textContent = 'Previsualización';
   const tit = document.getElementById('tb-title'); if (tit) tit.textContent = profile.name.toUpperCase();
   const sub = document.getElementById('logo-sub'); if (sub) sub.textContent = 'Preview';
-  const banner = document.getElementById('preview-banner');
-  if (banner) { document.getElementById('preview-banner-name').textContent = profile.name; banner.style.display = 'flex'; }
+  _showPreviewBanner('👁 Vista de ' + profile.name);
   toast('👁 Vista de ' + profile.name);
+}
+
+function enterSelfAthleteMode() {
+  const coach = currentUser;
+  const profile = { id: coach.id, name: coach.name, role: 'athlete', color: coach.color || athColor(coach.id) };
+  _previewCoachProfile = coach;
+  currentUser = profile;
+  showAthleteUI(profile);
+  ['foot-av','top-av'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = athInitial(profile.name); el.style.background = profile.color + '20'; el.style.color = profile.color; }
+  });
+  const fn = document.getElementById('foot-name'); if (fn) fn.textContent = profile.name;
+  const fr = document.getElementById('foot-role'); if (fr) fr.textContent = 'Coach · Atleta';
+  const tit = document.getElementById('tb-title'); if (tit) tit.textContent = profile.name.toUpperCase();
+  const sub = document.getElementById('logo-sub'); if (sub) sub.textContent = 'Mi Entreno';
+  _showPreviewBanner('💪 Mi Entrenamiento');
+  toast('💪 Modo entrenamiento');
+}
+
+function _showPreviewBanner(label) {
+  const banner = document.getElementById('preview-banner');
+  if (!banner) return;
+  const lbl = document.getElementById('preview-banner-label');
+  if (lbl) lbl.textContent = label;
+  banner.style.display = 'flex';
 }
 
 function exitPreviewMode() {

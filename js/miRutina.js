@@ -1101,17 +1101,21 @@ async function mrExportStory(photoFile, isDemo){
   sideLine(M,650,1050); sideLine(W-M,650,1050);
 
   const drawMetric=(x,y,lbl,val,sub,align)=>{
-    ctx.save(); ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=12; ctx.textAlign=align;
-    // Dark backing card for legibility on any background
-    const bkW=170, bkH=78, bkX=align==='right'?x-bkW+6:x-8;
-    ctx.fillStyle='rgba(0,0,0,0.38)'; ctx.beginPath(); ctx.roundRect(bkX,y-16,bkW,bkH,6); ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.font='600 11px Inter,system-ui,sans-serif';
+    ctx.save(); ctx.shadowColor='rgba(0,0,0,0.95)'; ctx.shadowBlur=16; ctx.textAlign=align;
+    // Dark backing card — opaque enough for any background
+    const bkW=180, bkH=82, bkX=align==='right'?x-bkW+10:x-10;
+    ctx.fillStyle='rgba(0,0,0,0.65)'; ctx.beginPath(); ctx.roundRect(bkX,y-18,bkW,bkH,8); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.10)'; ctx.lineWidth=1; ctx.stroke();
+    // Label
+    ctx.fillStyle='rgba(255,255,255,0.72)'; ctx.font='700 11px Inter,system-ui,sans-serif';
     ctx.letterSpacing='4px'; ctx.fillText(lbl,x,y); ctx.letterSpacing='0px';
+    // Value — large with stroke for extra punch
     ctx.font=`900 italic 44px "Barlow Condensed",Impact,sans-serif`;
-    ctx.strokeStyle='rgba(0,0,0,0.7)'; ctx.lineWidth=5; ctx.lineJoin='round';
+    ctx.strokeStyle='rgba(0,0,0,0.85)'; ctx.lineWidth=6; ctx.lineJoin='round';
     ctx.strokeText(val,x,y+38);
-    ctx.fillStyle='rgba(255,255,255,0.92)'; ctx.fillText(val,x,y+38);
-    ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.font='500 12px Inter,system-ui,sans-serif';
+    ctx.fillStyle='#ffffff'; ctx.fillText(val,x,y+38);
+    // Sub
+    ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font='500 12px Inter,system-ui,sans-serif';
     ctx.fillText(sub,x,y+58); ctx.textAlign='left'; ctx.restore();
   };
 

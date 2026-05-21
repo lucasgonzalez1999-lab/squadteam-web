@@ -476,13 +476,18 @@ async function ckSaveForm(){
   ckLoadAth(athId);
 }
 
-async function ckDelete(athId, ckId_){
-  if(!confirm('¿Eliminar este check-in?')) return;
-  let list = await ckGet(athId);
-  list = list.filter(x=>x.id!==ckId_);
-  await ckSave(athId, list);
-  toast('Eliminado');
-  ckLoadAth(athId);
+function ckDelete(athId, ckId_){
+  sqConfirm({
+    title:'¿Eliminar este check-in?',
+    confirmLabel:'Eliminar', danger:true,
+    onConfirm: async ()=>{
+      let list = await ckGet(athId);
+      list = list.filter(x=>x.id!==ckId_);
+      await ckSave(athId, list);
+      toast('Eliminado');
+      ckLoadAth(athId);
+    }
+  });
 }
 
 // ─── MODAL HELPERS ──────────────────────────────────────────────────────────

@@ -586,10 +586,12 @@ function removeFoodLog(athId, fi){
 }
 
 function clearFoodLog(athId){
-  if(!confirm('¿Limpiar el registro de hoy?')) return;
-  DB.del('foodlog_'+athId+'_'+today());
-  renderAthDieta(athId);
-  toast('Log del día limpiado');
+  sqConfirm({
+    title:'¿Limpiar el registro de hoy?',
+    body:'Se borrarán todos los alimentos registrados hoy.',
+    confirmLabel:'Limpiar', danger:true,
+    onConfirm:()=>{ DB.del('foodlog_'+athId+'_'+today()); renderAthDieta(athId); toast('Log del día limpiado'); }
+  });
 }
 
 function saveFav(athId, name, kcalP100, protP100, carbsP100, fatP100){

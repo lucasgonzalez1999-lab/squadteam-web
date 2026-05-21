@@ -28,7 +28,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; -webkit
   background-image:
     linear-gradient(rgba(255,255,255,.008) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,.008) 1px, transparent 1px),
-    radial-gradient(ellipse 120% 68% at 50% 122%, rgba(217,255,0,.034) 0%, rgba(217,255,0,.006) 55%, transparent 72%);
+    radial-gradient(ellipse 120% 68% at 50% 122%, rgba(232,255,0,.034) 0%, rgba(232,255,0,.006) 55%, transparent 72%);
   background-size: 64px 64px, 64px 64px, 100% 100%;
   overflow: hidden;
 }
@@ -45,7 +45,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; -webkit
   position: absolute; pointer-events: none; z-index: 0;
   width: 860px; height: 400px;
   bottom: -130px; left: 50%; transform: translateX(-50%);
-  background: radial-gradient(ellipse, rgba(217,255,0,.038) 0%, rgba(217,255,0,.006) 48%, transparent 72%);
+  background: radial-gradient(ellipse, rgba(232,255,0,.038) 0%, rgba(232,255,0,.006) 48%, transparent 72%);
   animation: glowFloat 12s ease-in-out infinite;
 }
 #login-screen > * { position: relative; z-index: 1; }
@@ -66,10 +66,10 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; -webkit
 }
 .sq-ey-dot {
   width: 5px; height: 5px; border-radius: 50%;
-  background: #d9ff00; flex-shrink: 0;
+  background: #e8ff00; flex-shrink: 0;
   animation: dotPulse 4s ease-in-out infinite;
 }
-.sq-eyebrow span { color: #d9ff00; }
+.sq-eyebrow span { color: #e8ff00; }
 
 /* Hero */
 .sq-hero-title {
@@ -83,7 +83,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; -webkit
 }
 /* TEAM — glow lima que respira */
 .sq-hero-title em {
-  color: #d9ff00; font-style: normal;
+  color: #e8ff00; font-style: normal;
   display: inline-block;
   animation: emBreath 13s ease-in-out 2s infinite;
 }
@@ -94,7 +94,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; -webkit
   letter-spacing: .35px; margin-bottom: 48px; line-height: 1.5;
   animation: sqFadeUp .5s cubic-bezier(.16,1,.3,1) .2s both;
 }
-.sq-tagline em { color: #d9ff00; font-style: normal; font-weight: 700; letter-spacing: .1px; }
+.sq-tagline em { color: #e8ff00; font-style: normal; font-weight: 700; letter-spacing: .1px; }
 
 /* Cards con stagger individual */
 .sq-roles { display: flex; flex-direction: column; gap: 9px; width: 100%; }
@@ -121,14 +121,14 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; -webkit
 .sq-role:nth-child(2) { animation: sqFadeUp .48s cubic-bezier(.16,1,.3,1) .36s both; }
 
 .sq-role:hover {
-  border-color: rgba(217,255,0,.3);
-  background: rgba(217,255,0,.032);
+  border-color: rgba(232,255,0,.3);
+  background: rgba(232,255,0,.032);
   transform: translateY(-2px);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.08),
-    0 0 0 1px rgba(217,255,0,.09),
+    0 0 0 1px rgba(232,255,0,.09),
     0 8px 28px rgba(0,0,0,.55),
-    0 2px 10px rgba(217,255,0,.06);
+    0 2px 10px rgba(232,255,0,.06);
 }
 .sq-role:active { transform: scale(.984) translateY(0); transition-duration: 75ms; }
 .sq-role-ic {
@@ -139,8 +139,8 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; -webkit
   transition: border-color 150ms, background 150ms, color 150ms;
 }
 .sq-role:hover .sq-role-ic {
-  border-color: rgba(217,255,0,.22);
-  background: rgba(217,255,0,.09); color: #d9ff00;
+  border-color: rgba(232,255,0,.22);
+  background: rgba(232,255,0,.09); color: #e8ff00;
 }
 .sq-role-texts { flex: 1; }
 .sq-role-name {
@@ -160,8 +160,8 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; -webkit
   transition: color 150ms, border-color 150ms, background 150ms, transform 200ms cubic-bezier(.16,1,.3,1);
 }
 .sq-role:hover .sq-role-arrow {
-  color: #d9ff00; border-color: rgba(217,255,0,.22);
-  background: rgba(217,255,0,.1); transform: translateX(3px);
+  color: #e8ff00; border-color: rgba(232,255,0,.22);
+  background: rgba(232,255,0,.1); transform: translateX(3px);
 }
 
 /* ── AUTH FORM ── */
@@ -183,7 +183,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; -webkit
   font-size: 10px; font-weight: 700; letter-spacing: 2px;
   margin-bottom: 28px; color: #454545;
 }
-.sq-badge-ic { display: flex; align-items: center; color: #d9ff00; }
+.sq-badge-ic { display: flex; align-items: center; color: #e8ff00; }
 .sq-form-title {
   font-family: 'Barlow Condensed', sans-serif;
   font-weight: 900; font-style: italic;
@@ -209,8 +209,8 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; -webkit
   box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
 }
 .sq-input:focus {
-  border-color: rgba(217,255,0,.4);
-  box-shadow: 0 0 0 1px rgba(217,255,0,.11), 0 0 20px rgba(217,255,0,.05), inset 0 1px 0 rgba(255,255,255,.04);
+  border-color: rgba(232,255,0,.4);
+  box-shadow: 0 0 0 1px rgba(232,255,0,.11), 0 0 20px rgba(232,255,0,.05), inset 0 1px 0 rgba(255,255,255,.04);
 }
 .sq-input::placeholder { color: #333333; }
 .sq-input.sq-err-inp { border-color: rgba(239,68,68,.55); box-shadow: 0 0 0 1px rgba(239,68,68,.18); }
@@ -223,17 +223,17 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; -webkit
 .sq-err-msg.sq-show { display: block; }
 .sq-btn {
   width: 100%; padding: 16px;
-  background: #d9ff00; color: #040404;
+  background: #e8ff00; color: #040404;
   border: none; border-radius: 12px;
   font-size: 13px; font-weight: 900; letter-spacing: 2.5px;
   cursor: pointer; font-family: inherit;
   transition: background 130ms, transform 100ms, box-shadow 160ms;
   margin-top: 8px;
-  box-shadow: 0 2px 12px rgba(217,255,0,.14), inset 0 1px 0 rgba(255,255,255,.22);
+  box-shadow: 0 2px 12px rgba(232,255,0,.14), inset 0 1px 0 rgba(255,255,255,.22);
 }
 .sq-btn:hover {
   background: #ddff00;
-  box-shadow: 0 0 28px rgba(217,255,0,.26), 0 4px 14px rgba(217,255,0,.12), inset 0 1px 0 rgba(255,255,255,.22);
+  box-shadow: 0 0 28px rgba(232,255,0,.26), 0 4px 14px rgba(232,255,0,.12), inset 0 1px 0 rgba(255,255,255,.22);
   transform: translateY(-1px);
 }
 .sq-btn:active { transform: scale(.985) translateY(0); transition-duration: 60ms; }
@@ -281,8 +281,8 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; -webkit
 }
 /* TEAM — glow que respira, ciclo más lento */
 @keyframes emBreath {
-  0%, 100% { text-shadow: 0 0 44px rgba(217,255,0,.12), 0 0 88px rgba(217,255,0,.04); }
-  50%       { text-shadow: 0 0 68px rgba(217,255,0,.22), 0 0 130px rgba(217,255,0,.08); }
+  0%, 100% { text-shadow: 0 0 44px rgba(232,255,0,.12), 0 0 88px rgba(232,255,0,.04); }
+  50%       { text-shadow: 0 0 68px rgba(232,255,0,.22), 0 0 130px rgba(232,255,0,.08); }
 }
 /* SQUAD TEAM — micro respiración de profundidad */
 @keyframes titleAmbient {
@@ -409,7 +409,7 @@ var _sqRole=null;
 function sqNorm(s){ return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim(); }
 
 var _boltSvg='<span class="sq-badge-ic"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>';
-var _barbSvg='<span class="sq-badge-ic"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#d9ff00" stroke-width="2.5" stroke-linecap="round"><line x1="6" y1="12" x2="18" y2="12"/><rect x="1" y="10" width="4" height="4" rx="1"/><rect x="19" y="10" width="4" height="4" rx="1"/></svg></span>';
+var _barbSvg='<span class="sq-badge-ic"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#e8ff00" stroke-width="2.5" stroke-linecap="round"><line x1="6" y1="12" x2="18" y2="12"/><rect x="1" y="10" width="4" height="4" rx="1"/><rect x="19" y="10" width="4" height="4" rx="1"/></svg></span>';
 
 function sqPickRole(role){
   _sqRole=role;
@@ -749,9 +749,9 @@ if('serviceWorker' in navigator){
 </script>
 
 <!-- PREVIEW / SELF-ATHLETE MODE BANNER -->
-<div id="preview-banner" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:8500;background:#111827;border:1.5px solid #d9ff0066;border-radius:100px;padding:10px 12px 10px 20px;align-items:center;gap:14px;box-shadow:0 4px 32px rgba(0,0,0,.7);white-space:nowrap;pointer-events:auto">
-  <span id="preview-banner-label" style="font-size:12px;font-weight:800;color:#d9ff00;letter-spacing:.5px"></span>
-  <button onclick="exitPreviewMode()" style="background:#d9ff00;color:#040404;border:none;border-radius:100px;padding:7px 16px;font-size:11px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.5px">← Volver al panel</button>
+<div id="preview-banner" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:8500;background:#111827;border:1.5px solid #e8ff0066;border-radius:100px;padding:10px 12px 10px 20px;align-items:center;gap:14px;box-shadow:0 4px 32px rgba(0,0,0,.7);white-space:nowrap;pointer-events:auto">
+  <span id="preview-banner-label" style="font-size:12px;font-weight:800;color:#e8ff00;letter-spacing:.5px"></span>
+  <button onclick="exitPreviewMode()" style="background:#e8ff00;color:#040404;border:none;border-radius:100px;padding:7px 16px;font-size:11px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.5px">← Volver al panel</button>
 </div>
 </body>
 </html>

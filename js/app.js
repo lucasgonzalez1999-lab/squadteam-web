@@ -218,6 +218,36 @@ function showAthleteUI(user) {
   goSection('mi-rutina', null);
 }
 
+// ── GENERIC CONFIRM MODAL ──
+function sqConfirm({ title, body='', confirmLabel='Confirmar', danger=false, onConfirm }){
+  let ov = document.getElementById('sq-confirm-ov');
+  if(ov) ov.remove();
+  ov = document.createElement('div');
+  ov.id = 'sq-confirm-ov';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px';
+  const btnBg = danger ? '#ef4444' : 'var(--acc)';
+  const btnColor = danger ? 'white' : '#000';
+  ov.innerHTML = `
+    <div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:24px;max-width:300px;width:100%">
+      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:${body?'8px':'20px'}">${title}</div>
+      ${body?`<div style="font-size:13px;color:var(--sub);margin-bottom:20px;line-height:1.5">${body}</div>`:''}
+      <div style="display:flex;gap:10px">
+        <button onclick="document.getElementById('sq-confirm-ov').remove()"
+          style="flex:1;padding:11px 0;background:none;border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+          Cancelar
+        </button>
+        <button id="sq-confirm-action-btn"
+          style="flex:1;padding:11px 0;background:${btnBg};border:none;border-radius:10px;color:${btnColor};font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+          ${confirmLabel}
+        </button>
+      </div>
+    </div>`;
+  ov.onclick = e => { if(e.target === ov) ov.remove(); };
+  document.getElementById('sq-confirm-action-btn')?.remove(); // prevent duplicate
+  document.body.appendChild(ov);
+  document.getElementById('sq-confirm-action-btn').onclick = () => { ov.remove(); onConfirm(); };
+}
+
 function confirmLogout() {
   let ov = document.getElementById('logout-confirm-ov');
   if (ov) return;
@@ -548,17 +578,17 @@ function renderAthleteView(user) {
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
           <div>
             <div style="font-size:10px;color:#555;letter-spacing:2px;font-weight:700;margin-bottom:4px">RACHA</div>
-            <div style="font-size:76px;font-weight:900;color:#e8ff00;line-height:1">${streak}</div>
+            <div style="font-size:76px;font-weight:900;color:var(--acc);line-height:1">${streak}</div>
             <div style="font-size:13px;color:#666;margin-top:4px">días seguidos</div>
           </div>
           <div style="text-align:right">
             <div style="font-size:10px;color:#555;letter-spacing:2px;font-weight:700;margin-bottom:6px">ESTA SEMANA</div>
             <div style="font-size:34px;font-weight:900;color:white;line-height:1">${weekSess.length} <span style="font-size:13px;color:#666">ses.</span></div>
-            <div style="font-size:20px;font-weight:800;color:#e8ff00;margin-top:6px">${volFmt(weekVol)} kg</div>
+            <div style="font-size:20px;font-weight:800;color:var(--acc);margin-top:6px">${volFmt(weekVol)} kg</div>
           </div>
         </div>
         <div style="background:#1a1a1a;border-radius:4px;height:5px;overflow:hidden">
-          <div style="background:#e8ff00;height:100%;width:${streak>0?Math.min(85,55+streak*4):0}%;border-radius:4px"></div>
+          <div style="background:var(--acc);height:100%;width:${streak>0?Math.min(85,55+streak*4):0}%;border-radius:4px"></div>
         </div>
       </div>`);
     }
@@ -592,7 +622,7 @@ function renderAthleteView(user) {
               <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;color:#9ca3af">kg</span>
             </div>
             <button onclick="saveDaily('${user.id}','weight',document.getElementById('ath-peso').value)"
-              style="background:#0a0a0a;color:#e8ff00;border:none;border-radius:10px;padding:11px 18px;font-weight:900;font-size:13px;cursor:pointer;white-space:nowrap">
+              style="background:#0a0a0a;color:var(--acc);border:none;border-radius:10px;padding:11px 18px;font-weight:900;font-size:13px;cursor:pointer;white-space:nowrap">
               Guardar
             </button>
           </div>
@@ -616,7 +646,7 @@ function renderAthleteView(user) {
                 onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor='#e8eaed'">
             </div>
             <button onclick="saveDaily('${user.id}','steps',document.getElementById('ath-pasos').value)"
-              style="background:#0a0a0a;color:#e8ff00;border:none;border-radius:10px;padding:11px 18px;font-weight:900;font-size:13px;cursor:pointer;white-space:nowrap">
+              style="background:#0a0a0a;color:var(--acc);border:none;border-radius:10px;padding:11px 18px;font-weight:900;font-size:13px;cursor:pointer;white-space:nowrap">
               Guardar
             </button>
           </div>

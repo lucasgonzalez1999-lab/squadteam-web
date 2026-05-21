@@ -14,8 +14,8 @@
   --acc-glow:rgba(232,255,0,.18);
   --text:#ededf2;
   --text2:#9090a8;
-  --sub:#48485a;
-  --sub2:#2e2e3a;
+  --sub:#7c7ca0;
+  --sub2:#52526e;
   --red:#ff3f3f;
   --red-dim:rgba(255,63,63,.1);
   --orange:#ff9500;
@@ -535,6 +535,34 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
 /* ════════════════════════════════════════
    SECTION HEADER
 ════════════════════════════════════════ */
+
+/* ── ATHLETES TABLE → CARDS ON MOBILE ── */
+@media (max-width:680px){
+  .ath-table-wrap{overflow-x:unset;}
+  .ath-table,.ath-table tbody{display:block;}
+  .ath-table thead{display:none;}
+  .ath-table tr{
+    display:block;position:relative;
+    padding:12px 14px;margin-bottom:8px;
+    border-radius:12px;background:var(--surf);
+    border:1px solid var(--border);
+  }
+  .ath-table tr:hover{background:var(--surf2);}
+  .ath-table td{display:none;border:none !important;padding:0;}
+  /* Name — full first line */
+  .ath-table td:nth-child(1){display:flex;margin-bottom:10px;padding-right:110px;}
+  /* Session, streak, adherence, payment — second line */
+  .ath-table td:nth-child(3),
+  .ath-table td:nth-child(4),
+  .ath-table td:nth-child(5),
+  .ath-table td:nth-child(6){display:inline-flex;align-items:center;margin-right:8px;font-size:12px;}
+  /* Actions — absolute top-right */
+  .ath-table td:nth-child(8){
+    display:flex;position:absolute;top:10px;right:10px;
+  }
+  .ath-table td:nth-child(8) .action-btns{gap:4px;}
+  .ath-table td:nth-child(8) .btn-icon{width:30px;height:30px;font-size:13px;}
+}
 .sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .sec-title{font-size:13px;font-weight:700;color:var(--text);}
 .sec-link{font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;text-decoration:none;background:none;border:none;font-family:var(--F);transition:color .15s;}

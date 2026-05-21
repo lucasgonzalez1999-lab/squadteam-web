@@ -31,7 +31,7 @@ async function renderMiRutina(){
       ${isSelfCoach
         ? `<div style="font-size:13px;color:var(--sub);margin-bottom:20px;line-height:1.6">Todavía no tenés un plan cargado para vos. Creá uno desde el panel.</div>
            <button onclick="exitPreviewMode();setTimeout(()=>{goSection('planilla',document.querySelector('[data-tab=planilla]'));pbSelectAth('${user.id}')},80)"
-             style="background:#e8ff00;color:#0a0a0a;border:none;border-radius:12px;padding:14px 28px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.3px">
+             style="background:var(--acc);color:#000;border:none;border-radius:12px;padding:14px 28px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.3px">
              ⚡ Crear mi plan
            </button>`
         : `<div style="font-size:13px;color:var(--sub)">Tu coach todavía no cargó tu plan. Consultale por Telegram.</div>`

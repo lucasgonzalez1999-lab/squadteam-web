@@ -902,16 +902,21 @@ async function _saveEditAthlete(id){
 async function archiveAthlete(id){
   const a = athletes.find(x=>x.id===id);
   if(!a) return;
-  const confirmed = window.confirm(`¿Dar de baja a ${a.name}? Sus datos quedan guardados pero no podrá iniciar sesión.`);
-  if(!confirmed) return;
-  a.inactive = true;
-  DB.set('athletes', athletes);
-  try{
-    await window.db.collection('config').doc('athletes').set({ list: JSON.stringify(athletes) });
-    toast(`${a.name} dado de baja`);
-  }catch(e){ toast('Guardado localmente'); }
-  document.getElementById('edit-ath-ov')?.remove();
-  renderAlumnos();
+  sqConfirm({
+    title:`¿Dar de baja a ${a.name}?`,
+    body:'Sus datos quedan guardados pero no podrá iniciar sesión.',
+    confirmLabel:'Dar de baja', danger:true,
+    onConfirm: async ()=>{
+      a.inactive = true;
+      DB.set('athletes', athletes);
+      try{
+        await window.db.collection('config').doc('athletes').set({ list: JSON.stringify(athletes) });
+        toast(`${a.name} dado de baja`);
+      }catch(e){ toast('Guardado localmente'); }
+      document.getElementById('edit-ath-ov')?.remove();
+      renderAlumnos();
+    }
+  });
 }
 function openAthProfile(id){
   const a=athletes.find(x=>x.id===id);
@@ -968,19 +973,23 @@ function showAthSessions(id){
 }
 
 function deleteSession(athId, idx, btn){
-  if(!confirm('¿Borrar esta sesión? No se puede deshacer.')) return;
-  const ss=getAthSessions(athId).sort((x,y)=>new Date(y.date)-new Date(x.date));
-  ss.splice(idx,1);
-  sessions[athId]=ss;
-  DB.set('sessions',sessions);
-  // Save to Firebase
-  window.db?.collection('sessions').doc(athId).set({data:JSON.stringify(ss)}).then(()=>{
-    toast('✅ Sesión eliminada');
-    // Refresh modal
-    showAthSessions(athId);
-  }).catch(()=>{
-    toast('✅ Eliminada localmente');
-    showAthSessions(athId);
+  sqConfirm({
+    title:'¿Borrar esta sesión?',
+    body:'Esta acción no se puede deshacer.',
+    confirmLabel:'Borrar', danger:true,
+    onConfirm:()=>{
+      const ss=getAthSessions(athId).sort((x,y)=>new Date(y.date)-new Date(x.date));
+      ss.splice(idx,1);
+      sessions[athId]=ss;
+      DB.set('sessions',sessions);
+      window.db?.collection('sessions').doc(athId).set({data:JSON.stringify(ss)}).then(()=>{
+        toast('✅ Sesión eliminada');
+        showAthSessions(athId);
+      }).catch(()=>{
+        toast('✅ Eliminada localmente');
+        showAthSessions(athId);
+      });
+    }
   });
 }
 
@@ -1384,7 +1393,7 @@ async function renderDB(){
     <div class="section-body" style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn-sm outline" onclick="exportJSON()">↓ Exportar JSON</button>
       <button class="btn-sm outline" onclick="importJSON()">↑ Importar JSON</button>
-      <button class="btn-sm" style="background:var(--red);color:#fff" onclick="if(confirm('Limpiar datos locales?'))clearLocal()">🗑 Limpiar local</button>
+      <button class="btn-sm" style="background:var(--red);color:#fff" onclick="sqConfirm({title:'¿Limpiar datos locales?',body:'Se borrarán todos los datos en caché del navegador.',confirmLabel:'Limpiar',danger:true,onConfirm:clearLocal})">🗑 Limpiar local</button>
     </div>
   </div>`;
   // Test Firebase

@@ -144,11 +144,19 @@ function mrRender(cont){
         </div>`:''}
       </div>
       ${currentUser?.role === 'coach'
-        ? `<button onclick="goSection('planilla',document.querySelector('[data-tab=planilla]'));setTimeout(()=>pbSelectAth('${_mrAthId}'),80)"
-            style="flex-shrink:0;padding:7px 14px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;
-            color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
-            ✏️ Editar plan
-          </button>`
+        ? `<div style="display:flex;gap:6px;flex-shrink:0">
+            <button onclick="mrExportDemo()"
+              style="padding:7px 12px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;
+              color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              Demo
+            </button>
+            <button onclick="goSection('planilla',document.querySelector('[data-tab=planilla]'));setTimeout(()=>pbSelectAth('${_mrAthId}'),80)"
+              style="padding:7px 12px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;
+              color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">
+              ✏️ Editar
+            </button>
+          </div>`
         : ''}
     </div>
 
@@ -589,6 +597,24 @@ async function mrSetDay(day){
 }
 
 // ── EXPORT WORKOUT IMAGE ──
+function mrExportDemo(){
+  const ath   = getAth(_mrAthId) || (typeof COACHES!=='undefined' && COACHES[_mrAthId]) || currentUser;
+  const color = ath?.color || '#e8ff00';
+  const resolvedColor = color.startsWith('var(') ? '#e8ff00' : color;
+  const demoItems = [
+    { name:'Press Banca',          sets:[{kg:80,reps:8},{kg:82.5,reps:7},{kg:82.5,reps:6}] },
+    { name:'Press Inclinado',      sets:[{kg:65,reps:9},{kg:67.5,reps:8},{kg:67.5,reps:7}] },
+    { name:'Press Militar',        sets:[{kg:52.5,reps:8},{kg:52.5,reps:8},{kg:50,reps:9}] },
+    { name:'Fondos con Lastre',    sets:[{kg:20,reps:10},{kg:20,reps:9},{kg:17.5,reps:9}] },
+    { name:'Extensión Tríceps',    sets:[{kg:30,reps:12},{kg:30,reps:11},{kg:27.5,reps:12}] },
+    { name:'Lateral Raises',       sets:[{kg:12,reps:15},{kg:12,reps:14},{kg:10,reps:15}] },
+  ];
+  _mrDrawWorkoutCanvas({
+    athName: (ath?.name || 'DEMO').toUpperCase(),
+    day: 'PUSH A', week: 3, resolvedColor, exItems: demoItems, isDemo: true
+  });
+}
+
 async function mrExportWorkoutImage(){
   const ath   = getAth(_mrAthId) || (typeof COACHES!=='undefined' && COACHES[_mrAthId]) || currentUser;
   const color = ath?.color || 'var(--acc)';
@@ -596,7 +622,6 @@ async function mrExportWorkoutImage(){
 
   // Build exercise list from last saved session
   const session = getAthSessions(_mrAthId).find(s => s.dia === _mrDay && s.week === _mrWeek && s.date === today());
-  const byDay   = _mrPlan?.byDay || {};
   const exItems = [];
 
   (session?.exercises || []).forEach(ex => {
@@ -607,6 +632,14 @@ async function mrExportWorkoutImage(){
   });
 
   if(!exItems.length){ toast('Sin datos para exportar'); return; }
+
+  await _mrDrawWorkoutCanvas({
+    athName: (ath?.name || _mrAthId || '').toUpperCase(),
+    day: _mrDay, week: _mrWeek, resolvedColor, exItems, isDemo: false
+  });
+}
+
+async function _mrDrawWorkoutCanvas({ athName, day, week, resolvedColor, exItems, isDemo }){
 
   const W = 1080;
   const MARGIN = 72;
@@ -656,10 +689,8 @@ async function mrExportWorkoutImage(){
   ctx.fillText('SQUAD TEAM', MARGIN, 86);
   ctx.letterSpacing = '0px';
 
-  const athName = (ath?.name || _mrAthId || '').toUpperCase();
   ctx.fillStyle = '#ffffff';
   ctx.font = '900 italic 96px "Barlow Condensed",Impact,sans-serif';
-  // Fit name
   let fs = 96;
   while(ctx.measureText(athName).width > W - MARGIN*2 - 20 && fs > 40){
     fs -= 4;
@@ -671,7 +702,7 @@ async function mrExportWorkoutImage(){
   const dateStr = new Date().toLocaleDateString('es-UY',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
   ctx.fillStyle = 'rgba(255,255,255,.5)';
   ctx.font = '500 30px Inter,system-ui,sans-serif';
-  ctx.fillText(`${_mrDay.toUpperCase()} · SEMANA ${_mrWeek} · ${dateStr}`, MARGIN, 248);
+  ctx.fillText(`${day.toUpperCase()} · SEMANA ${week} · ${dateStr}`, MARGIN, 248);
 
   // Total volume
   const totalVol = exItems.reduce((tot, ex) => tot + ex.sets.reduce((s, set) => s + (set.kg||0)*(set.reps||0), 0), 0);
@@ -785,21 +816,22 @@ async function mrExportWorkoutImage(){
 
   // ── Download / Share ──
   const dataUrl = canvas.toDataURL('image/png');
-  if(navigator.canShare?.({ files: [new File([], 'test.png', { type: 'image/png' })] })){
+  const suffix = isDemo ? 'demo' : `${day}_sem${week}`;
+  if(!isDemo && navigator.canShare?.({ files: [new File([], 'test.png', { type: 'image/png' })] })){
     const blob = await (await fetch(dataUrl)).blob();
-    const file = new File([blob], `squad_entreno_${_mrDay}_sem${_mrWeek}.png`, { type: 'image/png' });
+    const file = new File([blob], `squad_entreno_${suffix}.png`, { type: 'image/png' });
     try{
-      await navigator.share({ files: [file], title: `${_mrDay} · Semana ${_mrWeek}` });
-    }catch(e){ if(e.name!=='AbortError') _mrDownloadImage(dataUrl); }
+      await navigator.share({ files: [file], title: `${day} · Semana ${week}` });
+    }catch(e){ if(e.name!=='AbortError') _mrDownloadImage(dataUrl, suffix); }
   } else {
-    _mrDownloadImage(dataUrl);
+    _mrDownloadImage(dataUrl, suffix);
   }
-  toast('📸 Imagen generada');
+  toast(isDemo ? '📸 Demo generada' : '📸 Imagen generada');
 }
 
-function _mrDownloadImage(dataUrl){
+function _mrDownloadImage(dataUrl, suffix){
   const a = document.createElement('a');
-  a.download = `squad_entreno_${_mrDay}_sem${_mrWeek}.png`;
+  a.download = `squad_entreno_${suffix||'workout'}.png`;
   a.href = dataUrl;
   a.click();
 }

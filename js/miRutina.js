@@ -1023,6 +1023,26 @@ async function mrExportStory(photoFile, isDemo){
   while(ctx.measureText(exLabel).width>W-M*2-20&&efs>36){efs-=4;ctx.font=`900 italic ${efs}px "Barlow Condensed",Impact,sans-serif`;}
   ctx.fillText(exLabel,M,188); ctx.restore();
 
+  // Other exercises — compact chips below headline (y~218)
+  const otherEx=exItems.filter(ex=>ex!==mainEx);
+  if(otherEx.length){
+    ctx.save(); ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=14;
+    let ox=M; const oY=216;
+    otherEx.slice(0,5).forEach(ex=>{
+      const pk=Math.max(...ex.sets.map(s=>s.kg||0),0);
+      const nm=ex.name.length>13?ex.name.slice(0,12).trim()+'…':ex.name;
+      const lbl=nm.toUpperCase()+' '+pk+'KG';
+      ctx.font='600 17px Inter,system-ui,sans-serif';
+      const tw=ctx.measureText(lbl).width, bw=tw+14, bh=26;
+      if(ox+bw>W-M) return;
+      ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.roundRect(ox,oY,bw,bh,4); ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=1; ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,0.65)'; ctx.fillText(lbl,ox+7,oY+19);
+      ox+=bw+6;
+    });
+    ctx.restore();
+  }
+
   // ── WEIGHT GLOW SPHERE ──
   const glowSphere=ctx.createRadialGradient(W/2,360,0,W/2,360,320);
   glowSphere.addColorStop(0,`rgba(${ar},${ag},${ab},0.22)`);
@@ -1082,10 +1102,15 @@ async function mrExportStory(photoFile, isDemo){
 
   const drawMetric=(x,y,lbl,val,sub,align)=>{
     ctx.save(); ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=12; ctx.textAlign=align;
+    // Dark backing card for legibility on any background
+    const bkW=170, bkH=78, bkX=align==='right'?x-bkW+6:x-8;
+    ctx.fillStyle='rgba(0,0,0,0.38)'; ctx.beginPath(); ctx.roundRect(bkX,y-16,bkW,bkH,6); ctx.fill();
     ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.font='600 11px Inter,system-ui,sans-serif';
     ctx.letterSpacing='4px'; ctx.fillText(lbl,x,y); ctx.letterSpacing='0px';
-    ctx.fillStyle='rgba(255,255,255,0.92)'; ctx.font=`900 italic 44px "Barlow Condensed",Impact,sans-serif`;
-    ctx.fillText(val,x,y+38);
+    ctx.font=`900 italic 44px "Barlow Condensed",Impact,sans-serif`;
+    ctx.strokeStyle='rgba(0,0,0,0.7)'; ctx.lineWidth=5; ctx.lineJoin='round';
+    ctx.strokeText(val,x,y+38);
+    ctx.fillStyle='rgba(255,255,255,0.92)'; ctx.fillText(val,x,y+38);
     ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.font='500 12px Inter,system-ui,sans-serif';
     ctx.fillText(sub,x,y+58); ctx.textAlign='left'; ctx.restore();
   };

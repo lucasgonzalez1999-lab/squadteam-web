@@ -777,7 +777,7 @@ async function _naConfirm(){
     await window.db.collection('users').doc(uid).set({
       id:data.id, name:data.name, role:'athlete', color,
       freestyle:data.type==='freestyle',
-      features:{iifym:false,liveMode:true,progress:true,diet:true}
+      features:{iifym:false,liveMode:false,progress:true,diet:true}
     });
 
     // Add to athletes config
@@ -785,7 +785,7 @@ async function _naConfirm(){
       id:data.id, name:data.name,
       freestyle:data.type==='freestyle',
       color,
-      features:{iifym:false,liveMode:true,progress:true,diet:true},
+      features:{iifym:false,liveMode:false,progress:true,diet:true},
       payment:{status:'pending',payday:data.payday,amount:data.amount,currency:data.currency}
     };
     athletes.push(newAth);
@@ -810,6 +810,16 @@ async function _naConfirm(){
 async function saveNewAthlete(){ _naStep1Next(); }
 
 // ── EDITAR ATLETA ──────────────────────────────────────────────────────────
+function _eaToggleLiveMode(){
+  const cb = document.getElementById('ea-live-mode');
+  const track = document.getElementById('ea-live-toggle');
+  const thumb = document.getElementById('ea-live-thumb');
+  if(!cb||!track||!thumb) return;
+  cb.checked = !cb.checked;
+  track.style.background = cb.checked ? 'var(--acc)' : 'var(--surf3)';
+  thumb.style.left = cb.checked ? '20px' : '2px';
+}
+
 function openEditAthleteModal(id){
   const a = athletes.find(x=>x.id===id);
   if(!a) return;
@@ -868,6 +878,18 @@ function openEditAthleteModal(id){
         </div>
         <input type="hidden" id="ea-color-val" value="${a.color||COLORS[0]}">
       </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surf2);border:1px solid var(--border);border-radius:10px">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">Modo Autónomo</div>
+          <div style="font-size:11px;color:var(--sub);margin-top:2px">El alumno puede registrar sus propias cargas</div>
+        </div>
+        <div id="ea-live-toggle" onclick="_eaToggleLiveMode()"
+          style="position:relative;width:42px;height:24px;border-radius:24px;cursor:pointer;transition:background .2s;flex-shrink:0;
+          background:${(a.features?.liveMode!==false)?'var(--acc)':'var(--surf3)'}">
+          <div id="ea-live-thumb" style="position:absolute;top:2px;left:${(a.features?.liveMode!==false)?'20':'2'}px;width:20px;height:20px;border-radius:50%;background:#000;transition:left .2s"></div>
+          <input type="checkbox" id="ea-live-mode" ${(a.features?.liveMode!==false)?'checked':''} style="display:none">
+        </div>
+      </div>
     </div>
     <div style="padding:0 22px 20px;display:flex;gap:8px">
       <button onclick="archiveAthlete('${a.id}')" style="padding:10px 14px;background:none;border:1px solid #ef4444;border-radius:10px;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit" title="Dar de baja">Dar de baja</button>
@@ -886,9 +908,11 @@ async function _saveEditAthlete(id){
   const payday = parseInt(document.getElementById('ea-payday')?.value)||null;
   const color  = document.getElementById('ea-color-val')?.value||a.color;
 
+  const liveMode = document.getElementById('ea-live-mode')?.checked ?? (a.features?.liveMode !== false);
   a.freestyle = type==='freestyle';
   a.color     = color;
   a.payment   = { ...(a.payment||{}), amount, currency, payday, status: a.payment?.status||'pending' };
+  a.features  = { ...(a.features||{}), liveMode };
 
   DB.set('athletes', athletes);
   try{

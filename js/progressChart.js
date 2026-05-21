@@ -266,6 +266,11 @@ async function exportProgressIG(athId, exName){
       ctx.fillStyle='rgba(255,255,255,0.9)';
       ctx.textAlign='left';
       ctx.fillText(label,px2+pad+lw+gap,py2+pillH/2+7);
+      // Centro-abajo: logo solo, semi-transparente
+      const wmH=42, wmW=Math.round(img.naturalWidth*wmH/img.naturalHeight);
+      ctx.globalAlpha=0.18;
+      ctx.drawImage(img,W/2-wmW/2,H-wmH-18,wmW,wmH);
+      ctx.globalAlpha=1;
       res();
     };
     img.onerror=res;

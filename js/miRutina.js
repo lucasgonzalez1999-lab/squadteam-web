@@ -503,7 +503,7 @@ async function mrSave(){
   const updated = [sessionObj, ...withoutToday];
   sessions[_mrAthId] = updated;
   DB.set('sessions', sessions);
-  await fbSet('sessions', _mrAthId, { data: JSON.stringify(updated) });
+  const fbOk = await fbSet('sessions', _mrAthId, { data: JSON.stringify(updated) });
 
   // Mark as done in localStorage
   const doneKey = `mr_done_${_mrAthId}_${_mrWeek}_${_mrDay}`;
@@ -515,7 +515,7 @@ async function mrSave(){
   window.db.collection('sessions').doc(_mrAthId).set({ draft: null }, { merge: true }).catch(()=>{});
   _mrSaved = true;
 
-  toast('✅ ' + _mrDay + ' guardado — semana ' + _mrWeek);
+  toast(fbOk ? '✅ ' + _mrDay + ' guardado — semana ' + _mrWeek : '⚠️ Guardado localmente (sin conexión)');
   const cont = document.getElementById('mi-rutina-content');
   if(cont) mrRender(cont);
 }

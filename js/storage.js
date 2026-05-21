@@ -111,7 +111,28 @@ async function pullFromFirebase(){
     const _t=_parseList(tplData?.list||tplData); if(_t) templates=_t;
     for(const a of athletes){
       const s=await fbGet('sessions',a.id);
-      const _sd=_parseArrField(s?.data||s); if(_sd) sessions[a.id]=_sd;
+      const remote=_parseArrField(s?.data||s);
+      if(remote){
+        const local=sessions[a.id]||[];
+        if(!local.length){ sessions[a.id]=remote; }
+        else{
+          // Merge: start with remote, add local sessions missing from remote
+          const merged=[...remote];
+          for(const ls of local){
+            const lkey=ls.id||(ls.date+'_'+(ls.dia||ls.name||''));
+            const exists=remote.some(rs=>{
+              const rkey=rs.id||(rs.date+'_'+(rs.dia||rs.name||''));
+              return rkey===lkey;
+            });
+            if(!exists) merged.push(ls);
+          }
+          sessions[a.id]=merged.sort((x,y)=>(y.date||'').localeCompare(x.date||''));
+          // Re-push to Firestore if local had unsaved sessions
+          if(merged.length>remote.length){
+            fbSet('sessions',a.id,{data:JSON.stringify(sessions[a.id])}).catch(()=>{});
+          }
+        }
+      }
       const diet=await fbGet('diets',a.id);
       if(diet) DB.set('diet_'+a.id,diet);
       const notes=await fbGet('notes',a.id);

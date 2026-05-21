@@ -553,8 +553,6 @@ function renderAlumnos(){
               <div class="action-btns">
                 <button class="btn-icon" title="Ver perfil" onclick="openAthProfile('${a.id}')">👤</button>
                 <button class="btn-icon" title="Planilla" onclick="openAthPlanilla('${a.id}')">📋</button>
-                <button class="btn-icon" title="Sincronizar plan desde Google Sheets" onclick="openPlanSyncModal('${a.id}')">🔄</button>
-                <button class="btn-icon" title="Stats desde planilla" onclick="openStatsModal('${a.id}')">📊</button>
                 <button class="btn-icon" title="Dieta" onclick="openAthDiet('${a.id}')">🥗</button>
                 <button class="btn-icon" title="Editar atleta" onclick="openEditAthleteModal('${a.id}')">✏️</button>
                 <button class="btn-icon green-fill" title="Iniciar sesión" onclick="startLiveFor('${a.id}')">▶</button>

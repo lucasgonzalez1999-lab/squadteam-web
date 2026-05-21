@@ -345,7 +345,13 @@ function mrRenderSaveBtn(color){
         <div style="font-size:14px;font-weight:700;color:${color}">Entrenamiento guardado</div>
         <div style="font-size:11px;color:var(--sub);margin-top:1px">${_mrDay} · Semana ${_mrWeek}</div>
       </div>
-      <button onclick="mrUnsave()" style="margin-left:auto;font-size:12px;color:var(--sub);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;border:1px solid var(--border)">Editar</button>
+      <div style="margin-left:auto;display:flex;gap:6px">
+        <button onclick="mrExportWorkoutImage()" style="font-size:12px;color:var(--text2);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;border:1px solid var(--border);display:flex;align-items:center;gap:4px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Compartir
+        </button>
+        <button onclick="mrUnsave()" style="font-size:12px;color:var(--sub);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;border:1px solid var(--border)">Editar</button>
+      </div>
     </div>`;
   }
   return `<button onclick="mrSave()" ${!hasSomething?'disabled':''} id="mr-save-btn"
@@ -580,4 +586,220 @@ async function mrSetDay(day){
   await mrLoadTodayDraft();
   const cont = document.getElementById('mi-rutina-content');
   if(cont) mrRender(cont);
+}
+
+// ── EXPORT WORKOUT IMAGE ──
+async function mrExportWorkoutImage(){
+  const ath   = getAth(_mrAthId) || (typeof COACHES!=='undefined' && COACHES[_mrAthId]) || currentUser;
+  const color = ath?.color || 'var(--acc)';
+  const resolvedColor = color.startsWith('var(') ? '#e8ff00' : color;
+
+  // Build exercise list from last saved session
+  const session = getAthSessions(_mrAthId).find(s => s.dia === _mrDay && s.week === _mrWeek && s.date === today());
+  const byDay   = _mrPlan?.byDay || {};
+  const exItems = [];
+
+  (session?.exercises || []).forEach(ex => {
+    if(!ex.name || !ex.sets?.length) return;
+    const doneSets = ex.sets.filter(s => s.kg || s.reps);
+    if(!doneSets.length) return;
+    exItems.push({ name: ex.name, sets: doneSets });
+  });
+
+  if(!exItems.length){ toast('Sin datos para exportar'); return; }
+
+  const W = 1080;
+  const MARGIN = 72;
+  const HEADER_H = 300;
+  const EX_HEADER = 52;
+  const SET_ROW   = 38;
+  const FOOTER_H  = 100;
+  const GAP       = 14;
+
+  const exBlockHeights = exItems.map(ex => EX_HEADER + ex.sets.length * SET_ROW + GAP);
+  const exTotalH = exBlockHeights.reduce((a, b) => a + b, 0);
+  const H = Math.max(1080, HEADER_H + exTotalH + FOOTER_H + 40);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // ── Background ──
+  ctx.fillStyle = '#07070a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,.03)';
+  ctx.lineWidth = 1;
+  for(let x = 0; x < W; x += 80){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for(let y = 0; y < H; y += 80){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  // Accent strip top
+  ctx.fillStyle = resolvedColor;
+  ctx.fillRect(0, 0, W, 6);
+
+  // Noise grain
+  const imgData = ctx.getImageData(0, 0, W, H);
+  const buf = imgData.data;
+  for(let i = 0; i < buf.length; i += 4){
+    const n = (Math.random() - .5) * 8;
+    buf[i]   = Math.min(255, Math.max(0, buf[i]   + n));
+    buf[i+1] = Math.min(255, Math.max(0, buf[i+1] + n));
+    buf[i+2] = Math.min(255, Math.max(0, buf[i+2] + n));
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  // ── Header ──
+  ctx.fillStyle = 'rgba(255,255,255,.18)';
+  ctx.font = '700 22px Inter,system-ui,sans-serif';
+  ctx.letterSpacing = '6px';
+  ctx.fillText('SQUAD TEAM', MARGIN, 86);
+  ctx.letterSpacing = '0px';
+
+  const athName = (ath?.name || _mrAthId || '').toUpperCase();
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 italic 96px "Barlow Condensed",Impact,sans-serif';
+  // Fit name
+  let fs = 96;
+  while(ctx.measureText(athName).width > W - MARGIN*2 - 20 && fs > 40){
+    fs -= 4;
+    ctx.font = `900 italic ${fs}px "Barlow Condensed",Impact,sans-serif`;
+  }
+  ctx.fillText(athName, MARGIN, 196);
+
+  // Day + week + date
+  const dateStr = new Date().toLocaleDateString('es-UY',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
+  ctx.fillStyle = 'rgba(255,255,255,.5)';
+  ctx.font = '500 30px Inter,system-ui,sans-serif';
+  ctx.fillText(`${_mrDay.toUpperCase()} · SEMANA ${_mrWeek} · ${dateStr}`, MARGIN, 248);
+
+  // Total volume
+  const totalVol = exItems.reduce((tot, ex) => tot + ex.sets.reduce((s, set) => s + (set.kg||0)*(set.reps||0), 0), 0);
+  if(totalVol > 0){
+    ctx.fillStyle = resolvedColor;
+    ctx.font = '700 22px Inter,system-ui,sans-serif';
+    ctx.letterSpacing = '2px';
+    const volStr = `VOL TOTAL ${totalVol.toLocaleString('es')} KG`;
+    const volW = ctx.measureText(volStr).width;
+    ctx.fillText(volStr, W - MARGIN - volW, 248);
+    ctx.letterSpacing = '0px';
+  }
+
+  // Accent divider
+  ctx.fillStyle = resolvedColor;
+  ctx.fillRect(MARGIN, 272, W - MARGIN*2, 3);
+
+  // ── Exercises ──
+  let curY = HEADER_H;
+  const ordinals = ['1º','2º','3º','4º','5º','6º','7º','8º'];
+
+  exItems.forEach((ex, ei) => {
+    // Exercise name
+    ctx.fillStyle = 'rgba(255,255,255,.9)';
+    ctx.font = '700 34px Inter,system-ui,sans-serif';
+    let exLabel = ex.name;
+    const maxNameW = W - MARGIN*2 - 120;
+    while(ctx.measureText(exLabel).width > maxNameW && exLabel.length > 4) exLabel = exLabel.slice(0,-1);
+    if(exLabel !== ex.name) exLabel += '…';
+    ctx.fillText(exLabel, MARGIN, curY + 38);
+
+    // Set count badge
+    ctx.fillStyle = resolvedColor + '22';
+    const badge = `${ex.sets.length} sets`;
+    ctx.font = '600 20px Inter,system-ui,sans-serif';
+    const bw = ctx.measureText(badge).width + 20;
+    ctx.beginPath();
+    ctx.roundRect(W - MARGIN - bw, curY + 14, bw, 30, 6);
+    ctx.fill();
+    ctx.fillStyle = resolvedColor;
+    ctx.textAlign = 'center';
+    ctx.fillText(badge, W - MARGIN - bw/2, curY + 34);
+    ctx.textAlign = 'left';
+
+    curY += EX_HEADER;
+
+    // Set rows
+    ex.sets.forEach((set, si) => {
+      const rowY = curY + si * SET_ROW;
+      const isDone = si < ex.sets.length; // all saved sets are done
+
+      // Ordinal
+      ctx.fillStyle = 'rgba(255,255,255,.3)';
+      ctx.font = '600 22px Inter,system-ui,sans-serif';
+      ctx.fillText(ordinals[si] || (si+1)+'º', MARGIN, rowY + 26);
+
+      // Separator dot
+      ctx.fillStyle = 'rgba(255,255,255,.12)';
+      ctx.beginPath();
+      ctx.arc(MARGIN + 68, rowY + 18, 3, 0, Math.PI*2);
+      ctx.fill();
+
+      // kg × reps
+      const kgStr  = set.kg  ? set.kg+'kg'  : '—';
+      const repStr = set.reps ? '×'+set.reps : '';
+
+      ctx.font = '800 italic 36px "Barlow Condensed",Impact,sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(kgStr, MARGIN + 84, rowY + 30);
+
+      if(repStr){
+        const kgMeasure = ctx.measureText(kgStr).width;
+        ctx.font = '600 26px Inter,system-ui,sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,.45)';
+        ctx.fillText(repStr, MARGIN + 84 + kgMeasure + 10, rowY + 28);
+      }
+
+      // Row separator
+      if(si < ex.sets.length - 1){
+        ctx.fillStyle = 'rgba(255,255,255,.04)';
+        ctx.fillRect(MARGIN + 80, rowY + SET_ROW - 2, W - MARGIN*2 - 80, 1);
+      }
+    });
+
+    curY += ex.sets.length * SET_ROW + GAP;
+
+    // Exercise separator
+    if(ei < exItems.length - 1){
+      ctx.fillStyle = 'rgba(255,255,255,.06)';
+      ctx.fillRect(MARGIN, curY - GAP/2, W - MARGIN*2, 1);
+    }
+  });
+
+  // ── Footer ──
+  const footY = H - 52;
+  ctx.fillStyle = 'rgba(255,255,255,.12)';
+  ctx.font = '700 18px Inter,system-ui,sans-serif';
+  ctx.letterSpacing = '4px';
+  ctx.fillText('SQUAD TEAM · COACH OS', MARGIN, footY);
+  ctx.letterSpacing = '0px';
+
+  ctx.fillStyle = 'rgba(255,255,255,.2)';
+  ctx.font = '400 18px Inter,system-ui,sans-serif';
+  const ds = dateStr;
+  const dw = ctx.measureText(ds).width;
+  ctx.fillText(ds, W - MARGIN - dw, footY);
+
+  // Accent strip bottom
+  ctx.fillStyle = resolvedColor;
+  ctx.fillRect(0, H - 6, W, 6);
+
+  // ── Download / Share ──
+  const dataUrl = canvas.toDataURL('image/png');
+  if(navigator.canShare?.({ files: [new File([], 'test.png', { type: 'image/png' })] })){
+    const blob = await (await fetch(dataUrl)).blob();
+    const file = new File([blob], `squad_entreno_${_mrDay}_sem${_mrWeek}.png`, { type: 'image/png' });
+    try{
+      await navigator.share({ files: [file], title: `${_mrDay} · Semana ${_mrWeek}` });
+    }catch(e){ if(e.name!=='AbortError') _mrDownloadImage(dataUrl); }
+  } else {
+    _mrDownloadImage(dataUrl);
+  }
+  toast('📸 Imagen generada');
+}
+
+function _mrDownloadImage(dataUrl){
+  const a = document.createElement('a');
+  a.download = `squad_entreno_${_mrDay}_sem${_mrWeek}.png`;
+  a.href = dataUrl;
+  a.click();
 }

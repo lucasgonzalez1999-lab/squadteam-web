@@ -15,7 +15,7 @@ let _mrAutoSaveTimer = null;
 // ── ENTRY POINT ──
 async function renderMiRutina(){
   const user = currentUser;
-  if(!user || user.role !== 'athlete'){ return; }
+  if(!user) return;
   _mrAthId = user.id;
 
   const cont = document.getElementById('mi-rutina-content');
@@ -24,13 +24,13 @@ async function renderMiRutina(){
 
   _mrPlan = await mrLoadPlan(_mrAthId);
   if(!_mrPlan){
-    const isSelfCoach = typeof _previewCoachProfile !== 'undefined' && _previewCoachProfile !== null && _previewCoachProfile.id === user.id;
+    const isCoach = user.role === 'coach';
     cont.innerHTML = `<div style="padding:32px 24px;text-align:center;max-width:340px;margin:0 auto">
       <div style="font-size:40px;margin-bottom:14px">📋</div>
       <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:8px">Sin rutina asignada</div>
-      ${isSelfCoach
+      ${isCoach
         ? `<div style="font-size:13px;color:var(--sub);margin-bottom:20px;line-height:1.6">Todavía no tenés un plan cargado para vos. Creá uno desde el panel.</div>
-           <button onclick="exitPreviewMode();setTimeout(()=>{goSection('planilla',document.querySelector('[data-tab=planilla]'));pbSelectAth('${user.id}')},80)"
+           <button onclick="goSection('planilla',document.querySelector('[data-tab=planilla]'));setTimeout(()=>pbSelectAth('${user.id}'),80)"
              style="background:var(--acc);color:#000;border:none;border-radius:12px;padding:14px 28px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.3px">
              ⚡ Crear mi plan
            </button>`
@@ -137,8 +137,8 @@ function mrRender(cont){
         <div style="font-size:18px;font-weight:800;color:var(--text)">Mi Rutina</div>
         <div style="font-size:13px;color:var(--sub);margin-top:2px">${plan.nivel||'intermedio'} · ${plan.diasSemana||days.length} días/sem · ${totalWeeks-1} semanas</div>
       </div>
-      ${(typeof _previewCoachProfile!=='undefined'&&_previewCoachProfile!==null&&_previewCoachProfile.id===_mrAthId)
-        ? `<button onclick="exitPreviewMode();setTimeout(()=>{goSection('planilla',document.querySelector('[data-tab=planilla]'));pbSelectAth('${_mrAthId}')},80)"
+      ${currentUser?.role === 'coach'
+        ? `<button onclick="goSection('planilla',document.querySelector('[data-tab=planilla]'));setTimeout(()=>pbSelectAth('${_mrAthId}'),80)"
             style="flex-shrink:0;padding:7px 14px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;
             color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
             ✏️ Editar plan

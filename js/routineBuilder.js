@@ -297,7 +297,7 @@ function pbRenderExCard(ex, ei, wl, color){
   return `
   <div class="pb-ex-card" data-ei="${ei}" style="background:var(--surf);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden">
     <div style="padding:12px 14px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border)">
-      <div class="pb-drag-handle" style="cursor:grab;color:var(--sub2);font-size:20px;padding:2px 6px 2px 2px;touch-action:none;line-height:1;user-select:none;-webkit-user-select:none">⠿</div>
+      <div class="pb-drag-handle" style="cursor:grab;color:var(--sub2);font-size:22px;padding:8px 10px 8px 4px;touch-action:none;line-height:1;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none">⠿</div>
       <div style="flex:1;font-size:14px;font-weight:700;color:var(--text)">${ex.name}</div>
       <button onclick="pbRemoveEx(${ei})"  title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--sub);font-size:16px;padding:3px 7px;border-radius:5px;line-height:1">✕</button>
     </div>
@@ -415,16 +415,19 @@ function pbInitDrag(){
   let drag=null;
 
   list.querySelectorAll('.pb-drag-handle').forEach(handle=>{
-    handle.addEventListener('touchstart', startDrag, {passive:false});
+    handle.addEventListener('pointerdown', startDrag);
   });
 
   function startDrag(e){
+    if(e.button!==0 && e.pointerType==='mouse') return;
     e.preventDefault();
     const card=e.currentTarget.closest('.pb-ex-card');
     if(!card) return;
+
+    e.currentTarget.setPointerCapture(e.pointerId);
+
     const origEi=parseInt(card.dataset.ei);
     const rect=card.getBoundingClientRect();
-    const touch=e.touches[0];
 
     const ph=document.createElement('div');
     ph.style.cssText=`height:${rect.height}px;border-radius:12px;border:2px dashed var(--border);margin-bottom:10px;box-sizing:border-box;flex-shrink:0;`;
@@ -435,17 +438,16 @@ function pbInitDrag(){
     fl.style.cssText=`position:fixed;top:${rect.top}px;left:${rect.left}px;width:${rect.width}px;z-index:9999;opacity:.96;box-shadow:0 12px 40px rgba(0,0,0,.55);border-radius:12px;pointer-events:none;transform:scale(1.02);`;
     document.body.appendChild(fl);
 
-    drag={origEi, card, fl, ph, y:touch.clientY, flTop:rect.top};
-    document.addEventListener('touchmove', moveDrag, {passive:false});
-    document.addEventListener('touchend',  endDrag,  {once:true});
+    drag={origEi, card, fl, ph, handle:e.currentTarget, y:e.clientY, flTop:rect.top};
+    e.currentTarget.addEventListener('pointermove', moveDrag);
+    e.currentTarget.addEventListener('pointerup',   endDrag,   {once:true});
+    e.currentTarget.addEventListener('pointercancel', endDrag, {once:true});
   }
 
   function moveDrag(e){
-    e.preventDefault();
     if(!drag) return;
-    const touch=e.touches[0];
-    const dy=touch.clientY - drag.y;
-    drag.y=touch.clientY;
+    const dy=e.clientY - drag.y;
+    drag.y=e.clientY;
     drag.flTop+=dy;
     drag.fl.style.top=drag.flTop+'px';
 
@@ -462,7 +464,7 @@ function pbInitDrag(){
 
   function endDrag(){
     if(!drag) return;
-    document.removeEventListener('touchmove', moveDrag);
+    drag.handle.removeEventListener('pointermove', moveDrag);
 
     const children=[...list.children];
     const phIdx=children.indexOf(drag.ph);
@@ -486,7 +488,6 @@ function pbInitDrag(){
         return;
       }
     }
-    // Re-init handles even if no move happened (re-render didn't run)
     pbInitDrag();
   }
 }

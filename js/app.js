@@ -312,13 +312,12 @@ function goSection(id, el) {
   if (id==='planilla')  renderPlanilla();
   if (id==='nutricion') renderNutricion();
   if (id==='progreso')  renderProgreso();
-  if (id==='iacoach')   renderIACoach();
   if (id==='pagos')     renderPagos();
   if (id==='mi-rutina')    renderMiRutina();
   if (id==='mi-perfil')   renderAthleteView(currentUser);
   if (id==='mi-historial') renderAthHistorial(currentUser);
   if (id==='checkins')    renderCheckins();
-  if (id==='admin')     { renderDB(); renderBotConfig(); }
+  if (id==='admin')     renderDB();
 }
 
 function mobActive(btn) { document.querySelectorAll('.mob-btn').forEach(b => b.classList.remove('on')); btn.classList.add('on'); }
@@ -329,7 +328,6 @@ function showAdm(id, btn) {
   btn?.classList.add('on');
   if(id==='db') renderDB();
   if(id==='sheets') renderSheetsPanel();
-  if(id==='bot') renderBotConfig();
 }
 
 function renderAll() {

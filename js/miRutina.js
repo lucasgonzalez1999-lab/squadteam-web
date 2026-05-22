@@ -110,6 +110,7 @@ async function renderMiRutina(){
       _mrSyncing = false;
     })();
   }
+}
 
 // ── LOAD PLAN ──
 async function mrLoadPlan(athId){

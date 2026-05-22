@@ -110,6 +110,7 @@ async function renderMiRutina(){
       _mrSyncing = false;
     })();
   }
+}
 
 // ── LOAD PLAN ──
 async function mrLoadPlan(athId){
@@ -347,7 +348,7 @@ function mrRenderExercises(exercises, week, totalWeeks, color){
                 onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor=this.value?'${color}':'rgba(255,255,255,.18)'">
             </div>
           </div>
-          <button id="mr-chk-${ei}-${sKey}" onclick="mrCheckSet('${exName.replace(/'/g,"\\'")}','${sKey}',${ei})"
+          <button id="mr-chk-${ei}-${sKey}" onclick="mrCheckSet('${exName.replace(/'/g,"\\'")}_','${sKey}',${ei})"
             style="width:36px;height:36px;border-radius:50%;border:2px solid ${done?color:'rgba(255,255,255,.3)'};
             background:${done?color:'rgba(255,255,255,.05)'};display:flex;align-items:center;justify-content:center;
             flex-shrink:0;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;margin-top:18px">
@@ -807,7 +808,6 @@ async function _mrDrawWorkoutCanvas({ athName, day, week, resolvedColor, exItems
     // Set rows
     ex.sets.forEach((set, si) => {
       const rowY = curY + si * SET_ROW;
-      const isDone = si < ex.sets.length; // all saved sets are done
 
       // Ordinal
       ctx.fillStyle = 'rgba(255,255,255,.3)';

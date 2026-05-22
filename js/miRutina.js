@@ -12,6 +12,7 @@ let _mrInputs        = {};
 let _mrSaved         = false;
 let _mrAutoSaveTimer = null;
 let _mrReadOnly      = false;
+let _mrSyncing       = false;
 
 // ── ENTRY POINT ──
 async function renderMiRutina(){
@@ -66,7 +67,49 @@ async function renderMiRutina(){
   }
 
   mrRender(cont);
-}
+
+  // Background re-sync: fetches fresh sessions from Firestore once per navigation.
+  // Catches data saved on another device (desktop/mobile) without requiring a full reload.
+  if(!_mrSyncing && window.db){
+    _mrSyncing = true;
+    (async()=>{
+      try{
+        const snap = await window.db.collection('sessions').doc(_mrAthId).get();
+        // Also check Firestore draft for in-progress sessions from other devices
+        const fbDraft = snap.data()?.draft;
+        if(fbDraft && fbDraft.date===today() && fbDraft.day===_mrDay && fbDraft.week===_mrWeek && !mrDayIsDone(_mrDay,_mrWeek)){
+          const hasLocal = Object.values(_mrInputs).some(ex=>Object.values(ex).some(s=>s.kg||s.reps));
+          if(!hasLocal){
+            _mrInputs = fbDraft.inputs || {};
+            const c = document.getElementById('mi-rutina-content');
+            if(c) mrRender(c);
+          }
+        }
+        // Check if remote has sessions the local array doesn't
+        const remote = _parseArrField(snap.data()?.data||snap.data());
+        if(remote && remote.length > (sessions[_mrAthId]||[]).length){
+          sessions[_mrAthId] = remote;
+          DB.set('sessions', sessions);
+          // Heal done state and re-render if this day now has data
+          if(!mrDayIsDone(_mrDay, _mrWeek)){
+            const ss = remote.find(s=>s.dia===_mrDay&&s.week===_mrWeek);
+            if(ss){
+              DB.set(`mr_done_${_mrAthId}_${_mrWeek}_${_mrDay}`, ss.date||today());
+              _mrInputs = {};
+              ss.exercises?.forEach(ex=>{
+                if(!ex.name) return;
+                _mrInputs[ex.name] = {};
+                (ex.sets||[]).forEach((s,i)=>{ _mrInputs[ex.name]['s'+(i+1)]={kg:s.kg,reps:s.reps}; });
+              });
+              const c = document.getElementById('mi-rutina-content');
+              if(c) mrRender(c);
+            }
+          }
+        }
+      }catch(e){}
+      _mrSyncing = false;
+    })();
+  }
 
 // ── LOAD PLAN ──
 async function mrLoadPlan(athId){

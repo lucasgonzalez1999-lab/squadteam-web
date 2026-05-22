@@ -12,6 +12,7 @@ let _mrInputs        = {};
 let _mrSaved         = false;
 let _mrAutoSaveTimer = null;
 let _mrReadOnly      = false;
+let _mrSyncing       = false;
 
 // ── ENTRY POINT ──
 async function renderMiRutina(){
@@ -48,8 +49,67 @@ async function renderMiRutina(){
   _mrReadOnly = user.role !== 'coach' && getAth(user.id)?.features?.liveMode === false;
 
   await mrLoadTodayDraft();
+
+  // Heal "done" state from session data — handles cross-device sync
+  // If a session exists for this day+week, mark as done even on a new device
+  if(!mrDayIsDone(_mrDay, _mrWeek)){
+    const syncedSession = getAthSessions(_mrAthId).find(s => s.dia === _mrDay && s.week === _mrWeek);
+    if(syncedSession){
+      const doneKey = `mr_done_${_mrAthId}_${_mrWeek}_${_mrDay}`;
+      DB.set(doneKey, syncedSession.date || today());
+      // Also restore inputs from the saved session so Editar works correctly
+      syncedSession.exercises?.forEach(ex => {
+        if(!ex.name) return;
+        _mrInputs[ex.name] = {};
+        (ex.sets||[]).forEach((s,i) => { _mrInputs[ex.name]['s'+(i+1)] = {kg:s.kg,reps:s.reps}; });
+      });
+    }
+  }
+
   mrRender(cont);
-}
+
+  // Background re-sync: fetches fresh sessions from Firestore once per navigation.
+  // Catches data saved on another device (desktop/mobile) without requiring a full reload.
+  if(!_mrSyncing && window.db){
+    _mrSyncing = true;
+    (async()=>{
+      try{
+        const snap = await window.db.collection('sessions').doc(_mrAthId).get();
+        // Also check Firestore draft for in-progress sessions from other devices
+        const fbDraft = snap.data()?.draft;
+        if(fbDraft && fbDraft.date===today() && fbDraft.day===_mrDay && fbDraft.week===_mrWeek && !mrDayIsDone(_mrDay,_mrWeek)){
+          const hasLocal = Object.values(_mrInputs).some(ex=>Object.values(ex).some(s=>s.kg||s.reps));
+          if(!hasLocal){
+            _mrInputs = fbDraft.inputs || {};
+            const c = document.getElementById('mi-rutina-content');
+            if(c) mrRender(c);
+          }
+        }
+        // Check if remote has sessions the local array doesn't
+        const remote = _parseArrField(snap.data()?.data||snap.data());
+        if(remote && remote.length > (sessions[_mrAthId]||[]).length){
+          sessions[_mrAthId] = remote;
+          DB.set('sessions', sessions);
+          // Heal done state and re-render if this day now has data
+          if(!mrDayIsDone(_mrDay, _mrWeek)){
+            const ss = remote.find(s=>s.dia===_mrDay&&s.week===_mrWeek);
+            if(ss){
+              DB.set(`mr_done_${_mrAthId}_${_mrWeek}_${_mrDay}`, ss.date||today());
+              _mrInputs = {};
+              ss.exercises?.forEach(ex=>{
+                if(!ex.name) return;
+                _mrInputs[ex.name] = {};
+                (ex.sets||[]).forEach((s,i)=>{ _mrInputs[ex.name]['s'+(i+1)]={kg:s.kg,reps:s.reps}; });
+              });
+              const c = document.getElementById('mi-rutina-content');
+              if(c) mrRender(c);
+            }
+          }
+        }
+      }catch(e){}
+      _mrSyncing = false;
+    })();
+  }
 
 // ── LOAD PLAN ──
 async function mrLoadPlan(athId){
@@ -503,7 +563,7 @@ async function mrSave(){
   const updated = [sessionObj, ...withoutToday];
   sessions[_mrAthId] = updated;
   DB.set('sessions', sessions);
-  await fbSet('sessions', _mrAthId, { data: JSON.stringify(updated) });
+  const fbOk = await fbSet('sessions', _mrAthId, { data: JSON.stringify(updated) });
 
   // Mark as done in localStorage
   const doneKey = `mr_done_${_mrAthId}_${_mrWeek}_${_mrDay}`;
@@ -515,7 +575,7 @@ async function mrSave(){
   window.db.collection('sessions').doc(_mrAthId).set({ draft: null }, { merge: true }).catch(()=>{});
   _mrSaved = true;
 
-  toast('✅ ' + _mrDay + ' guardado — semana ' + _mrWeek);
+  toast(fbOk ? '✅ ' + _mrDay + ' guardado — semana ' + _mrWeek : '⚠️ Guardado localmente (sin conexión)');
   const cont = document.getElementById('mi-rutina-content');
   if(cont) mrRender(cont);
 }
@@ -1023,6 +1083,26 @@ async function mrExportStory(photoFile, isDemo){
   while(ctx.measureText(exLabel).width>W-M*2-20&&efs>36){efs-=4;ctx.font=`900 italic ${efs}px "Barlow Condensed",Impact,sans-serif`;}
   ctx.fillText(exLabel,M,188); ctx.restore();
 
+  // Other exercises — compact chips below headline (y~218)
+  const otherEx=exItems.filter(ex=>ex!==mainEx);
+  if(otherEx.length){
+    ctx.save(); ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=14;
+    let ox=M; const oY=216;
+    otherEx.slice(0,5).forEach(ex=>{
+      const pk=Math.max(...ex.sets.map(s=>s.kg||0),0);
+      const nm=ex.name.length>13?ex.name.slice(0,12).trim()+'…':ex.name;
+      const lbl=nm.toUpperCase()+' '+pk+'KG';
+      ctx.font='600 17px Inter,system-ui,sans-serif';
+      const tw=ctx.measureText(lbl).width, bw=tw+14, bh=26;
+      if(ox+bw>W-M) return;
+      ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.roundRect(ox,oY,bw,bh,4); ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=1; ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,0.65)'; ctx.fillText(lbl,ox+7,oY+19);
+      ox+=bw+6;
+    });
+    ctx.restore();
+  }
+
   // ── WEIGHT GLOW SPHERE ──
   const glowSphere=ctx.createRadialGradient(W/2,360,0,W/2,360,320);
   glowSphere.addColorStop(0,`rgba(${ar},${ag},${ab},0.22)`);
@@ -1035,7 +1115,11 @@ async function mrExportStory(photoFile, isDemo){
   let wfs=196; ctx.font=`900 italic ${wfs}px "Barlow Condensed",Impact,sans-serif`;
   while(ctx.measureText(numStr).width>W-M*2-170&&wfs>80){wfs-=4;ctx.font=`900 italic ${wfs}px "Barlow Condensed",Impact,sans-serif`;}
 
-  ctx.save(); ctx.shadowColor=`rgba(${ar},${ag},${ab},0.75)`; ctx.shadowBlur=44;
+  ctx.save();
+  ctx.strokeStyle='rgba(0,0,0,0.85)'; ctx.lineWidth=10; ctx.lineJoin='round';
+  ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=24;
+  ctx.strokeText(numStr,M,396);
+  ctx.shadowColor=`rgba(${ar},${ag},${ab},0.75)`; ctx.shadowBlur=44;
   ctx.fillStyle='#ffffff'; ctx.fillText(numStr,M,396); ctx.restore();
 
   const numW=ctx.measureText(numStr).width;
@@ -1048,39 +1132,7 @@ async function mrExportStory(photoFile, isDemo){
   ctx.font=`700 italic ${Math.round(wfs*0.26)}px "Barlow Condensed",Impact,sans-serif`;
   ctx.fillText(`× ${mMaxReps}`,M+numW+12,375);
 
-  // ── BADGES ROW (y~418) ──
-  const isPR=!isDemo&&mainEx&&_mrStoryIsPR(mainEx.name,mMaxKg);
-  const badges=[];
-  if(isPR) badges.push({t:'● NEW PR',s:'pr'});
-  if(!isDemo){
-    const prevS=getAthSessions(_mrAthId).filter(s=>!(s.dia===_mrDay&&s.week===_mrWeek&&s.date===today()));
-    const thisVol=exItems.reduce((t,ex)=>t+ex.sets.reduce((ss,s)=>ss+(s.kg||0)*(s.reps||0),0),0);
-    const recent=prevS.slice(0,6);
-    if(recent.length>=2){
-      const avgVol=recent.reduce((t,s)=>t+(s.exercises||[]).reduce((et,e)=>et+(e.sets||[]).reduce((st,s2)=>st+(s2.kg||0)*(s2.reps||0),0),0),0)/recent.length;
-      const pct=Math.round((thisVol/avgVol-1)*100);
-      if(pct>=5) badges.push({t:`+${pct}% VOL`,s:'vol'});
-    }
-    const streak=_mrCalcStreak();
-    if(streak>=3) badges.push({t:`${streak} DAY STREAK`,s:'streak'});
-  }
-
-  let bx=M;
-  badges.slice(0,3).forEach(b=>{
-    ctx.font='700 16px Inter,system-ui,sans-serif';
-    const tw=ctx.measureText(b.t).width, bw=tw+22, bh=30;
-    const ispr=b.s==='pr';
-    if(ispr){ ctx.save(); ctx.shadowColor=accent; ctx.shadowBlur=16; }
-    ctx.fillStyle=ispr?accent:'rgba(255,255,255,0.1)';
-    ctx.beginPath(); ctx.roundRect(bx,418,bw,bh,bh/2); ctx.fill();
-    if(ispr) ctx.restore();
-    if(!ispr){ ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.lineWidth=1; ctx.stroke(); }
-    ctx.fillStyle=ispr?'#000':'rgba(255,255,255,0.88)';
-    ctx.save(); if(ispr){ctx.shadowColor=accent;ctx.shadowBlur=8;}
-    ctx.fillText(b.t,bx+11,418+20); ctx.restore(); bx+=bw+8;
-  });
-
-  // Accent micro-line after badges
+  // Accent micro-line
   ctx.save(); ctx.strokeStyle=accent; ctx.lineWidth=1; ctx.globalAlpha=0.35;
   ctx.beginPath(); ctx.moveTo(M,460); ctx.lineTo(M+160,460); ctx.stroke(); ctx.restore();
 
@@ -1098,7 +1150,6 @@ async function mrExportStory(photoFile, isDemo){
   };
   drawWv(wvFull,10,0.05); drawWv(wvFull,4,0.1);
   ctx.save(); ctx.shadowColor=accent; ctx.shadowBlur=10; drawWv(wvFull,1.2,0.55); ctx.restore();
-  // Set dots
   wvP.forEach(p=>{ ctx.beginPath(); ctx.arc(p.x,p.y,2.5,0,Math.PI*2); ctx.fillStyle=accent; ctx.globalAlpha=0.6; ctx.fill(); ctx.globalAlpha=1; });
 
   // ── SIDE METRICS (y: 660-1020, hugging edges) ──
@@ -1110,13 +1161,21 @@ async function mrExportStory(photoFile, isDemo){
   sideLine(M,650,1050); sideLine(W-M,650,1050);
 
   const drawMetric=(x,y,lbl,val,sub,align)=>{
-    const a=align==='right';
-    ctx.save(); ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=12; ctx.textAlign=align;
-    ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.font='600 11px Inter,system-ui,sans-serif';
+    ctx.save(); ctx.shadowColor='rgba(0,0,0,0.95)'; ctx.shadowBlur=16; ctx.textAlign=align;
+    // Dark backing card — opaque enough for any background
+    const bkW=180, bkH=82, bkX=align==='right'?x-bkW+10:x-10;
+    ctx.fillStyle='rgba(0,0,0,0.65)'; ctx.beginPath(); ctx.roundRect(bkX,y-18,bkW,bkH,8); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.10)'; ctx.lineWidth=1; ctx.stroke();
+    // Label
+    ctx.fillStyle='rgba(255,255,255,0.72)'; ctx.font='700 11px Inter,system-ui,sans-serif';
     ctx.letterSpacing='4px'; ctx.fillText(lbl,x,y); ctx.letterSpacing='0px';
-    ctx.fillStyle='rgba(255,255,255,0.92)'; ctx.font=`900 italic 44px "Barlow Condensed",Impact,sans-serif`;
-    ctx.fillText(val,x,y+38);
-    ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.font='500 12px Inter,system-ui,sans-serif';
+    // Value — large with stroke for extra punch
+    ctx.font=`900 italic 44px "Barlow Condensed",Impact,sans-serif`;
+    ctx.strokeStyle='rgba(0,0,0,0.85)'; ctx.lineWidth=6; ctx.lineJoin='round';
+    ctx.strokeText(val,x,y+38);
+    ctx.fillStyle='#ffffff'; ctx.fillText(val,x,y+38);
+    // Sub
+    ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font='500 12px Inter,system-ui,sans-serif';
     ctx.fillText(sub,x,y+58); ctx.textAlign='left'; ctx.restore();
   };
 
@@ -1133,52 +1192,71 @@ async function mrExportStory(photoFile, isDemo){
   ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(M,1390); ctx.lineTo(W-M,1390); ctx.stroke();
 
-  // ── MUSCLE PILLS (y~1420) ──
+  // ── SESSION COMPARISON vs anterior (y: 1415-1495) ──
+  let _prevVol=0,_prevMax=0,_hasPrev=false;
+  if(!isDemo){
+    const _prevSess=getAthSessions(_mrAthId)
+      .filter(s=>s.dia===_mrDay&&!(s.week===_mrWeek&&s.date===today()))
+      .sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
+    if(_prevSess){
+      _hasPrev=true;
+      (_prevSess.exercises||[]).forEach(ex=>{
+        (ex.sets||[]).forEach(s=>{
+          _prevVol+=(s.kg||0)*(s.reps||0);
+          if((s.kg||0)>_prevMax) _prevMax=s.kg||0;
+        });
+      });
+    }
+  }
+  if(_hasPrev){
+    ctx.save(); ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=12;
+    const fmtV=v=>v>=1000?(v/1000).toFixed(1)+'T':Math.round(v)+'KG';
+    ctx.fillStyle='rgba(255,255,255,0.20)'; ctx.font='600 11px Inter,system-ui,sans-serif';
+    ctx.letterSpacing='5px'; ctx.fillText('VS ANTERIOR',M,1418); ctx.letterSpacing='0px';
+    const drawCmpRow=(ry,lbl,prev,curr,delta,dUnit)=>{
+      ctx.fillStyle='rgba(255,255,255,0.22)'; ctx.font='600 10px Inter,system-ui,sans-serif';
+      ctx.letterSpacing='2px'; ctx.fillText(lbl,M,ry); ctx.letterSpacing='0px';
+      const c1=M+90, c2=M+200, c3=M+320;
+      ctx.fillStyle='rgba(255,255,255,0.38)'; ctx.font=`900 italic 28px "Barlow Condensed",Impact,sans-serif`;
+      ctx.fillText(prev,c1,ry+2);
+      ctx.fillStyle='rgba(255,255,255,0.18)'; ctx.font='400 14px Inter,system-ui,sans-serif';
+      ctx.fillText('→',c2-22,ry-2);
+      ctx.fillStyle='rgba(255,255,255,0.90)'; ctx.font=`900 italic 28px "Barlow Condensed",Impact,sans-serif`;
+      ctx.fillText(curr,c2,ry+2);
+      const dPos=delta>=0;
+      ctx.fillStyle=dPos?'rgba(134,239,172,0.88)':'rgba(252,165,165,0.88)';
+      ctx.font=`700 italic 20px "Barlow Condensed",Impact,sans-serif`;
+      ctx.fillText((dPos?'+':'')+delta+dUnit,c3,ry+2);
+    };
+    drawCmpRow(1444,'VOLUMEN',fmtV(_prevVol),fmtV(totalVol),Math.round(totalVol-_prevVol),' KG');
+    if(_prevMax>0) drawCmpRow(1486,'PICO MAX',_prevMax+'KG',mMaxKg+'KG',+(mMaxKg-_prevMax).toFixed(1),' KG');
+    ctx.restore();
+  }
+
+  // ── MUSCLE PILLS (y~1530) ──
   const muscles=_mrStoryMuscles(exItems);
   let mpx=M;
   (muscles.length?muscles:['FULL BODY']).forEach(m=>{
     ctx.font='700 15px Inter,system-ui,sans-serif';
     const tw=ctx.measureText(m).width, bw=tw+20, bh=30;
-    ctx.fillStyle=`rgba(${ar},${ag},${ab},0.14)`; ctx.beginPath(); ctx.roundRect(mpx,1420,bw,bh,4); ctx.fill();
+    ctx.fillStyle=`rgba(${ar},${ag},${ab},0.14)`; ctx.beginPath(); ctx.roundRect(mpx,1530,bw,bh,4); ctx.fill();
     ctx.strokeStyle=`rgba(${ar},${ag},${ab},0.45)`; ctx.lineWidth=1; ctx.stroke();
-    ctx.fillStyle=accent; ctx.fillText(m,mpx+10,1420+20); mpx+=bw+8;
+    ctx.fillStyle=accent; ctx.fillText(m,mpx+10,1530+20); mpx+=bw+8;
   });
 
-  // ── MINI STATS ROW (y~1490) ──
+  // ── MINI STATS ROW (y~1600) ──
   const miniS=[{l:'TOTAL',v:volStr},{l:'MAX',v:maxKgAll+'KG'},{l:'SETS',v:String(totalSets)},{l:'EJERC',v:String(exItems.length)}];
   const msW=(W-M*2)/miniS.length;
   miniS.forEach((s,i)=>{
     const sx=M+i*msW;
-    if(i>0){ ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(sx,1492); ctx.lineTo(sx,1548); ctx.stroke(); }
+    if(i>0){ ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(sx,1600); ctx.lineTo(sx,1656); ctx.stroke(); }
     ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.font='600 11px Inter,system-ui,sans-serif';
-    ctx.letterSpacing='3px'; ctx.fillText(s.l,sx+4,1508); ctx.letterSpacing='0px';
+    ctx.letterSpacing='3px'; ctx.fillText(s.l,sx+4,1616); ctx.letterSpacing='0px';
     ctx.fillStyle='rgba(255,255,255,0.88)'; ctx.font=`900 italic 36px "Barlow Condensed",Impact,sans-serif`;
-    ctx.fillText(s.v,sx+4,1546);
+    ctx.fillText(s.v,sx+4,1654);
   });
 
-  // ── PERFORMANCE BADGE (y~1580) ──
-  if(!isDemo){
-    const prevS2=getAthSessions(_mrAthId).filter(s=>!(s.dia===_mrDay&&s.week===_mrWeek&&s.date===today()));
-    const recent2=prevS2.slice(0,5);
-    if(recent2.length>=2){
-      const avg2=recent2.reduce((t,s)=>t+(s.exercises||[]).reduce((et,e)=>et+(e.sets||[]).reduce((st,s2)=>st+(s2.kg||0)*(s2.reps||0),0),0),0)/recent2.length;
-      const pct=Math.round((totalVol/avg2-1)*100);
-      const pstr=(pct>=0?`+${pct}%`:`${pct}%`)+' VS PROMEDIO';
-      ctx.save();
-      ctx.shadowColor=pct>=0?'rgba(74,222,128,0.6)':'rgba(248,113,113,0.5)'; ctx.shadowBlur=14;
-      ctx.fillStyle=pct>=0?'rgba(74,222,128,0.92)':'rgba(248,113,113,0.82)';
-      ctx.font='700 italic 28px "Barlow Condensed",Impact,sans-serif';
-      ctx.letterSpacing='2px'; ctx.fillText(pstr,M,1590); ctx.letterSpacing='0px'; ctx.restore();
-    }
-  }
-
-  // ── MOTIVATIONAL PHRASE (y~1650) ──
-  const phrases=['DISCIPLINA > MOTIVACIÓN','CONSISTENCY WINS','BUILT THROUGH REPETITION','TRUST THE PROCESS','SIN EXCUSAS','EARNED NOT GIVEN','THE PROCESS IS THE PRIZE','EVERY REP COUNTS'];
-  const phrase=phrases[(athName.charCodeAt(0)||0)%phrases.length];
-  ctx.fillStyle='rgba(255,255,255,0.20)'; ctx.font='800 italic 36px "Barlow Condensed",Impact,sans-serif';
-  ctx.letterSpacing='1px'; ctx.fillText(phrase,M,1652); ctx.letterSpacing='0px';
-
-  // Set breakdown of main lift (y~1720)
+  // ── SET BREAKDOWN of main lift (y~1715) ──
   if(mSets.length){
     ctx.fillStyle='rgba(255,255,255,0.18)'; ctx.font='600 12px Inter,system-ui,sans-serif';
     ctx.letterSpacing='4px'; ctx.fillText('SERIES',M,1702); ctx.letterSpacing='0px';
@@ -1194,10 +1272,16 @@ async function mrExportStory(photoFile, isDemo){
     });
   }
 
-  // ── DATE + WATERMARK ──
+  // ── DATE + SQUAD TEAM WATERMARK ──
   const dtStr=new Date().toLocaleDateString('es-UY',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
   ctx.fillStyle='rgba(255,255,255,0.18)'; ctx.font='400 14px Inter,system-ui,sans-serif';
   ctx.textAlign='right'; ctx.fillText(dtStr,W-M,1810); ctx.textAlign='left';
+
+  // Geometric diamond mark (subtle Squad Team logo)
+  const wmX=W-M-20, wmY=H-56;
+  ctx.save(); ctx.globalAlpha=0.10; ctx.strokeStyle=accent; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(wmX,wmY-12); ctx.lineTo(wmX+10,wmY); ctx.lineTo(wmX,wmY+12); ctx.lineTo(wmX-10,wmY); ctx.closePath(); ctx.stroke();
+  ctx.restore();
 
   ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.font='700 14px Inter,system-ui,sans-serif';
   ctx.letterSpacing='5px'; ctx.textAlign='center'; ctx.fillText('SQUAD TEAM · COACH OS',W/2,H-44);
@@ -1208,7 +1292,7 @@ async function mrExportStory(photoFile, isDemo){
   ctx.fillStyle=`rgba(${ar},${ag},${ab},0.75)`; ctx.fillRect(0,H-4,W,4); ctx.restore();
 
   // ── EXPORT ──
-  const dataUrl=canvas.toDataURL('image/png'); // PNG preserves transparency
+  const dataUrl=canvas.toDataURL('image/png');
   const sfx=isDemo?'hud_demo':`hud_${dayLabel}_s${weekNum}`;
   if(!isDemo&&navigator.canShare?.({files:[new File([],'t.png',{type:'image/png'})]})){
     const blob=await(await fetch(dataUrl)).blob();

@@ -111,11 +111,52 @@ async function pullFromFirebase(){
     const _t=_parseList(tplData?.list||tplData); if(_t) templates=_t;
     for(const a of athletes){
       const s=await fbGet('sessions',a.id);
-      const _sd=_parseArrField(s?.data||s); if(_sd) sessions[a.id]=_sd;
+      const remote=_parseArrField(s?.data||s);
+      if(remote){
+        const local=sessions[a.id]||[];
+        if(!local.length){ sessions[a.id]=remote; }
+        else{
+          // Merge: start with remote, add local sessions missing from remote
+          const merged=[...remote];
+          for(const ls of local){
+            const lkey=ls.id||(ls.date+'_'+(ls.dia||ls.name||''));
+            const exists=remote.some(rs=>{
+              const rkey=rs.id||(rs.date+'_'+(rs.dia||rs.name||''));
+              return rkey===lkey;
+            });
+            if(!exists) merged.push(ls);
+          }
+          sessions[a.id]=merged.sort((x,y)=>(y.date||'').localeCompare(x.date||''));
+          // Re-push to Firestore if local had unsaved sessions
+          if(merged.length>remote.length){
+            fbSet('sessions',a.id,{data:JSON.stringify(sessions[a.id])}).catch(()=>{});
+          }
+        }
+      }
       const diet=await fbGet('diets',a.id);
       if(diet) DB.set('diet_'+a.id,diet);
       const notes=await fbGet('notes',a.id);
       if(notes?.text) DB.set('notes_'+a.id,notes.text);
+    }
+    // Also sync coach sessions (coaches are not in athletes array)
+    if(typeof COACHES!=='undefined'){
+      for(const cid of Object.keys(COACHES)){
+        const cs=await fbGet('sessions',cid);
+        const cr=_parseArrField(cs?.data||cs);
+        if(cr){
+          const cl=sessions[cid]||[];
+          if(!cl.length){ sessions[cid]=cr; }
+          else{
+            const cm=[...cr];
+            for(const ls of cl){
+              const lk=ls.id||(ls.date+'_'+(ls.dia||ls.name||''));
+              if(!cr.some(rs=>(rs.id||(rs.date+'_'+(rs.dia||rs.name||'')))=== lk)) cm.push(ls);
+            }
+            sessions[cid]=cm.sort((x,y)=>(y.date||'').localeCompare(x.date||''));
+            if(cm.length>cr.length) fbSet('sessions',cid,{data:JSON.stringify(sessions[cid])}).catch(()=>{});
+          }
+        }
+      }
     }
     DB.set('athletes',athletes);
     DB.set('templates',templates);

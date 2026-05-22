@@ -654,20 +654,31 @@ function _naRenderStep(step, data){
     const curOpts=currencies.map(c=>`<option value="${c}" ${(data.currency||'UYU')===c?'selected':''}>${c}</option>`).join('');
     body=`
       <div style="padding:18px 22px;display:flex;flex-direction:column;gap:14px">
-        <div style="display:flex;gap:10px">
-          <div style="flex:2">
-            <div style="${lbl}">Monto mensual</div>
-            <input id="na-amount" type="number" min="0" placeholder="0" style="${inp}" value="${data.amount||''}">
+        <label style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surf2);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;-webkit-tap-highlight-color:transparent">
+          <input type="checkbox" id="na-guest" ${data.guest?'checked':''}
+            onchange="_naToggleGuestFields(this.checked)"
+            style="width:16px;height:16px;accent-color:var(--acc);cursor:pointer;flex-shrink:0">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text)">Invitado · no paga</div>
+            <div style="font-size:11px;color:var(--sub);margin-top:1px">No genera cobros ni recordatorios</div>
           </div>
-          <div style="flex:1">
-            <div style="${lbl}">Moneda</div>
-            <select id="na-currency" style="${inp};appearance:auto">${curOpts}</select>
+        </label>
+        <div id="na-pay-fields" style="display:${data.guest?'none':'flex'};flex-direction:column;gap:14px">
+          <div style="display:flex;gap:10px">
+            <div style="flex:2">
+              <div style="${lbl}">Monto mensual</div>
+              <input id="na-amount" type="number" min="0" placeholder="0" style="${inp}" value="${data.amount||''}">
+            </div>
+            <div style="flex:1">
+              <div style="${lbl}">Moneda</div>
+              <select id="na-currency" style="${inp};appearance:auto">${curOpts}</select>
+            </div>
           </div>
-        </div>
-        <div>
-          <div style="${lbl}">Día de vencimiento</div>
-          <input id="na-payday" type="number" min="1" max="31" placeholder="ej. 10" style="${inp}" value="${data.payday||''}">
-          <div style="font-size:11px;color:var(--sub);margin-top:5px">Día del mes en que se cobra (1–31)</div>
+          <div>
+            <div style="${lbl}">Día de vencimiento</div>
+            <input id="na-payday" type="number" min="1" max="31" placeholder="ej. 10" style="${inp}" value="${data.payday||''}">
+            <div style="font-size:11px;color:var(--sub);margin-top:5px">Día del mes en que se cobra (1–31)</div>
+          </div>
         </div>
       </div>`;
     footer=`
@@ -684,7 +695,7 @@ function _naRenderStep(step, data){
           <div style="font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Resumen</div>
           <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--sub)">Nombre</span><span style="font-weight:700;color:var(--text)">${data.name}</span></div>
           <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--sub)">Tipo</span><span style="font-weight:700;color:var(--text)">${data.type==='freestyle'?'Freestyle':'Con plan'}</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--sub)">Pago</span><span style="font-weight:700;color:var(--text)">${data.currency} ${data.amount} · día ${data.payday}</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span style="color:var(--sub)">Pago</span>${data.guest?'<span style="background:#6366f120;color:#818cf8;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700">INVITADO</span>':`<span style="font-weight:700;color:var(--text)">${data.currency} ${data.amount} · día ${data.payday}</span>`}</div>
         </div>
         <div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:16px">
           <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Credenciales de acceso</div>
@@ -737,13 +748,23 @@ function _naGenId(name){
   return name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
 }
 
+function _naToggleGuestFields(checked){
+  const fields=document.getElementById('na-pay-fields');
+  if(fields) fields.style.display=checked?'none':'flex';
+}
+
 function _naStep2Next(){
+  const guest=document.getElementById('na-guest')?.checked||false;
+  if(guest){
+    _naRenderStep(3,{...window._naDraft||{},guest:true,amount:0,currency:'UYU',payday:null});
+    return;
+  }
   const amount=document.getElementById('na-amount')?.value||'';
   const currency=document.getElementById('na-currency')?.value||'UYU';
   const payday=document.getElementById('na-payday')?.value||'';
   if(!amount||isNaN(amount)||Number(amount)<0){toast('⚠ Ingresá un monto válido');document.getElementById('na-amount')?.focus();return;}
   if(!payday||isNaN(payday)||Number(payday)<1||Number(payday)>31){toast('⚠ Día de vencimiento entre 1 y 31');document.getElementById('na-payday')?.focus();return;}
-  const data={...window._naDraft||{}, amount:Number(amount), currency, payday:Number(payday)};
+  const data={...window._naDraft||{}, guest:false, amount:Number(amount), currency, payday:Number(payday)};
   _naRenderStep(3, data);
 }
 
@@ -783,9 +804,10 @@ async function _naConfirm(){
     const newAth={
       id:data.id, name:data.name,
       freestyle:data.type==='freestyle',
+      guest:data.guest||false,
       color,
       features:{iifym:false,liveMode:false,progress:true,diet:true},
-      payment:{status:'pending',payday:data.payday,amount:data.amount,currency:data.currency}
+      payment:data.guest?{status:'guest'}:{status:'pending',payday:data.payday,amount:data.amount,currency:data.currency}
     };
     athletes.push(newAth);
     DB.set('athletes',athletes);
@@ -853,21 +875,32 @@ function openEditAthleteModal(id){
           </label>
         </div>
       </div>
-      <div style="display:flex;gap:10px">
-        <div style="flex:2">
-          <div style="${lbl}">Monto mensual</div>
-          <input id="ea-amount" type="number" min="0" placeholder="0" style="${inp}" value="${pay.amount||''}">
+      <label style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surf2);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;-webkit-tap-highlight-color:transparent">
+        <input type="checkbox" id="ea-guest" ${a.guest?'checked':''}
+          onchange="(function(c){var f=document.getElementById('ea-pay-fields');if(f)f.style.display=c?'none':'flex';})(this.checked)"
+          style="width:16px;height:16px;accent-color:var(--acc);cursor:pointer;flex-shrink:0">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">Invitado · no paga</div>
+          <div style="font-size:11px;color:var(--sub);margin-top:1px">No genera cobros ni recordatorios</div>
         </div>
-        <div style="flex:1">
-          <div style="${lbl}">Moneda</div>
-          <select id="ea-currency" style="${inp};appearance:auto">
-            ${currencies.map(c=>`<option value="${c}" ${(pay.currency||'UYU')===c?'selected':''}>${c}</option>`).join('')}
-          </select>
+      </label>
+      <div id="ea-pay-fields" style="display:${a.guest?'none':'flex'};flex-direction:column;gap:14px">
+        <div style="display:flex;gap:10px">
+          <div style="flex:2">
+            <div style="${lbl}">Monto mensual</div>
+            <input id="ea-amount" type="number" min="0" placeholder="0" style="${inp}" value="${pay.amount||''}">
+          </div>
+          <div style="flex:1">
+            <div style="${lbl}">Moneda</div>
+            <select id="ea-currency" style="${inp};appearance:auto">
+              ${currencies.map(c=>`<option value="${c}" ${(pay.currency||'UYU')===c?'selected':''}>${c}</option>`).join('')}
+            </select>
+          </div>
         </div>
-      </div>
-      <div>
-        <div style="${lbl}">Día de vencimiento</div>
-        <input id="ea-payday" type="number" min="1" max="31" placeholder="ej. 10" style="${inp}" value="${pay.payday||''}">
+        <div>
+          <div style="${lbl}">Día de vencimiento</div>
+          <input id="ea-payday" type="number" min="1" max="31" placeholder="ej. 10" style="${inp}" value="${pay.payday||''}">
+        </div>
       </div>
       <div>
         <div style="${lbl}">Color</div>
@@ -908,9 +941,11 @@ async function _saveEditAthlete(id){
   const color  = document.getElementById('ea-color-val')?.value||a.color;
 
   const liveMode = document.getElementById('ea-live-mode')?.checked ?? (a.features?.liveMode !== false);
+  const guest = document.getElementById('ea-guest')?.checked || false;
   a.freestyle = type==='freestyle';
+  a.guest     = guest;
   a.color     = color;
-  a.payment   = { ...(a.payment||{}), amount, currency, payday, status: a.payment?.status||'pending' };
+  a.payment   = guest ? {status:'guest'} : { ...(a.payment||{}), amount, currency, payday, status: a.payment?.status==='guest'?'pending':a.payment?.status||'pending' };
   a.features  = { ...(a.features||{}), liveMode };
 
   DB.set('athletes', athletes);

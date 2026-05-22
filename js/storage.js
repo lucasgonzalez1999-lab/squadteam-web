@@ -138,6 +138,26 @@ async function pullFromFirebase(){
       const notes=await fbGet('notes',a.id);
       if(notes?.text) DB.set('notes_'+a.id,notes.text);
     }
+    // Also sync coach sessions (coaches are not in athletes array)
+    if(typeof COACHES!=='undefined'){
+      for(const cid of Object.keys(COACHES)){
+        const cs=await fbGet('sessions',cid);
+        const cr=_parseArrField(cs?.data||cs);
+        if(cr){
+          const cl=sessions[cid]||[];
+          if(!cl.length){ sessions[cid]=cr; }
+          else{
+            const cm=[...cr];
+            for(const ls of cl){
+              const lk=ls.id||(ls.date+'_'+(ls.dia||ls.name||''));
+              if(!cr.some(rs=>(rs.id||(rs.date+'_'+(rs.dia||rs.name||'')))=== lk)) cm.push(ls);
+            }
+            sessions[cid]=cm.sort((x,y)=>(y.date||'').localeCompare(x.date||''));
+            if(cm.length>cr.length) fbSet('sessions',cid,{data:JSON.stringify(sessions[cid])}).catch(()=>{});
+          }
+        }
+      }
+    }
     DB.set('athletes',athletes);
     DB.set('templates',templates);
     DB.set('sessions',sessions);

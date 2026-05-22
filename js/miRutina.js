@@ -48,6 +48,23 @@ async function renderMiRutina(){
   _mrReadOnly = user.role !== 'coach' && getAth(user.id)?.features?.liveMode === false;
 
   await mrLoadTodayDraft();
+
+  // Heal "done" state from session data — handles cross-device sync
+  // If a session exists for this day+week, mark as done even on a new device
+  if(!mrDayIsDone(_mrDay, _mrWeek)){
+    const syncedSession = getAthSessions(_mrAthId).find(s => s.dia === _mrDay && s.week === _mrWeek);
+    if(syncedSession){
+      const doneKey = `mr_done_${_mrAthId}_${_mrWeek}_${_mrDay}`;
+      DB.set(doneKey, syncedSession.date || today());
+      // Also restore inputs from the saved session so Editar works correctly
+      syncedSession.exercises?.forEach(ex => {
+        if(!ex.name) return;
+        _mrInputs[ex.name] = {};
+        (ex.sets||[]).forEach((s,i) => { _mrInputs[ex.name]['s'+(i+1)] = {kg:s.kg,reps:s.reps}; });
+      });
+    }
+  }
+
   mrRender(cont);
 }
 

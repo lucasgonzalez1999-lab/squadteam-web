@@ -304,6 +304,10 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; -webkit
 /* APP */
 #coach-app { display: none; }
 #coach-app.visible { display: flex; height: 100svh; overflow: hidden; background: #fafafa; }
+@keyframes livePulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:.4; transform:scale(1.4); }
+}
 </style>
 <link rel="stylesheet" href="css/main.css?v=3">
 <link rel="stylesheet" href="css/nutrition-export.css">
@@ -569,10 +573,6 @@ document.addEventListener('DOMContentLoaded',function(){
         <span class="ni"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
         Progreso
       </a>
-      <a class="nav-item coach-only" data-tab="iacoach" onclick="goSection('iacoach',this)">
-        <span class="ni"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
-        Bot Coach
-      </a>
       <a class="nav-item coach-only" data-tab="checkins" onclick="goSection('checkins',this)">
         <span class="ni"><svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
         Seguimiento
@@ -648,7 +648,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="sec" id="sec-planilla"><div id="planilla-root"></div></div>
       <div class="sec" id="sec-nutricion"><div id="nutricion-content"></div></div>
       <div class="sec" id="sec-progreso"><div id="progreso-content"></div></div>
-      <div class="sec" id="sec-iacoach"><div id="iacoach-content"></div></div>
+      <div class="sec" id="sec-live"><div id="live-content"></div></div>
       <div class="sec" id="sec-pagos"><div id="pagos-content"></div></div>
       <div class="sec" id="sec-mi-rutina"><div id="mi-rutina-content"></div></div>
       <div class="sec" id="sec-mi-perfil"><div id="mi-perfil-content"></div></div>
@@ -658,12 +658,10 @@ document.addEventListener('DOMContentLoaded',function(){
         <div class="sub-tabs">
           <button class="sub-tab on" id="adm-db" onclick="showAdm('db',this)">Firebase</button>
           <button class="sub-tab" id="adm-sheets" onclick="showAdm('sheets',this)">Planilla</button>
-          <button class="sub-tab" id="adm-bot" onclick="showAdm('bot',this)">Bot</button>
           <button class="sub-tab" id="adm-diag" onclick="showAdm('diag',this);renderDiag()">Diagnóstico</button>
         </div>
         <div class="adm-pnl on" id="adm-pnl-db"></div>
         <div class="adm-pnl" id="adm-pnl-sheets"></div>
-        <div class="adm-pnl" id="adm-pnl-bot"></div>
         <div class="adm-pnl" id="adm-pnl-diag"></div>
       </div>
     </div>

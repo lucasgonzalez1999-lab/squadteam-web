@@ -70,7 +70,6 @@ function cmdSearch(q){
     {id:'planilla',label:'Planes',sub:'Rutinas y planillas',tag:'Nav'},
     {id:'nutricion',label:'Nutrición',sub:'Dietas y macros',tag:'Nav'},
     {id:'progreso',label:'Progreso',sub:'Estadísticas y PRs',tag:'Nav'},
-    {id:'iacoach',label:'Bot Coach',sub:'Acciones del bot',tag:'Nav'},
     {id:'checkins',label:'Seguimiento',sub:'Peso y métricas',tag:'Nav'},
     {id:'pagos',label:'Pagos',sub:'Estado de pagos',tag:'Nav'},
     {id:'admin',label:'Configuración',sub:'Ajustes del sistema',tag:'Nav'},
@@ -655,20 +654,31 @@ function _naRenderStep(step, data){
     const curOpts=currencies.map(c=>`<option value="${c}" ${(data.currency||'UYU')===c?'selected':''}>${c}</option>`).join('');
     body=`
       <div style="padding:18px 22px;display:flex;flex-direction:column;gap:14px">
-        <div style="display:flex;gap:10px">
-          <div style="flex:2">
-            <div style="${lbl}">Monto mensual</div>
-            <input id="na-amount" type="number" min="0" placeholder="0" style="${inp}" value="${data.amount||''}">
+        <label style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surf2);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;-webkit-tap-highlight-color:transparent">
+          <input type="checkbox" id="na-guest" ${data.guest?'checked':''}
+            onchange="_naToggleGuestFields(this.checked)"
+            style="width:16px;height:16px;accent-color:var(--acc);cursor:pointer;flex-shrink:0">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text)">Invitado · no paga</div>
+            <div style="font-size:11px;color:var(--sub);margin-top:1px">No genera cobros ni recordatorios</div>
           </div>
-          <div style="flex:1">
-            <div style="${lbl}">Moneda</div>
-            <select id="na-currency" style="${inp};appearance:auto">${curOpts}</select>
+        </label>
+        <div id="na-pay-fields" style="display:${data.guest?'none':'flex'};flex-direction:column;gap:14px">
+          <div style="display:flex;gap:10px">
+            <div style="flex:2">
+              <div style="${lbl}">Monto mensual</div>
+              <input id="na-amount" type="number" min="0" placeholder="0" style="${inp}" value="${data.amount||''}">
+            </div>
+            <div style="flex:1">
+              <div style="${lbl}">Moneda</div>
+              <select id="na-currency" style="${inp};appearance:auto">${curOpts}</select>
+            </div>
           </div>
-        </div>
-        <div>
-          <div style="${lbl}">Día de vencimiento</div>
-          <input id="na-payday" type="number" min="1" max="31" placeholder="ej. 10" style="${inp}" value="${data.payday||''}">
-          <div style="font-size:11px;color:var(--sub);margin-top:5px">Día del mes en que se cobra (1–31)</div>
+          <div>
+            <div style="${lbl}">Día de vencimiento</div>
+            <input id="na-payday" type="number" min="1" max="31" placeholder="ej. 10" style="${inp}" value="${data.payday||''}">
+            <div style="font-size:11px;color:var(--sub);margin-top:5px">Día del mes en que se cobra (1–31)</div>
+          </div>
         </div>
       </div>`;
     footer=`
@@ -685,7 +695,7 @@ function _naRenderStep(step, data){
           <div style="font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Resumen</div>
           <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--sub)">Nombre</span><span style="font-weight:700;color:var(--text)">${data.name}</span></div>
           <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--sub)">Tipo</span><span style="font-weight:700;color:var(--text)">${data.type==='freestyle'?'Freestyle':'Con plan'}</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--sub)">Pago</span><span style="font-weight:700;color:var(--text)">${data.currency} ${data.amount} · día ${data.payday}</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span style="color:var(--sub)">Pago</span>${data.guest?'<span style="background:#6366f120;color:#818cf8;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700">INVITADO</span>':`<span style="font-weight:700;color:var(--text)">${data.currency} ${data.amount} · día ${data.payday}</span>`}</div>
         </div>
         <div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:16px">
           <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Credenciales de acceso</div>
@@ -738,13 +748,23 @@ function _naGenId(name){
   return name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
 }
 
+function _naToggleGuestFields(checked){
+  const fields=document.getElementById('na-pay-fields');
+  if(fields) fields.style.display=checked?'none':'flex';
+}
+
 function _naStep2Next(){
+  const guest=document.getElementById('na-guest')?.checked||false;
+  if(guest){
+    _naRenderStep(3,{...window._naDraft||{},guest:true,amount:0,currency:'UYU',payday:null});
+    return;
+  }
   const amount=document.getElementById('na-amount')?.value||'';
   const currency=document.getElementById('na-currency')?.value||'UYU';
   const payday=document.getElementById('na-payday')?.value||'';
   if(!amount||isNaN(amount)||Number(amount)<0){toast('⚠ Ingresá un monto válido');document.getElementById('na-amount')?.focus();return;}
   if(!payday||isNaN(payday)||Number(payday)<1||Number(payday)>31){toast('⚠ Día de vencimiento entre 1 y 31');document.getElementById('na-payday')?.focus();return;}
-  const data={...window._naDraft||{}, amount:Number(amount), currency, payday:Number(payday)};
+  const data={...window._naDraft||{}, guest:false, amount:Number(amount), currency, payday:Number(payday)};
   _naRenderStep(3, data);
 }
 
@@ -784,9 +804,10 @@ async function _naConfirm(){
     const newAth={
       id:data.id, name:data.name,
       freestyle:data.type==='freestyle',
+      guest:data.guest||false,
       color,
       features:{iifym:false,liveMode:false,progress:true,diet:true},
-      payment:{status:'pending',payday:data.payday,amount:data.amount,currency:data.currency}
+      payment:data.guest?{status:'guest'}:{status:'pending',payday:data.payday,amount:data.amount,currency:data.currency}
     };
     athletes.push(newAth);
     DB.set('athletes',athletes);
@@ -854,21 +875,32 @@ function openEditAthleteModal(id){
           </label>
         </div>
       </div>
-      <div style="display:flex;gap:10px">
-        <div style="flex:2">
-          <div style="${lbl}">Monto mensual</div>
-          <input id="ea-amount" type="number" min="0" placeholder="0" style="${inp}" value="${pay.amount||''}">
+      <label style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surf2);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;-webkit-tap-highlight-color:transparent">
+        <input type="checkbox" id="ea-guest" ${a.guest?'checked':''}
+          onchange="(function(c){var f=document.getElementById('ea-pay-fields');if(f)f.style.display=c?'none':'flex';})(this.checked)"
+          style="width:16px;height:16px;accent-color:var(--acc);cursor:pointer;flex-shrink:0">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">Invitado · no paga</div>
+          <div style="font-size:11px;color:var(--sub);margin-top:1px">No genera cobros ni recordatorios</div>
         </div>
-        <div style="flex:1">
-          <div style="${lbl}">Moneda</div>
-          <select id="ea-currency" style="${inp};appearance:auto">
-            ${currencies.map(c=>`<option value="${c}" ${(pay.currency||'UYU')===c?'selected':''}>${c}</option>`).join('')}
-          </select>
+      </label>
+      <div id="ea-pay-fields" style="display:${a.guest?'none':'flex'};flex-direction:column;gap:14px">
+        <div style="display:flex;gap:10px">
+          <div style="flex:2">
+            <div style="${lbl}">Monto mensual</div>
+            <input id="ea-amount" type="number" min="0" placeholder="0" style="${inp}" value="${pay.amount||''}">
+          </div>
+          <div style="flex:1">
+            <div style="${lbl}">Moneda</div>
+            <select id="ea-currency" style="${inp};appearance:auto">
+              ${currencies.map(c=>`<option value="${c}" ${(pay.currency||'UYU')===c?'selected':''}>${c}</option>`).join('')}
+            </select>
+          </div>
         </div>
-      </div>
-      <div>
-        <div style="${lbl}">Día de vencimiento</div>
-        <input id="ea-payday" type="number" min="1" max="31" placeholder="ej. 10" style="${inp}" value="${pay.payday||''}">
+        <div>
+          <div style="${lbl}">Día de vencimiento</div>
+          <input id="ea-payday" type="number" min="1" max="31" placeholder="ej. 10" style="${inp}" value="${pay.payday||''}">
+        </div>
       </div>
       <div>
         <div style="${lbl}">Color</div>
@@ -909,9 +941,11 @@ async function _saveEditAthlete(id){
   const color  = document.getElementById('ea-color-val')?.value||a.color;
 
   const liveMode = document.getElementById('ea-live-mode')?.checked ?? (a.features?.liveMode !== false);
+  const guest = document.getElementById('ea-guest')?.checked || false;
   a.freestyle = type==='freestyle';
+  a.guest     = guest;
   a.color     = color;
-  a.payment   = { ...(a.payment||{}), amount, currency, payday, status: a.payment?.status||'pending' };
+  a.payment   = guest ? {status:'guest'} : { ...(a.payment||{}), amount, currency, payday, status: a.payment?.status==='guest'?'pending':a.payment?.status||'pending' };
   a.features  = { ...(a.features||{}), liveMode };
 
   DB.set('athletes', athletes);
@@ -1212,177 +1246,108 @@ function renderProgreso(){
   </div>`;
 }
 
-// ── IA COACH ──
-function renderIACoach(){
+// ── LIVE SECTION ──
+async function renderLivePicker(){
   if(!Array.isArray(athletes)||!athletes.length) athletes=typeof DEFAULT_ATHLETES!=='undefined'?DEFAULT_ATHLETES:[];
-  const cont=document.getElementById('iacoach-content');
+  const cont=document.getElementById('live-content');
   if(!cont)return;
 
-  // Stats
-  const totalSess=athletes.reduce((t,a)=>t+getAthSessions(a.id).length,0);
-  const freestyleCount=athletes.filter(a=>a.freestyle).length;
-
-  cont.innerHTML=`
-  <div style="padding:20px;max-width:1000px;margin:0 auto">
-
-    <!-- Stats row -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
-      <div class="card" style="text-align:center;padding:20px">
-        <div style="font-size:32px;font-weight:800;color:var(--acc)" id="iac-action-count">—</div>
-        <div style="font-size:13px;color:var(--sub);margin-top:4px">Acciones registradas</div>
+  cont.innerHTML=`<div style="padding:20px;max-width:900px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <div style="font-size:20px;font-weight:800;color:var(--text)">En Vivo</div>
+        <div style="font-size:13px;color:var(--sub);margin-top:2px">Sesiones activas en este momento</div>
       </div>
-      <div class="card" style="text-align:center;padding:20px">
-        <div style="font-size:32px;font-weight:800;color:var(--text)">${totalSess}</div>
-        <div style="font-size:13px;color:var(--sub);margin-top:4px">Sesiones totales</div>
-      </div>
-      <div class="card" style="text-align:center;padding:20px">
-        <div style="font-size:32px;font-weight:800;color:var(--text)">${freestyleCount}</div>
-        <div style="font-size:13px;color:var(--sub);margin-top:4px">Alumnos freestyle</div>
-      </div>
+      <button onclick="renderLivePicker()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:7px 14px;font-size:12px;color:var(--sub);cursor:pointer;font-family:inherit;font-weight:600">↻ Actualizar</button>
     </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-
-      <!-- Action log -->
-      <div class="card">
-        <div class="sec-head" style="margin-bottom:14px">
-          <div class="sec-title">📋 Acciones del bot</div>
-          <button onclick="loadBotLog()" style="font-size:12px;color:var(--acc);background:none;border:none;cursor:pointer;font-weight:600">↻ Actualizar</button>
-        </div>
-        <div id="iac-log-list">
-          <div style="text-align:center;padding:20px;color:var(--sub);font-size:13px">Cargando...</div>
-        </div>
-      </div>
-
-      <!-- Web → Bot chat -->
-      <div class="card">
-        <div class="sec-head" style="margin-bottom:14px">
-          <div class="sec-title">💬 Enviar al bot</div>
-          <div style="font-size:11px;color:var(--sub)">Desde la web a Telegram</div>
-        </div>
-        <div id="iac-chat-msgs" style="height:260px;overflow-y:auto;background:#f9fafb;border-radius:10px;padding:12px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px">
-          <div style="text-align:center;padding:12px;color:var(--sub);font-size:12px">Los mensajes enviados acá van al bot de Telegram</div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <input id="iac-chat-input" type="text" placeholder='ej: "como viene el mes"'
-            style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none"
-            onkeydown="if(event.key==='Enter')sendToBot()"
-            onfocus="this.style.borderColor='var(--acc)'" onblur="this.style.borderColor='var(--border)'">
-          <button onclick="sendToBot()" style="padding:10px 16px;background:var(--acc);color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">→</button>
-        </div>
-        <div id="iac-chat-status" style="font-size:11px;color:var(--sub);margin-top:6px"></div>
-
-        <!-- Quick commands -->
-        <div style="margin-top:12px">
-          <div style="font-size:11px;color:var(--sub);margin-bottom:6px">Comandos rápidos:</div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px">
-            ${['como viene el mes','quien no entrenó esta semana','resumen de pagos','/alumnos','/pagos'].map(cmd=>
-              `<button onclick="document.getElementById('iac-chat-input').value='${cmd}';sendToBot()"
-                style="padding:4px 10px;border:1px solid var(--border);border-radius:12px;background:white;font-size:11px;cursor:pointer;font-family:inherit;color:var(--text2)">${cmd}</button>`
-            ).join('')}
-          </div>
-        </div>
-      </div>
+    <div id="live-cards" style="display:flex;flex-direction:column;gap:12px">
+      <div style="text-align:center;padding:40px;color:var(--sub);font-size:13px">Cargando sesiones...</div>
     </div>
   </div>`;
 
-  loadBotLog();
-}
-
-async function loadBotLog(){
-  const logList = document.getElementById('iac-log-list');
-  if(!logList) return;
-
+  const cards=document.getElementById('live-cards');
   try{
-    const snap = await window.db.collection('botLog').doc('actions').get();
-    let log = [];
-    if(snap.exists) try{ log = JSON.parse(snap.data()?.data||'[]'); }catch(e){}
+    const results=await Promise.all(athletes.map(async a=>{
+      try{
+        const doc=await window.db.collection('activeSessions').doc(a.id).get();
+        if(!doc.exists) return null;
+        const d=doc.data()||{};
+        if(d.status!=='active') return null;
+        return {ath:a,data:d};
+      }catch(e){ return null; }
+    }));
+    const active=results.filter(Boolean);
 
-    // Update count
-    const countEl = document.getElementById('iac-action-count');
-    if(countEl) countEl.textContent = log.length;
-
-    if(!log.length){
-      logList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--sub);font-size:13px">Sin acciones aún. Usá el bot de Telegram para que aparezcan acá.</div>';
+    if(!active.length){
+      cards.innerHTML=`<div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:48px;text-align:center">
+        <div style="font-size:32px;margin-bottom:12px">😴</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">Sin sesiones activas</div>
+        <div style="font-size:13px;color:var(--sub)">Cuando un alumno arranque una sesión aparece acá en tiempo real</div>
+      </div>`;
       return;
     }
 
-    const typeIcons = {
-      session_start: '▶️', session_end: '✅', log_exercise: '💪',
-      update_athlete: '✏️', update_diet: '🥗', add_food: '🍽️', default: '⚡'
-    };
+    cards.innerHTML=active.map(({ath,data})=>{
+      const color=ath.color||athColor(ath.id);
+      const plan=data.plan||{};
+      const exIdx=data.exerciseIndex??0;
+      const exercises=Array.isArray(plan.exercises)?plan.exercises:(Array.isArray(data.exercises)?data.exercises:[]);
+      const curEx=exercises[exIdx]||null;
+      const sets=data.sets||{};
+      const startMs=data.startTime?.toMillis?data.startTime.toMillis():(data.startTime||Date.now());
+      const elapsed=Math.floor((Date.now()-startMs)/60000);
+      const elStr=elapsed<60?elapsed+'min':(Math.floor(elapsed/60)+'h '+(elapsed%60)+'min');
 
-    logList.innerHTML = log.slice(0,20).map(entry=>{
-      const icon = typeIcons[entry.type] || typeIcons.default;
-      return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
-        <span style="font-size:16px;flex-shrink:0;margin-top:1px">${icon}</span>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${entry.description||entry.type}</div>
-          <div style="font-size:11px;color:var(--sub);margin-top:2px">${entry.date||''} ${entry.time||''}</div>
+      const setsHtml=curEx?Object.entries(sets[curEx.name||'']||{}).map(([si,st])=>
+        `<span style="display:inline-flex;align-items:center;gap:3px;background:${color}18;color:${color};border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700">
+          S${parseInt(si)+1}: ${st.kg||'—'}kg × ${st.reps||'—'}
+        </span>`
+      ).join(''):'' ;
+
+      const exListHtml=exercises.slice(0,6).map((ex,i)=>
+        `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+          <div style="width:20px;height:20px;border-radius:50%;background:${i===exIdx?color:'var(--bg)'};color:${i===exIdx?'#fff':'var(--sub)'};font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
+          <div style="font-size:12px;color:${i===exIdx?'var(--text)':'var(--sub)'};font-weight:${i===exIdx?700:400}">${ex.name||'Ejercicio'}</div>
+          ${i===exIdx?`<div style="margin-left:auto;width:7px;height:7px;border-radius:50%;background:${color};animation:livePulse 1.4s ease-in-out infinite"></div>`:''}
+        </div>`
+      ).join('');
+
+      return `<div style="background:var(--surf);border:1.5px solid ${color}44;border-radius:16px;overflow:hidden">
+        <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:40px;height:40px;border-radius:12px;background:${color}22;color:${color};font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${(ath.name||'?')[0].toUpperCase()}</div>
+            <div>
+              <div style="font-size:15px;font-weight:800;color:var(--text)">${ath.name}</div>
+              <div style="font-size:11px;color:var(--sub);margin-top:1px">${plan.name||data.planName||'Sesión libre'} · ${elStr}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="width:8px;height:8px;border-radius:50%;background:#22c55e;animation:livePulse 1.4s ease-in-out infinite"></div>
+            <span style="font-size:11px;font-weight:700;color:#22c55e">EN VIVO</span>
+          </div>
+        </div>
+        <div style="padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--sub);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Ejercicio actual</div>
+            ${curEx
+              ?`<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px">${curEx.name||'—'}</div>
+                <div style="display:flex;flex-wrap:wrap;gap:4px">${setsHtml||'<span style="font-size:12px;color:var(--sub)">Sin series aún</span>'}</div>`
+              :'<div style="font-size:13px;color:var(--sub)">Sin ejercicio activo</div>'
+            }
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--sub);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Plan (${exIdx+1}/${exercises.length||'?'})</div>
+            ${exListHtml||'<div style="font-size:12px;color:var(--sub)">Sin plan cargado</div>'}
+          </div>
         </div>
       </div>`;
     }).join('');
+
   }catch(e){
-    logList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--sub);font-size:13px">Sin acciones registradas aún.</div>';
+    cards.innerHTML=`<div style="text-align:center;padding:32px;color:var(--sub);font-size:13px">Error al cargar sesiones</div>`;
   }
 }
 
-async function sendToBot(){
-  const input = document.getElementById('iac-chat-input');
-  const status = document.getElementById('iac-chat-status');
-  const msgs = document.getElementById('iac-chat-msgs');
-  const text = input?.value?.trim();
-  if(!text) return;
-
-  // Get coach chat ID from Firebase
-  let chatId = null;
-  try{
-    const snap = await window.db.collection('config').doc('coachChats').get();
-    if(snap.exists){
-      const d = snap.data()||{};
-      chatId = d.lucas || d.tomas || d[currentUser?.id];
-    }
-  }catch(e){}
-
-  if(!chatId){
-    if(status) status.textContent = '⚠️ No hay chat ID guardado. Primero mandá /login al bot desde Telegram.';
-    return;
-  }
-
-  // Add to chat UI
-  if(msgs){
-    const msg = document.createElement('div');
-    msg.style.cssText = 'align-self:flex-end;background:var(--acc);color:white;padding:8px 12px;border-radius:10px 10px 2px 10px;font-size:13px;max-width:80%';
-    msg.textContent = text;
-    msgs.appendChild(msg);
-    msgs.scrollTop = msgs.scrollHeight;
-  }
-
-  input.value = '';
-
-  // Send via bot proxy endpoint (token stays server-side)
-  const BOT_URL = window.SQUAD_BOT_URL || 'https://squadteam-bot.up.railway.app';
-  const APP_SECRET = window.SQUAD_APP_SECRET || '';
-  try{
-    const r = await fetch(`${BOT_URL}/api/send`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json', 'X-App-Secret': APP_SECRET},
-      body: JSON.stringify({ chat_id: chatId, text })
-    });
-    const d = await r.json();
-    if(d.ok){
-      if(status) status.textContent = '✓ Enviado a Telegram';
-      setTimeout(()=>{ if(status) status.textContent = ''; }, 2000);
-    } else {
-      if(status) status.textContent = '⚠️ Error: ' + d.description;
-    }
-  }catch(e){
-    if(status) status.textContent = '⚠️ Error de conexión';
-  }
-}
-
-
-// ── LIVE SECTION ──
 // ── PLANILLA SECTION (delegated to planilla functions) ──
 // renderPlanilla is defined in the planilla section below
 
@@ -1586,47 +1551,6 @@ function renderSheetsPanel(){
   const cont=document.getElementById('adm-pnl-sheets');
   if(!cont)return;
   renderXlsxImporter(cont);
-}
-
-function renderBotConfig(){
-  if(!Array.isArray(athletes)||!athletes.length) athletes=typeof DEFAULT_ATHLETES!=='undefined'?DEFAULT_ATHLETES:[];
-
-  const pnl=document.getElementById('adm-pnl-bot');
-  if(!pnl)return;
-  pnl.innerHTML=`
-  <div class="section-card">
-    <div class="section-head"><div class="section-title">Bot de Telegram</div></div>
-    <div class="section-body">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <div style="background:var(--acc-l);border-radius:8px;padding:10px 12px;font-size:12px">
-          <div style="font-weight:700;color:var(--acc);margin-bottom:2px">@squadteamuy_bot</div>
-          <div style="color:var(--text2)">Bot activo en Railway</div>
-        </div>
-        <div style="background:var(--bg);border-radius:8px;padding:10px 12px;font-size:12px">
-          <div style="font-weight:700;color:var(--text);margin-bottom:2px">Gemini 2.5 Flash</div>
-          <div style="color:var(--sub)">IA centralizada</div>
-        </div>
-      </div>
-      <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px">Comandos disponibles</div>
-      <div style="display:flex;flex-direction:column;gap:4px">
-        ${[
-          ['/login lucas','Iniciar sesión como coach'],
-          ['/alumnos','Ver todos los alumnos'],
-          ['/pagos','Estado de cobros'],
-          ['/alertas','Revisar alertas ahora'],
-          ['"arranca juan dia 1"','Iniciar sesión con plan'],
-          ['"arrancan bruno maxi"','Múltiples a la vez'],
-          ['"bruno press 100x8"','Registrar ejercicio freestyle'],
-          ['"alan no es freestyle"','Editar configuración'],
-          ['"quien debe plata"','Consultar pagos'],
-        ].map(([cmd,desc])=>`
-          <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:var(--bg);border-radius:5px">
-            <code style="font-size:11px;font-weight:600;color:var(--acc);font-family:var(--FM);min-width:140px">${cmd}</code>
-            <span style="font-size:11px;color:var(--sub)">${desc}</span>
-          </div>`).join('')}
-      </div>
-    </div>
-  </div>`;
 }
 
 // ═══════════════════════════════════════

@@ -47,6 +47,7 @@ function pgFmtFull(dateStr){
 }
 
 function payCalc(a){
+  if(a.guest) return {status:'guest', daysUntil:null, period:'', nextDueStr:'', daysOverdue:0};
   const pay = a.payment || {};
   const now  = new Date();
   const todayDay = now.getDate();
@@ -114,7 +115,8 @@ function renderPagos(){
   if(!cont) return;
 
   const now = new Date();
-  const calcs = athletes.map(a=>({ a, pay:a.payment||{}, calc:payCalc(a) }));
+  const guests = athletes.filter(a => a.guest);
+  const calcs = athletes.filter(a => !a.guest).map(a=>({ a, pay:a.payment||{}, calc:payCalc(a) }));
 
   // ── Metrics ──
   const overdue  = calcs.filter(x=>x.calc.status==='overdue');
@@ -207,6 +209,19 @@ function renderPagos(){
   </div>
 
   <!-- Recordatorios -->
+  ${guests.length ? `
+  <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px 18px;margin-top:4px">
+    <div style="font-size:10px;font-weight:700;color:var(--sub);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">Invitados · ${guests.length}</div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      ${guests.map(a=>{const color=athColor(a.id);return`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="width:30px;height:30px;border-radius:9px;background:${color}22;color:${color};font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${athInitial(a.name)}</div>
+        <div style="flex:1;font-size:13px;font-weight:600;color:var(--text)">${a.name}</div>
+        <span style="font-size:10px;font-weight:700;color:var(--sub);letter-spacing:.05em;background:var(--surf2);padding:3px 8px;border-radius:5px">INVITADO</span>
+      </div>`;}).join('')}
+    </div>
+  </div>` : ''}
+
   ${reminders.length ? `
   <div class="pg-remind-section">
     <div class="pg-remind-title">

@@ -114,6 +114,7 @@ function renderPlanilla(){
   const cont=document.getElementById('planilla-root');
   if(!cont) return;
   _pb.athId ? pbRenderEditor(cont) : pbRenderList(cont);
+  if(_pb.athId) pbInitDrag();
 }
 
 // ── ATHLETE LIST ──
@@ -294,12 +295,11 @@ function pbRenderExCard(ex, ei, wl, color){
   }).join('');
 
   return `
-  <div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden">
+  <div class="pb-ex-card" data-ei="${ei}" style="background:var(--surf);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden">
     <div style="padding:12px 14px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border)">
+      <div class="pb-drag-handle" style="cursor:grab;color:var(--sub2);font-size:20px;padding:2px 6px 2px 2px;touch-action:none;line-height:1;user-select:none;-webkit-user-select:none">⠿</div>
       <div style="flex:1;font-size:14px;font-weight:700;color:var(--text)">${ex.name}</div>
-      <button onclick="pbMoveEx(${ei},-1)" title="Subir" style="background:none;border:none;cursor:pointer;color:var(--sub);font-size:14px;padding:3px 7px;border-radius:5px;line-height:1">↑</button>
-      <button onclick="pbMoveEx(${ei},1)"  title="Bajar" style="background:none;border:none;cursor:pointer;color:var(--sub);font-size:14px;padding:3px 7px;border-radius:5px;line-height:1">↓</button>
-      <button onclick="pbRemoveEx(${ei})"  title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px;padding:3px 7px;border-radius:5px;line-height:1">✕</button>
+      <button onclick="pbRemoveEx(${ei})"  title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--sub);font-size:16px;padding:3px 7px;border-radius:5px;line-height:1">✕</button>
     </div>
     <div style="overflow-x:auto;padding:6px 14px">
       <table style="border-collapse:collapse;min-width:320px">
@@ -405,7 +405,90 @@ function pbSetNote(exIdx,val){
 // ── REFRESH (without full re-render to preserve input focus) ──
 function pbRefreshEditor(){
   const cont=document.getElementById('planilla-root');
-  if(cont) pbRenderEditor(cont);
+  if(cont){ pbRenderEditor(cont); pbInitDrag(); }
+}
+
+// ── DRAG-TO-REORDER ──
+function pbInitDrag(){
+  const list=document.getElementById('pb-exlist');
+  if(!list) return;
+  let drag=null;
+
+  list.querySelectorAll('.pb-drag-handle').forEach(handle=>{
+    handle.addEventListener('touchstart', startDrag, {passive:false});
+  });
+
+  function startDrag(e){
+    e.preventDefault();
+    const card=e.currentTarget.closest('.pb-ex-card');
+    if(!card) return;
+    const origEi=parseInt(card.dataset.ei);
+    const rect=card.getBoundingClientRect();
+    const touch=e.touches[0];
+
+    const ph=document.createElement('div');
+    ph.style.cssText=`height:${rect.height}px;border-radius:12px;border:2px dashed var(--border);margin-bottom:10px;box-sizing:border-box;flex-shrink:0;`;
+    list.insertBefore(ph, card);
+    card.style.display='none';
+
+    const fl=card.cloneNode(true);
+    fl.style.cssText=`position:fixed;top:${rect.top}px;left:${rect.left}px;width:${rect.width}px;z-index:9999;opacity:.96;box-shadow:0 12px 40px rgba(0,0,0,.55);border-radius:12px;pointer-events:none;transform:scale(1.02);`;
+    document.body.appendChild(fl);
+
+    drag={origEi, card, fl, ph, y:touch.clientY, flTop:rect.top};
+    document.addEventListener('touchmove', moveDrag, {passive:false});
+    document.addEventListener('touchend',  endDrag,  {once:true});
+  }
+
+  function moveDrag(e){
+    e.preventDefault();
+    if(!drag) return;
+    const touch=e.touches[0];
+    const dy=touch.clientY - drag.y;
+    drag.y=touch.clientY;
+    drag.flTop+=dy;
+    drag.fl.style.top=drag.flTop+'px';
+
+    const mid=drag.flTop+drag.fl.offsetHeight/2;
+    const siblings=[...list.querySelectorAll('.pb-ex-card')].filter(c=>c!==drag.card);
+    let before=null;
+    for(const sib of siblings){
+      const r=sib.getBoundingClientRect();
+      if(mid < r.top+r.height/2){before=sib;break;}
+    }
+    if(before) list.insertBefore(drag.ph, before);
+    else        list.appendChild(drag.ph);
+  }
+
+  function endDrag(){
+    if(!drag) return;
+    document.removeEventListener('touchmove', moveDrag);
+
+    const children=[...list.children];
+    const phIdx=children.indexOf(drag.ph);
+    let newEi=0;
+    for(let i=0;i<phIdx;i++){
+      if(children[i].classList.contains('pb-ex-card') && children[i]!==drag.card) newEi++;
+    }
+
+    const origEi=drag.origEi;
+    drag.fl.remove();
+    drag.ph.remove();
+    drag.card.style.display='';
+    drag=null;
+
+    if(newEi!==origEi){
+      const arr=_pb.plan.byDay[_pb.activeDay];
+      if(arr){
+        const [item]=arr.splice(origEi,1);
+        arr.splice(newEi,0,item);
+        pbRefreshEditor();
+        return;
+      }
+    }
+    // Re-init handles even if no move happened (re-render didn't run)
+    pbInitDrag();
+  }
 }
 
 // ── SAVE ──

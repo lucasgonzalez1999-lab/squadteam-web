@@ -14,6 +14,23 @@ let _mrAutoSaveTimer = null;
 let _mrReadOnly      = false;
 let _mrSyncing       = false;
 
+// ── UNIT HELPERS ──
+function _mrUnit(){ return DB.get('units_'+_mrAthId)||getAth(_mrAthId)?.units||'kg'; }
+function _fromKg(v){ return _mrUnit()==='lbs'?+(v*2.20462).toFixed(1):+v; }
+function _toKg(v){   return _mrUnit()==='lbs'?+(v*0.453592).toFixed(2):+v; }
+function _unitLabel(){ return _mrUnit()==='lbs'?'lb':'kg'; }
+
+function mrToggleUnit(){
+  const next=_mrUnit()==='kg'?'lbs':'kg';
+  const factor=next==='lbs'?2.20462:0.453592;
+  Object.values(_mrInputs).forEach(ex=>Object.values(ex).forEach(s=>{
+    if(s.kg!=null&&s.kg!=='') s.kg=+(parseFloat(s.kg)*factor).toFixed(1);
+  }));
+  DB.set('units_'+_mrAthId,next);
+  const c=document.getElementById('mi-rutina-content');
+  if(c) mrRender(c);
+}
+
 // ── ENTRY POINT ──
 async function renderMiRutina(){
   const user = currentUser;
@@ -68,7 +85,7 @@ async function renderMiRutina(){
       syncedSession.exercises?.forEach(ex => {
         if(!ex.name) return;
         _mrInputs[ex.name] = {};
-        (ex.sets||[]).forEach((s,i) => { _mrInputs[ex.name]['s'+(i+1)] = {kg:s.kg,reps:s.reps}; });
+        (ex.sets||[]).forEach((s,i) => { _mrInputs[ex.name]['s'+(i+1)] = {kg:_fromKg(s.kg),reps:s.reps}; });
       });
     }
   }
@@ -106,7 +123,7 @@ async function renderMiRutina(){
               ss.exercises?.forEach(ex=>{
                 if(!ex.name) return;
                 _mrInputs[ex.name] = {};
-                (ex.sets||[]).forEach((s,i)=>{ _mrInputs[ex.name]['s'+(i+1)]={kg:s.kg,reps:s.reps}; });
+                (ex.sets||[]).forEach((s,i)=>{ _mrInputs[ex.name]['s'+(i+1)]={kg:_fromKg(s.kg),reps:s.reps}; });
               });
               const c = document.getElementById('mi-rutina-content');
               if(c) mrRender(c);
@@ -211,21 +228,25 @@ function mrRender(cont){
           Tu coach registra tus entrenamientos
         </div>`:''}
       </div>
-      ${currentUser?.role === 'coach'
-        ? `<div style="display:flex;gap:6px;flex-shrink:0">
-            <button onclick="mrExportDemo()"
-              style="padding:7px 12px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;
-              color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              Demo
-            </button>
-            <button onclick="goSection('planilla',document.querySelector('[data-tab=planilla]'));setTimeout(()=>pbSelectAth('${_mrAthId}'),80)"
-              style="padding:7px 12px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;
-              color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">
-              ✏️ Editar
-            </button>
-          </div>`
-        : ''}
+      <div style="display:flex;gap:6px;flex-shrink:0;align-items:flex-start">
+        ${!_mrReadOnly?`<button onclick="mrToggleUnit()"
+          style="padding:7px 12px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;
+          color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">
+          ${_mrUnit()==='kg'?'kg → lb':'lb → kg'}
+        </button>`:''}
+        ${currentUser?.role === 'coach'?`
+        <button onclick="mrExportDemo()"
+          style="padding:7px 12px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;
+          color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Demo
+        </button>
+        <button onclick="goSection('planilla',document.querySelector('[data-tab=planilla]'));setTimeout(()=>pbSelectAth('${_mrAthId}'),80)"
+          style="padding:7px 12px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;
+          color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">
+          ✏️ Editar
+        </button>`:''}
+      </div>
     </div>
 
     <!-- Week selector -->
@@ -309,8 +330,8 @@ function mrRenderExercises(exercises, week, totalWeeks, color){
     // Current inputs
     if(!_mrInputs[exName]) _mrInputs[exName] = {};
     const inputs = _mrInputs[exName];
-    const athUnit = DB.get('units_'+_mrAthId) || getAth(_mrAthId)?.units || 'kg';
-    const inputStep = athUnit === 'lbs' ? 5 : 2.5;
+    const athUnit = _mrUnit();
+    const inputStep = athUnit === 'lbs' ? 2.5 : 2.5;
 
     // Series rows
     let seriesHtml = '';
@@ -336,8 +357,8 @@ function mrRenderExercises(exercises, week, totalWeeks, color){
           </div>
           <div style="flex:1;display:flex;gap:8px;align-items:center">
             <div style="flex:1">
-              <div style="font-size:10px;font-weight:600;color:var(--text2);margin-bottom:4px;letter-spacing:.4px">KG</div>
-              <input type="number" step="${inputStep}" min="0" placeholder="${lastRef?lastRef.kg:'0'}"
+              <div style="font-size:10px;font-weight:600;color:var(--text2);margin-bottom:4px;letter-spacing:.4px">${_unitLabel().toUpperCase()}</div>
+              <input type="number" step="${inputStep}" min="0" placeholder="${lastRef?_fromKg(lastRef.kg):'0'}"
                 value="${val.kg||''}"
                 id="mr-${ei}-${sKey}-kg"
                 oninput="mrInput('${exName}','${sKey}','kg',this.value)"
@@ -380,7 +401,7 @@ function mrRenderExercises(exercises, week, totalWeeks, color){
               background:${overload.color}18;border:1px solid ${overload.color}35;cursor:default"
               title="${overload.reasoning}">
               <span style="font-size:10px;font-weight:700;color:${overload.color}">
-                ${overload.action==='increase'?'↑':overload.action==='deload'?'↓':'='} ${overload.label} · ${overload.suggestedKg}${overload.unit||'kg'}
+                ${overload.action==='increase'?'↑':overload.action==='deload'?'↓':'='} ${overload.label} · ${_fromKg(overload.suggestedKg)}${_unitLabel()}
               </span>
             </span>
           </div>`:''}
@@ -389,7 +410,7 @@ function mrRenderExercises(exercises, week, totalWeeks, color){
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
           ${lastRef?`<div style="text-align:right">
             <div style="font-size:10px;color:var(--sub2)">sem. anterior</div>
-            <div style="font-size:13px;font-weight:700;color:var(--sub)">${lastRef.kg}kg × ${lastRef.reps}</div>
+            <div style="font-size:13px;font-weight:700;color:var(--sub)">${_fromKg(lastRef.kg)}${_unitLabel()} × ${lastRef.reps}</div>
           </div>`:''}
           <button onclick="showProgressChart('${_mrAthId}','${exName.replace(/'/g,"\\'")}')"
             title="Ver progreso"
@@ -489,21 +510,23 @@ function mrCheckSet(exName, sKey, ei){
     try{
       const cleanEx=exName.replace(/_$/,'');
       const inp=_mrInputs[cleanEx]?.[sKey]||{};
-      const kg=parseFloat(inp.kg)||0;
+      const displayVal=parseFloat(inp.kg)||0;  // in user's unit
       const reps=parseInt(inp.reps)||0;
-      if(kg>0){
+      const unit=_unitLabel();
+      if(displayVal>0){
         const lastSets=mrGetLastSets(cleanEx);
-        const prevMaxKg=lastSets?Math.max(0,...lastSets.map(s=>parseFloat(s.kg)||0)):0;
-        const sparkDelta=prevMaxKg>0?+(kg-prevMaxKg).toFixed(1):0;
+        const prevMaxDisplay=lastSets?_fromKg(Math.max(0,...lastSets.map(s=>parseFloat(s.kg)||0))):0;
+        const sparkDelta=prevMaxDisplay>0?+(displayVal-prevMaxDisplay).toFixed(1):0;
         document.dispatchEvent(new CustomEvent('sq:set:done',{
-          detail:{athId:_mrAthId,exercise:cleanEx,kg,reps,sparkDelta,rowId:'mr-row-'+ei+'-'+sKey}
+          detail:{athId:_mrAthId,exercise:cleanEx,kg:displayVal,reps,sparkDelta,unit,rowId:'mr-row-'+ei+'-'+sKey}
         }));
-        const prKg=mrGetExercisePR(cleanEx);
-        if(prKg>0&&kg>prKg){
+        const prKgStored=mrGetExercisePR(cleanEx);
+        const prDisplay=_fromKg(prKgStored);
+        if(prDisplay>0&&displayVal>prDisplay){
           const prDate=mrGetExercisePRDate(cleanEx);
           const weeksSince=prDate?Math.floor((Date.now()-new Date(prDate+'T12:00:00'))/604800000):null;
           document.dispatchEvent(new CustomEvent('sq:pr:broken',{
-            detail:{athId:_mrAthId,exercise:cleanEx,kg,reps,prevKg:prKg,weeksSince}
+            detail:{athId:_mrAthId,exercise:cleanEx,kg:displayVal,reps,prevKg:prDisplay,weeksSince,unit}
           }));
         }
       }
@@ -574,7 +597,7 @@ async function mrSave(){
     const planSeries = (item.weekData?.['S'+_mrWeek]?.series || item.series || 3);
     for(let s=1; s<=planSeries; s++){
       const v = inp['s'+s] || {};
-      if(v.kg || v.reps) sets.push({ kg: parseFloat(v.kg)||0, reps: parseInt(v.reps)||0 });
+      if(v.kg || v.reps) sets.push({ kg: _toKg(parseFloat(v.kg)||0), reps: parseInt(v.reps)||0 });
     }
     if(sets.length) exList.push({ name: exName, sets });
   });

@@ -83,7 +83,7 @@ function _dpHandleSetDone(e) {
     const label = document.createElement('div');
     label.className = 'sq-spark-label';
     label.style.color = _dpColor;
-    label.textContent = `+${sparkDelta}kg`;
+    label.textContent = `+${sparkDelta}${e.detail.unit||'kg'}`;
     row.appendChild(label);
     requestAnimationFrame(() => requestAnimationFrame(() => label.classList.add('visible')));
     setTimeout(() => {
@@ -97,7 +97,7 @@ function _dpHandleSetDone(e) {
 function _dpHandlePR(e) {
   try {
     if (!_dpEnabled || _prOverlayActive) return;
-    const { athId, exercise, kg, prevKg, weeksSince } = e.detail;
+    const { athId, exercise, kg, prevKg, weeksSince, unit } = e.detail;
     if (athId !== _dpAthId || !kg || !prevKg || kg <= prevKg) return;
 
     _prOverlayActive = true;
@@ -129,7 +129,7 @@ function _dpHandlePR(e) {
         <div style="font-size:52px;font-weight:900;font-family:'Barlow Condensed',Impact,sans-serif;font-style:italic;color:#252525;line-height:1">${prevKg}</div>
         <div style="font-size:20px;color:#252525;padding-bottom:6px;font-weight:300">→</div>
         <div id="sq-pr-count" style="font-size:80px;font-weight:900;font-family:'Barlow Condensed',Impact,sans-serif;font-style:italic;color:${c};line-height:.9;text-shadow:0 0 40px ${c}55">${prevKg}</div>
-        <div style="font-size:20px;font-weight:700;color:${c}88;padding-bottom:8px">kg</div>
+        <div style="font-size:20px;font-weight:700;color:${c}88;padding-bottom:8px">${unit||'kg'}</div>
       </div>
       ${weekStr ? `<div style="font-size:11px;color:#444">${weekStr}</div>` : ''}`;
 

@@ -797,7 +797,7 @@ async function _naConfirm(){
     await window.db.collection('users').doc(uid).set({
       id:data.id, name:data.name, role:'athlete', color,
       freestyle:data.type==='freestyle',
-      features:{iifym:false,liveMode:false,progress:true,diet:true}
+      features:{iifym:false,liveMode:false,progress:true,diet:true,dopamine:false}
     });
 
     // Add to athletes config
@@ -806,7 +806,7 @@ async function _naConfirm(){
       freestyle:data.type==='freestyle',
       guest:data.guest||false,
       color,
-      features:{iifym:false,liveMode:false,progress:true,diet:true},
+      features:{iifym:false,liveMode:false,progress:true,diet:true,dopamine:false},
       payment:data.guest?{status:'guest'}:{status:'pending',payday:data.payday,amount:data.amount,currency:data.currency}
     };
     athletes.push(newAth);
@@ -835,6 +835,15 @@ function _eaToggleLiveMode(){
   const cb = document.getElementById('ea-live-mode');
   const track = document.getElementById('ea-live-toggle');
   const thumb = document.getElementById('ea-live-thumb');
+  if(!cb||!track||!thumb) return;
+  cb.checked = !cb.checked;
+  track.style.background = cb.checked ? 'var(--acc)' : 'var(--surf3)';
+  thumb.style.left = cb.checked ? '20px' : '2px';
+}
+function _eaToggleDopamine(){
+  const cb = document.getElementById('ea-dopamine-cb');
+  const track = document.getElementById('ea-dopamine-toggle');
+  const thumb = document.getElementById('ea-dopamine-thumb');
   if(!cb||!track||!thumb) return;
   cb.checked = !cb.checked;
   track.style.background = cb.checked ? 'var(--acc)' : 'var(--surf3)';
@@ -922,6 +931,18 @@ function openEditAthleteModal(id){
           <input type="checkbox" id="ea-live-mode" ${(a.features?.liveMode!==false)?'checked':''} style="display:none">
         </div>
       </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surf2);border:1px solid var(--border);border-radius:10px">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">Sistema de progreso</div>
+          <div style="font-size:11px;color:var(--sub);margin-top:2px">Celebraciones, PRs y pantalla de cierre de sesión</div>
+        </div>
+        <div id="ea-dopamine-toggle" onclick="_eaToggleDopamine()"
+          style="position:relative;width:42px;height:24px;border-radius:24px;cursor:pointer;transition:background .2s;flex-shrink:0;
+          background:${a.features?.dopamine?'var(--acc)':'var(--surf3)'}">
+          <div id="ea-dopamine-thumb" style="position:absolute;top:2px;left:${a.features?.dopamine?'20':'2'}px;width:20px;height:20px;border-radius:50%;background:#000;transition:left .2s"></div>
+          <input type="checkbox" id="ea-dopamine-cb" ${a.features?.dopamine?'checked':''} style="display:none">
+        </div>
+      </div>
     </div>
     <div style="padding:0 22px 20px;display:flex;gap:8px">
       <button onclick="archiveAthlete('${a.id}')" style="padding:10px 14px;background:none;border:1px solid #ef4444;border-radius:10px;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit" title="Dar de baja">Dar de baja</button>
@@ -941,12 +962,13 @@ async function _saveEditAthlete(id){
   const color  = document.getElementById('ea-color-val')?.value||a.color;
 
   const liveMode = document.getElementById('ea-live-mode')?.checked ?? (a.features?.liveMode !== false);
+  const dopamine = document.getElementById('ea-dopamine-cb')?.checked || false;
   const guest = document.getElementById('ea-guest')?.checked || false;
   a.freestyle = type==='freestyle';
   a.guest     = guest;
   a.color     = color;
   a.payment   = guest ? {status:'guest'} : { ...(a.payment||{}), amount, currency, payday, status: a.payment?.status==='guest'?'pending':a.payment?.status||'pending' };
-  a.features  = { ...(a.features||{}), liveMode };
+  a.features  = { ...(a.features||{}), liveMode, dopamine };
 
   DB.set('athletes', athletes);
   try{

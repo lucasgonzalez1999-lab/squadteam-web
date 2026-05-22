@@ -275,6 +275,7 @@ function confirmLogout() {
 }
 
 function doLogout() {
+  if(typeof destroyDopamine==='function') destroyDopamine();
   DB.set('session', null);
   currentUser = null;
   document.body.classList.remove('is-athlete');

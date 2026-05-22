@@ -48,6 +48,13 @@ async function renderMiRutina(){
   _mrSaved    = false;
   _mrReadOnly = user.role !== 'coach' && getAth(user.id)?.features?.liveMode === false;
 
+  if(typeof initDopamine==='function'){
+    const ath=getAth(_mrAthId);
+    if(ath?.features?.dopamine||currentUser?.features?.dopamine){
+      initDopamine(_mrAthId, ath?.color||currentUser?.color||'var(--acc)');
+    }
+  }
+
   await mrLoadTodayDraft();
 
   // Heal "done" state from session data — handles cross-device sync
@@ -477,6 +484,31 @@ function mrCheckSet(exName, sKey, ei){
 
   const saveArea = document.getElementById('mr-save-area');
   if(saveArea) saveArea.innerHTML = mrRenderSaveBtn(color);
+
+  if(done){
+    try{
+      const cleanEx=exName.replace(/_$/,'');
+      const inp=_mrInputs[cleanEx]?.[sKey]||{};
+      const kg=parseFloat(inp.kg)||0;
+      const reps=parseInt(inp.reps)||0;
+      if(kg>0){
+        const lastSets=mrGetLastSets(cleanEx);
+        const prevMaxKg=lastSets?Math.max(0,...lastSets.map(s=>parseFloat(s.kg)||0)):0;
+        const sparkDelta=prevMaxKg>0?+(kg-prevMaxKg).toFixed(1):0;
+        document.dispatchEvent(new CustomEvent('sq:set:done',{
+          detail:{athId:_mrAthId,exercise:cleanEx,kg,reps,sparkDelta,rowId:'mr-row-'+ei+'-'+sKey}
+        }));
+        const prKg=mrGetExercisePR(cleanEx);
+        if(prKg>0&&kg>prKg){
+          const prDate=mrGetExercisePRDate(cleanEx);
+          const weeksSince=prDate?Math.floor((Date.now()-new Date(prDate+'T12:00:00'))/604800000):null;
+          document.dispatchEvent(new CustomEvent('sq:pr:broken',{
+            detail:{athId:_mrAthId,exercise:cleanEx,kg,reps,prevKg:prKg,weeksSince}
+          }));
+        }
+      }
+    }catch(_){}
+  }
 }
 
 // ── INPUT HANDLER ──
@@ -577,6 +609,19 @@ async function mrSave(){
   _mrSaved = true;
 
   toast(fbOk ? '✅ ' + _mrDay + ' guardado — semana ' + _mrWeek : '⚠️ Guardado localmente (sin conexión)');
+  try{
+    const vol=exList.reduce((t,ex)=>t+ex.sets.reduce((s,set)=>s+(parseFloat(set.kg)||0)*(parseInt(set.reps)||0),0),0);
+    document.dispatchEvent(new CustomEvent('sq:session:saved',{
+      detail:{
+        athId:_mrAthId,
+        volume:Math.round(vol),
+        sets:exList.reduce((t,ex)=>t+ex.sets.length,0),
+        exercises:exList.length,
+        fbOk,
+        weekdayAvg:mrGetWeekdayAvg()
+      }
+    }));
+  }catch(_){}
   const cont = document.getElementById('mi-rutina-content');
   if(cont) mrRender(cont);
 }
@@ -607,6 +652,35 @@ function mrGetLastSets(exName){
     if(ex?.sets?.length) return ex.sets;
   }
   return null;
+}
+
+// ── DOPAMINE HELPERS ──
+function mrGetExercisePR(exName){
+  let max=0;
+  (getAthSessions(_mrAthId)||[]).forEach(s=>{
+    (s.exercises||[]).filter(e=>e.name===exName).forEach(ex=>{
+      (ex.sets||[]).forEach(st=>{const k=parseFloat(st.kg)||0;if(k>max)max=k;});
+    });
+  });
+  return max;
+}
+function mrGetExercisePRDate(exName){
+  let max=0,date=null;
+  (getAthSessions(_mrAthId)||[]).sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(s=>{
+    (s.exercises||[]).filter(e=>e.name===exName).forEach(ex=>{
+      (ex.sets||[]).forEach(st=>{const k=parseFloat(st.kg)||0;if(k>max){max=k;date=s.date;}});
+    });
+  });
+  return date;
+}
+function mrGetWeekdayAvg(){
+  const dow=new Date().getDay();
+  const prev=(getAthSessions(_mrAthId)||[])
+    .filter(s=>s.dia===_mrDay&&new Date(s.date+'T12:00:00').getDay()===dow)
+    .sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,4);
+  if(!prev.length) return null;
+  const vols=prev.map(s=>(s.exercises||[]).reduce((t,ex)=>t+(ex.sets||[]).reduce((ts,set)=>ts+(parseFloat(set.kg)||0)*(parseInt(set.reps)||0),0),0));
+  return Math.round(vols.reduce((a,b)=>a+b,0)/vols.length);
 }
 
 // ── PREFILL INPUTS FROM LAST SESSION ──

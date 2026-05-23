@@ -190,6 +190,7 @@ async function initApp(user) {
     const ok = await pullFromFirebase();
     if (ok) renderAll();
     startGlobalPoller();
+    if (!localStorage.getItem('sq_coach_tour_done') && typeof initCoachTour === 'function') initCoachTour();
   } else {
     showAthleteUI(user);
     await pullFromFirebase();

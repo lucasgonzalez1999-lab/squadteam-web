@@ -793,6 +793,9 @@ async function _naConfirm(){
       await secondaryApp.delete().catch(()=>{});
     }
 
+    // Store PIN so coach can change it later
+    await window.db.collection('pins').doc(data.id).set({pin: data.pin});
+
     // Create Firestore user profile
     await window.db.collection('users').doc(uid).set({
       id:data.id, name:data.name, role:'athlete', color,
@@ -944,12 +947,61 @@ function openEditAthleteModal(id){
         </div>
       </div>
     </div>
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div style="${lbl}">Cambiar PIN</div>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <input id="ea-new-pin" type="number" min="1000" max="9999" placeholder="PIN nuevo (4 dígitos)"
+            style="${inp};flex:1" oninput="if(this.value.length>4)this.value=this.value.slice(0,4)">
+          <button id="ea-pin-btn" onclick="_eaChangePin('${a.id}')"
+            style="padding:10px 14px;background:var(--surf2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">
+            Actualizar
+          </button>
+        </div>
+        <div id="ea-pin-msg" style="font-size:11px;margin-top:6px;display:none"></div>
+      </div>
+    </div>
     <div style="padding:0 22px 20px;display:flex;gap:8px">
       <button onclick="archiveAthlete('${a.id}')" style="padding:10px 14px;background:none;border:1px solid #ef4444;border-radius:10px;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit" title="Dar de baja">Dar de baja</button>
       <button onclick="document.getElementById('edit-ath-ov').remove()" style="flex:1;padding:10px 0;background:none;border:1px solid var(--border);border-radius:10px;color:var(--sub);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
       <button onclick="_saveEditAthlete('${a.id}')" style="flex:1;padding:10px 0;background:var(--acc);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Guardar</button>
     </div>
   </div>`;
+}
+
+async function _eaChangePin(athId){
+  const newPin = String(document.getElementById('ea-new-pin')?.value||'').trim();
+  const msgEl  = document.getElementById('ea-pin-msg');
+  const btn    = document.getElementById('ea-pin-btn');
+  const show   = (txt, ok) => { msgEl.textContent=txt; msgEl.style.color=ok?'#22c55e':'#ef4444'; msgEl.style.display='block'; };
+
+  if(!/^\d{4}$/.test(newPin)){ show('Ingresá exactamente 4 dígitos'); return; }
+
+  btn.disabled=true; btn.textContent='Cambiando...'; msgEl.style.display='none';
+  try{
+    const pinDoc = await window.db.collection('pins').doc(athId).get();
+    const stored = pinDoc.data()?.pin;
+    if(!stored){ show('PIN original no guardado. Recreá el alumno para poder cambiarlo.'); return; }
+
+    const secondaryApp = firebase.initializeApp(firebase.app().options,'pin_chg_'+Date.now());
+    const secondaryAuth = secondaryApp.auth();
+    try{
+      const cred = await secondaryAuth.signInWithEmailAndPassword(`${athId}@squadteam.uy`, `sq${stored}`);
+      await cred.user.updatePassword(`sq${newPin}`);
+      await window.db.collection('pins').doc(athId).set({pin:newPin});
+      document.getElementById('ea-new-pin').value='';
+      show('PIN actualizado correctamente', true);
+    } finally {
+      await secondaryAuth.signOut().catch(()=>{});
+      await secondaryApp.delete().catch(()=>{});
+    }
+  } catch(e){
+    const msg = e.code==='auth/wrong-password'?'PIN guardado no coincide con Firebase'
+      : e.code==='auth/user-not-found'?'Usuario no encontrado'
+      : e.message;
+    show(msg);
+  } finally {
+    btn.disabled=false; btn.textContent='Actualizar';
+  }
 }
 
 async function _saveEditAthlete(id){

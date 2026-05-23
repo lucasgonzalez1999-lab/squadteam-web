@@ -627,9 +627,9 @@ function _naRenderStep(step, data){
             value="${data.name||''}" onkeydown="if(event.key==='Enter')document.getElementById('na-pin').focus()">
         </div>
         <div>
-          <div style="${lbl}">PIN (4 dígitos)</div>
-          <input id="na-pin" type="tel" placeholder="ej. 1234" maxlength="4" inputmode="numeric" style="${inp}"
-            value="${data.pin||''}" oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+          <div style="${lbl}">Contraseña</div>
+          <input id="na-pin" type="password" placeholder="mínimo 4 caracteres" style="${inp}"
+            value="${data.pin||''}"
             onkeydown="if(event.key==='Enter')_naStep1Next()">
         </div>
         <div>
@@ -726,7 +726,7 @@ function _naStep1Next(){
   const pin=(document.getElementById('na-pin')?.value||'').trim();
   const type=document.querySelector('input[name="na-type"]:checked')?.value||'plan';
   if(!name){toast('⚠ Ingresá el nombre');document.getElementById('na-name')?.focus();return;}
-  if(!/^\d{4}$/.test(pin)){toast('⚠ El PIN debe ser 4 dígitos');document.getElementById('na-pin')?.focus();return;}
+  if(pin.length<4){toast('⚠ La contraseña debe tener al menos 4 caracteres');document.getElementById('na-pin')?.focus();return;}
   if(athletes.some(a=>a.id===_naGenId(name)&&false)){} // id check later
   let base=name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
   let id=base; let n=1;
@@ -950,8 +950,8 @@ function openEditAthleteModal(id){
       <div style="border-top:1px solid var(--border);padding-top:14px">
         <div style="${lbl}">Cambiar PIN</div>
         <div style="display:flex;gap:8px;margin-top:6px">
-          <input id="ea-new-pin" type="number" min="1000" max="9999" placeholder="PIN nuevo (4 dígitos)"
-            style="${inp};flex:1" oninput="if(this.value.length>4)this.value=this.value.slice(0,4)">
+          <input id="ea-new-pin" type="password" placeholder="Contraseña nueva (mín. 4 caracteres)"
+            style="${inp};flex:1">
           <button id="ea-pin-btn" onclick="_eaChangePin('${a.id}')"
             style="padding:10px 14px;background:var(--surf2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">
             Actualizar
@@ -974,7 +974,7 @@ async function _eaChangePin(athId){
   const btn    = document.getElementById('ea-pin-btn');
   const show   = (txt, ok) => { msgEl.textContent=txt; msgEl.style.color=ok?'#22c55e':'#ef4444'; msgEl.style.display='block'; };
 
-  if(!/^\d{4}$/.test(newPin)){ show('Ingresá exactamente 4 dígitos'); return; }
+  if(newPin.length < 4){ show('Mínimo 4 caracteres'); return; }
 
   btn.disabled=true; btn.textContent='Cambiando...'; msgEl.style.display='none';
   try{

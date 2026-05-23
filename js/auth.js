@@ -5,7 +5,7 @@ const SQ_AUTH = (() => {
 
   // Email convention: {userId}@squadteam.uy — nunca se verifica, es solo un identificador
   function toEmail(userId){ return `${userId}@squadteam.uy`; }
-  // Password: prefijo fijo + PIN (Firebase requiere mínimo 6 chars)
+  // Firebase requiere mínimo 6 chars — prefijo fijo compensa contraseñas cortas
   function toPass(pin){ return `sq${pin}`; }
 
   async function signIn(userId, pin){

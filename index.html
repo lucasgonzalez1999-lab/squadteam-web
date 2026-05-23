@@ -383,11 +383,11 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; -webkit
         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
     <div class="sq-field">
-      <label class="sq-label">PIN</label>
-      <input id="sq-pin" class="sq-input" type="password" inputmode="numeric"
-        placeholder="••••" maxlength="4" autocomplete="current-password">
+      <label class="sq-label">CONTRASEÑA</label>
+      <input id="sq-pin" class="sq-input" type="password"
+        placeholder="••••••" autocomplete="current-password">
     </div>
-    <div class="sq-err-msg" id="sq-err">Usuario o PIN incorrecto</div>
+    <div class="sq-err-msg" id="sq-err">Usuario o contraseña incorrecta</div>
     <button class="sq-btn" id="sq-btn" onclick="sqSubmit()">ENTRAR</button>
     <div class="sq-back" onclick="sqBack()">← Volver</div>
   </div>
@@ -431,7 +431,7 @@ function sqPickRole(role){
     } else {
       document.getElementById('sq-badge').innerHTML=_barbSvg+'ALUMNO';
       document.getElementById('sq-form-title').textContent='Tu plan te espera.';
-      document.getElementById('sq-form-sub').textContent='Ingresá con tu nombre y PIN de 4 dígitos.';
+      document.getElementById('sq-form-sub').textContent='Ingresá con tu nombre y contraseña.';
     }
     var last=localStorage.getItem('sq_lu_'+role);
     var userInp=document.getElementById('sq-user');

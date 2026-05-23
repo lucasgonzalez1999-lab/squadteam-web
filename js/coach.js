@@ -580,7 +580,107 @@ function renderAlumnos(){
         </tbody>
       </table>
     </div>
-  </details>` : ''}`;
+  </details>` : ''}
+
+  <!-- STAFF / COACHES -->
+  <div style="margin-top:24px">
+    <div style="font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px">Staff</div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="ath-table">
+        <tbody>
+          ${Object.values(typeof COACHES!=='undefined'?COACHES:{}).map(c=>`
+          <tr>
+            <td>
+              <div class="ath-cell">
+                <div style="width:34px;height:34px;border-radius:50%;background:${c.color}20;color:${c.color};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0">${(c.name||'?')[0].toUpperCase()}</div>
+                <div>
+                  <div class="ath-nm">${c.name}</div>
+                  <div class="ath-subs">Coach</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge" style="background:${c.color}18;color:${c.color};border:1px solid ${c.color}33;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700">Coach</span></td>
+            <td colspan="5"></td>
+            <td>
+              <div class="action-btns">
+                <button class="btn-icon" title="Cambiar contraseña" onclick="openCoachPassModal('${c.id}','${c.name}')">🔑</button>
+              </div>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function openCoachPassModal(coachId, coachName){
+  let ov=document.getElementById('coach-pass-ov');
+  if(!ov){ov=document.createElement('div');ov.id='coach-pass-ov';document.body.appendChild(ov);}
+  ov.style.cssText='position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.onclick=e=>{if(e.target===ov)ov.remove();};
+  const inp='width:100%;background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:10px 13px;font-size:14px;color:var(--text);font-family:inherit;outline:none;box-sizing:border-box';
+  const lbl='font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--sub);text-transform:uppercase;margin-bottom:6px';
+  ov.innerHTML=`
+  <div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:360px;overflow:hidden">
+    <div style="padding:20px 22px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)">
+      <div style="font-size:15px;font-weight:800;color:var(--text)">Contraseña — ${coachName}</div>
+      <button onclick="document.getElementById('coach-pass-ov').remove()" style="background:none;border:1px solid var(--border);border-radius:8px;width:30px;height:30px;cursor:pointer;color:var(--sub);font-size:18px;display:flex;align-items:center;justify-content:center">×</button>
+    </div>
+    <div style="padding:18px 22px;display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="${lbl}">Contraseña actual</div>
+        <input id="cp-current" type="password" placeholder="contraseña actual" style="${inp}">
+      </div>
+      <div>
+        <div style="${lbl}">Contraseña nueva</div>
+        <input id="cp-new" type="password" placeholder="mínimo 4 caracteres" style="${inp}">
+      </div>
+      <div id="cp-msg" style="font-size:12px;display:none"></div>
+    </div>
+    <div style="padding:0 22px 20px;display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="document.getElementById('coach-pass-ov').remove()" style="padding:10px 18px;background:none;border:1px solid var(--border);border-radius:10px;color:var(--sub);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
+      <button id="cp-btn" onclick="_saveCoachPass('${coachId}')" style="padding:10px 22px;background:var(--acc);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Actualizar</button>
+    </div>
+  </div>`;
+}
+
+async function _saveCoachPass(coachId){
+  const currentPass = document.getElementById('cp-current')?.value?.trim();
+  const newPass     = document.getElementById('cp-new')?.value?.trim();
+  const msgEl       = document.getElementById('cp-msg');
+  const btn         = document.getElementById('cp-btn');
+  const show = (txt,ok)=>{ msgEl.textContent=txt; msgEl.style.color=ok?'#22c55e':'#ef4444'; msgEl.style.display='block'; };
+
+  if(!currentPass){ show('Ingresá la contraseña actual'); return; }
+  if(!newPass||newPass.length<4){ show('La contraseña nueva debe tener al menos 4 caracteres'); return; }
+
+  btn.disabled=true; btn.textContent='Actualizando...'; msgEl.style.display='none';
+  try{
+    // Try stored PIN first, fall back to entered current password
+    const pinDoc = await window.db.collection('pins').doc(coachId).get();
+    const stored  = pinDoc.data()?.pin || currentPass;
+
+    const secondaryApp=firebase.initializeApp(firebase.app().options,'coach_pass_'+Date.now());
+    const secondaryAuth=secondaryApp.auth();
+    try{
+      const cred=await secondaryAuth.signInWithEmailAndPassword(`${coachId}@squadteam.uy`,`sq${stored}`);
+      await cred.user.updatePassword(`sq${newPass}`);
+      await window.db.collection('pins').doc(coachId).set({pin:newPass});
+      show('Contraseña actualizada correctamente',true);
+      document.getElementById('cp-current').value='';
+      document.getElementById('cp-new').value='';
+    } finally {
+      await secondaryAuth.signOut().catch(()=>{});
+      await secondaryApp.delete().catch(()=>{});
+    }
+  } catch(e){
+    const msg=e.code==='auth/wrong-password'?'Contraseña actual incorrecta'
+      :e.code==='auth/user-not-found'?'Usuario no encontrado'
+      :e.message;
+    show(msg);
+  } finally {
+    btn.disabled=false; btn.textContent='Actualizar';
+  }
 }
 function filterAlumnos(q){
   document.querySelectorAll('#full-ath-table tbody tr').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(q.toLowerCase())?'':'none';});

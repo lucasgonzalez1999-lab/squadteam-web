@@ -621,27 +621,53 @@ function openCoachPassModal(coachId, coachName){
   const inp='width:100%;background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:10px 13px;font-size:14px;color:var(--text);font-family:inherit;outline:none;box-sizing:border-box';
   const lbl='font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--sub);text-transform:uppercase;margin-bottom:6px';
   ov.innerHTML=`
-  <div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:360px;overflow:hidden">
+  <div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:380px;overflow:hidden">
     <div style="padding:20px 22px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)">
       <div style="font-size:15px;font-weight:800;color:var(--text)">Contraseña — ${coachName}</div>
       <button onclick="document.getElementById('coach-pass-ov').remove()" style="background:none;border:1px solid var(--border);border-radius:8px;width:30px;height:30px;cursor:pointer;color:var(--sub);font-size:18px;display:flex;align-items:center;justify-content:center">×</button>
     </div>
-    <div style="padding:18px 22px;display:flex;flex-direction:column;gap:14px">
-      <div>
-        <div style="${lbl}">Contraseña actual</div>
-        <input id="cp-current" type="password" placeholder="contraseña actual" style="${inp}">
+
+    <!-- Modo cambio (sabe la contraseña actual) -->
+    <div id="cp-mode-change">
+      <div style="padding:18px 22px;display:flex;flex-direction:column;gap:14px">
+        <div><div style="${lbl}">Contraseña actual</div><input id="cp-current" type="password" placeholder="contraseña actual" style="${inp}"></div>
+        <div><div style="${lbl}">Contraseña nueva</div><input id="cp-new" type="password" placeholder="mínimo 4 caracteres" style="${inp}"></div>
+        <div id="cp-msg" style="font-size:12px;display:none"></div>
+        <div style="font-size:12px;color:var(--sub)">
+          ¿No sabés la contraseña actual?
+          <button onclick="_cpSwitchMode('reset')" style="background:none;border:none;color:var(--acc);cursor:pointer;font-size:12px;font-family:inherit;padding:0;text-decoration:underline">Recrear cuenta</button>
+        </div>
       </div>
-      <div>
-        <div style="${lbl}">Contraseña nueva</div>
-        <input id="cp-new" type="password" placeholder="mínimo 4 caracteres" style="${inp}">
+      <div style="padding:0 22px 20px;display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="document.getElementById('coach-pass-ov').remove()" style="padding:10px 18px;background:none;border:1px solid var(--border);border-radius:10px;color:var(--sub);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
+        <button id="cp-btn" onclick="_saveCoachPass('${coachId}')" style="padding:10px 22px;background:var(--acc);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Actualizar</button>
       </div>
-      <div id="cp-msg" style="font-size:12px;display:none"></div>
     </div>
-    <div style="padding:0 22px 20px;display:flex;gap:8px;justify-content:flex-end">
-      <button onclick="document.getElementById('coach-pass-ov').remove()" style="padding:10px 18px;background:none;border:1px solid var(--border);border-radius:10px;color:var(--sub);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
-      <button id="cp-btn" onclick="_saveCoachPass('${coachId}')" style="padding:10px 22px;background:var(--acc);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Actualizar</button>
+
+    <!-- Modo recrear (no sabe la contraseña actual) -->
+    <div id="cp-mode-reset" style="display:none">
+      <div style="padding:18px 22px;display:flex;flex-direction:column;gap:12px">
+        <div style="font-size:13px;color:var(--sub);background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;line-height:1.6">
+          <strong style="color:var(--text)">Paso 1:</strong> Andá a Firebase Console → Authentication → Users → buscá <strong style="color:var(--acc)">${coachId}@squadteam.uy</strong> → ⋮ → <em>Borrar cuenta</em>.<br><br>
+          <strong style="color:var(--text)">Paso 2:</strong> Volvé acá, ingresá la contraseña nueva y hacé clic en Recrear.
+        </div>
+        <div><div style="${lbl}">Contraseña nueva</div><input id="cp-new-reset" type="password" placeholder="mínimo 4 caracteres" style="${inp}"></div>
+        <div id="cp-msg-reset" style="font-size:12px;display:none"></div>
+        <div style="font-size:12px;color:var(--sub)">
+          <button onclick="_cpSwitchMode('change')" style="background:none;border:none;color:var(--acc);cursor:pointer;font-size:12px;font-family:inherit;padding:0;text-decoration:underline">← Volver al modo normal</button>
+        </div>
+      </div>
+      <div style="padding:0 22px 20px;display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="document.getElementById('coach-pass-ov').remove()" style="padding:10px 18px;background:none;border:1px solid var(--border);border-radius:10px;color:var(--sub);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
+        <button id="cp-btn-reset" onclick="_recreateCoachPass('${coachId}')" style="padding:10px 22px;background:var(--acc);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Recrear cuenta</button>
+      </div>
     </div>
   </div>`;
+}
+
+function _cpSwitchMode(mode){
+  document.getElementById('cp-mode-change').style.display = mode==='change' ? '' : 'none';
+  document.getElementById('cp-mode-reset').style.display  = mode==='reset'  ? '' : 'none';
 }
 
 async function _saveCoachPass(coachId){
@@ -656,7 +682,7 @@ async function _saveCoachPass(coachId){
 
   btn.disabled=true; btn.textContent='Actualizando...'; msgEl.style.display='none';
   try{
-    // Try stored PIN first, fall back to entered current password
+    // Try stored password first, fall back to entered current password
     const pinDoc = await window.db.collection('pins').doc(coachId).get();
     const stored  = pinDoc.data()?.pin || currentPass;
 
@@ -682,6 +708,39 @@ async function _saveCoachPass(coachId){
     btn.disabled=false; btn.textContent='Actualizar';
   }
 }
+
+async function _recreateCoachPass(coachId){
+  const newPass = document.getElementById('cp-new-reset')?.value?.trim();
+  const msgEl   = document.getElementById('cp-msg-reset');
+  const btn     = document.getElementById('cp-btn-reset');
+  const show = (txt,ok)=>{ msgEl.textContent=txt; msgEl.style.color=ok?'#22c55e':'#ef4444'; msgEl.style.display='block'; };
+
+  if(!newPass||newPass.length<4){ show('La contraseña debe tener al menos 4 caracteres'); return; }
+
+  btn.disabled=true; btn.textContent='Creando...'; msgEl.style.display='none';
+  const secondaryApp=firebase.initializeApp(firebase.app().options,'coach_recreate_'+Date.now());
+  const secondaryAuth=secondaryApp.auth();
+  try{
+    const cred=await secondaryAuth.createUserWithEmailAndPassword(`${coachId}@squadteam.uy`,`sq${newPass}`);
+    const coachData=typeof COACHES!=='undefined'?COACHES[coachId]:null;
+    await window.db.collection('users').doc(cred.user.uid).set({
+      id:coachId, name:coachData?.name||coachId, role:'coach', color:coachData?.color||'#6366f1'
+    });
+    await window.db.collection('pins').doc(coachId).set({pin:newPass});
+    show('Cuenta creada correctamente. Ya puede iniciar sesión.',true);
+    document.getElementById('cp-new-reset').value='';
+  } catch(e){
+    const msg=e.code==='auth/email-already-in-use'
+      ?'La cuenta todavía existe en Firebase. Borrala primero (paso 1) y volvé a intentar.'
+      :e.message;
+    show(msg);
+  } finally {
+    await secondaryAuth.signOut().catch(()=>{});
+    await secondaryApp.delete().catch(()=>{});
+    btn.disabled=false; btn.textContent='Recrear cuenta';
+  }
+}
+
 function filterAlumnos(q){
   document.querySelectorAll('#full-ath-table tbody tr').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(q.toLowerCase())?'':'none';});
 }

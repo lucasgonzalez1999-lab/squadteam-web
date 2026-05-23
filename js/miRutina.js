@@ -44,17 +44,13 @@ async function renderMiRutina(){
   _mrPlan = await mrLoadPlan(_mrAthId);
   if(!_mrPlan){
     const isCoach = user.role === 'coach';
-    cont.innerHTML = `<div style="padding:32px 24px;text-align:center;max-width:340px;margin:0 auto">
-      <div style="font-size:40px;margin-bottom:14px">📋</div>
-      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:8px">Sin rutina asignada</div>
-      ${isCoach
-        ? `<div style="font-size:13px;color:var(--sub);margin-bottom:20px;line-height:1.6">Todavía no tenés un plan cargado para vos. Creá uno desde el panel.</div>
-           <button onclick="goSection('planilla',document.querySelector('[data-tab=planilla]'));setTimeout(()=>pbSelectAth('${user.id}'),80)"
-             style="background:var(--acc);color:#000;border:none;border-radius:12px;padding:14px 28px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.3px">
-             ⚡ Crear mi plan
-           </button>`
-        : `<div style="font-size:13px;color:var(--sub)">Tu coach todavía no cargó tu plan. Consultale por Telegram.</div>`
-      }
+    cont.innerHTML = `<div class="sq-empty">
+      <span class="sq-empty-title">Sin plan todavía</span>
+      <span class="sq-empty-sub">Tu coach todavía no cargó tu rutina.</span>
+      ${isCoach ? `<button onclick="goSection('planilla',document.querySelector('[data-tab=planilla]'));setTimeout(()=>pbSelectAth('${user.id}'),80)"
+        style="margin-top:8px;background:var(--acc);color:#000;border:none;border-radius:12px;padding:14px 28px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.3px">
+        Crear mi plan
+      </button>` : ''}
     </div>`;
     return;
   }
@@ -305,7 +301,7 @@ function mrRender(cont){
 // ── RENDER EXERCISES ──
 function mrRenderExercises(exercises, week, totalWeeks, color){
   if(!exercises || !exercises.length)
-    return `<div style="text-align:center;padding:30px;color:var(--sub);font-size:13px">Sin ejercicios para este día</div>`;
+    return `<div class="sq-empty"><span class="sq-empty-title">Día libre</span><span class="sq-empty-sub">No hay ejercicios asignados para este día.</span></div>`;
 
   const isDeload = week === totalWeeks;
 

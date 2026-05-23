@@ -728,6 +728,11 @@ function renderAthleteView(user) {
       </div>`);
     }
 
+    // ── PERFIL VACÍO ──
+    if(!lastSess && !topPRs.length){
+      parts.push(`<div class="sq-empty"><span class="sq-empty-title">Tu perfil está vacío</span><span class="sq-empty-sub">Completá tu primera sesión para que aparezca tu progreso.</span></div>`);
+    }
+
     // ── CONFIGURACIÓN ──
     const curUnit = DB.get('units_'+user.id) || 'kg';
     parts.push(`
@@ -871,11 +876,7 @@ function renderAthHistorial(user) {
   const now = new Date();
 
   if(!ss.length){
-    cont.innerHTML = `<div style="padding:40px;text-align:center">
-      <div style="font-size:32px;margin-bottom:12px">📭</div>
-      <div style="font-size:15px;font-weight:700;color:var(--text)">Sin sesiones registradas</div>
-      <div style="font-size:13px;color:var(--sub);margin-top:6px">Completá tu primera rutina para verla acá</div>
-    </div>`;
+    cont.innerHTML = `<div class="sq-empty"><span class="sq-empty-title">Sin sesiones todavía</span><span class="sq-empty-sub">Registrá tu primer entrenamiento para verlo acá.</span></div>`;
     return;
   }
 

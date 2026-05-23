@@ -256,7 +256,7 @@ function renderAthDieta(id){
   const diet = DB.get('diet_'+id);
   const cont = document.getElementById('ath-dieta'); if(!cont) return;
   if(!diet?.meals?.length){
-    cont.innerHTML=`<div class="empty"><div class="ei">🥗</div><p>Tu dieta no está cargada aún.<br>Tu entrenador la va a subir pronto.</p></div>`;
+    cont.innerHTML=`<div class="sq-empty"><span class="sq-empty-title">Sin plan nutricional</span><span class="sq-empty-sub">Tu coach todavía no cargó tu dieta.</span></div>`;
     return;
   }
 

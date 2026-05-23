@@ -1529,3 +1529,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
 .pg-hist-amount{font-size:15px;font-weight:800;}
 .pg-hist-method,.pg-hist-period,.pg-hist-note{font-size:11px;color:var(--sub);}
 .pg-hist-note{font-style:italic;}
+
+/* ── EMPTY STATES ── */
+.sq-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:240px;text-align:center;padding:32px 24px;gap:8px;}
+.sq-empty-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;color:var(--text);letter-spacing:.5px;text-transform:uppercase;}
+.sq-empty-sub{font-size:14px;color:var(--sub);line-height:1.5;max-width:260px;}
+

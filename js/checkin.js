@@ -517,14 +517,7 @@ async function ckAthleteView(cont, user){
   const sorted = [...list].sort((x,y)=>y.id.localeCompare(x.id));
 
   if(!sorted.length){
-    cont.innerHTML = `
-<div class="ck-wrap">
-  <div class="ck-empty" style="margin-top:60px">
-    <div class="ck-empty-icon">📋</div>
-    <div class="ck-empty-title">Sin check-in esta semana</div>
-    <div class="ck-empty-sub">Tu coach todavía no cargó la revisión</div>
-  </div>
-</div>`;
+    cont.innerHTML = `<div class="sq-empty"><span class="sq-empty-title">Sin check-in esta semana</span><span class="sq-empty-sub">Tu coach lo va a cargar próximamente.</span></div>`;
     return;
   }
 

@@ -33,13 +33,16 @@ function initCoachTour() {
     },
   ];
 
-  let current  = 0;
-  let prevEl   = null;
-  let prevSaved = null;
+  let current = 0;
 
-  const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:8000;background:rgba(9,9,11,.88);';
-  document.body.appendChild(overlay);
+  // Spotlight box — positioned over the target, box-shadow creates the dark overlay
+  const spot = document.createElement('div');
+  spot.style.cssText = [
+    'position:fixed;z-index:8001;pointer-events:none;',
+    'border:2px solid var(--acc);border-radius:var(--radius);',
+    'transition:top .3s ease,left .3s ease,width .3s ease,height .3s ease;',
+  ].join('');
+  document.body.appendChild(spot);
 
   const panel = document.createElement('div');
   panel.style.cssText = [
@@ -52,38 +55,31 @@ function initCoachTour() {
 
   function getTarget(sel) {
     const all = [...document.querySelectorAll(sel)];
+    // prefer the visible one (sidebar on desktop, bottom nav on mobile)
     return all.find(el => el.offsetParent !== null) || all[0] || null;
   }
 
-  function highlight(el) {
-    if (!el) return;
-    prevSaved = {
-      position:      el.style.position,
-      zIndex:        el.style.zIndex,
-      outline:       el.style.outline,
-      outlineOffset: el.style.outlineOffset,
-      borderRadius:  el.style.borderRadius,
-    };
-    if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
-    el.style.zIndex        = '8001';
-    el.style.outline       = '2px solid var(--acc)';
-    el.style.outlineOffset = '3px';
-    el.style.borderRadius  = 'var(--radius)';
-    prevEl = el;
-  }
-
-  function clearHighlight() {
-    if (!prevEl || !prevSaved) return;
-    Object.assign(prevEl.style, prevSaved);
-    prevEl   = null;
-    prevSaved = null;
+  function positionSpot(el) {
+    if (!el) {
+      // No target — full-screen dark overlay
+      spot.style.cssText += 'top:50%;left:50%;width:0;height:0;border:none;' +
+        'box-shadow:0 0 0 4000px rgba(9,9,11,.88);';
+      return;
+    }
+    const pad = 6;
+    const r = el.getBoundingClientRect();
+    spot.style.top    = (r.top  - pad) + 'px';
+    spot.style.left   = (r.left - pad) + 'px';
+    spot.style.width  = (r.width  + pad * 2) + 'px';
+    spot.style.height = (r.height + pad * 2) + 'px';
+    spot.style.border = '2px solid var(--acc)';
+    spot.style.boxShadow = '0 0 0 4000px rgba(9,9,11,.88)';
   }
 
   function render(idx) {
-    clearHighlight();
     const step    = steps[idx];
     const isFinal = idx === steps.length - 1;
-    highlight(getTarget(step.selector));
+    positionSpot(getTarget(step.selector));
 
     panel.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -99,16 +95,12 @@ function initCoachTour() {
       </div>`;
 
     panel.querySelector('#sq-tour-skip').onclick = finish;
-    panel.querySelector('#sq-tour-next').onclick  = () => {
-      if (isFinal) finish();
-      else render(++current);
-    };
+    panel.querySelector('#sq-tour-next').onclick  = () => isFinal ? finish() : render(++current);
   }
 
   function finish() {
     localStorage.setItem('sq_coach_tour_done', 'true');
-    clearHighlight();
-    overlay.remove();
+    spot.remove();
     panel.remove();
   }
 

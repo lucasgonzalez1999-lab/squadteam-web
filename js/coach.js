@@ -1013,15 +1013,15 @@ function openEditAthleteModal(id){
   const lbl = 'font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--sub);text-transform:uppercase;margin-bottom:6px';
 
   ov.innerHTML = `
-  <div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:400px;overflow:hidden">
-    <div style="padding:20px 22px 16px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--border)">
+  <div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:400px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:20px 22px 16px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0">
       <div>
         <div style="font-size:15px;font-weight:800;color:var(--text)">Editar — ${a.name}</div>
         <div style="font-size:12px;color:var(--sub);margin-top:2px">Modificá datos del alumno</div>
       </div>
       <button onclick="document.getElementById('edit-ath-ov').remove()" style="background:none;border:1px solid var(--border);border-radius:8px;width:30px;height:30px;cursor:pointer;color:var(--sub);font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0">×</button>
     </div>
-    <div style="padding:18px 22px;display:flex;flex-direction:column;gap:14px">
+    <div style="padding:18px 22px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;min-height:0">
       <div>
         <div style="${lbl}">Tipo</div>
         <div style="display:flex;gap:8px">
@@ -1092,7 +1092,6 @@ function openEditAthleteModal(id){
           <input type="checkbox" id="ea-dopamine-cb" ${a.features?.dopamine?'checked':''} style="display:none">
         </div>
       </div>
-    </div>
       <div style="border-top:1px solid var(--border);padding-top:14px">
         <div style="${lbl}">Cambiar PIN</div>
         <div style="display:flex;gap:8px;margin-top:6px">
@@ -1106,7 +1105,7 @@ function openEditAthleteModal(id){
         <div id="ea-pin-msg" style="font-size:11px;margin-top:6px;display:none"></div>
       </div>
     </div>
-    <div style="padding:0 22px 20px;display:flex;gap:8px">
+    <div style="padding:14px 22px 20px;display:flex;gap:8px;border-top:1px solid var(--border);flex-shrink:0">
       <button onclick="archiveAthlete('${a.id}')" style="padding:10px 14px;background:none;border:1px solid #ef4444;border-radius:10px;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit" title="Dar de baja">Dar de baja</button>
       <button onclick="document.getElementById('edit-ath-ov').remove()" style="flex:1;padding:10px 0;background:none;border:1px solid var(--border);border-radius:10px;color:var(--sub);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
       <button onclick="_saveEditAthlete('${a.id}')" style="flex:1;padding:10px 0;background:var(--acc);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Guardar</button>

@@ -1535,3 +1535,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
 .sq-empty-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;color:var(--text);letter-spacing:.5px;text-transform:uppercase;}
 .sq-empty-sub{font-size:14px;color:var(--sub);line-height:1.5;max-width:260px;}
 
+/* ── HOY CTA ── */
+.hoy-cta{padding:20px 0;border-bottom:1px solid var(--border);margin-bottom:8px;}
+.hoy-cta-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;color:var(--sub);text-transform:uppercase;margin-bottom:12px;}
+.hoy-cta-sub{font-size:13px;color:var(--sub);}
+.btn-primary.full-width{width:100%;background:var(--acc);color:#000;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:18px;letter-spacing:1px;padding:16px;border:none;border-radius:var(--radius);cursor:pointer;display:block;}
+

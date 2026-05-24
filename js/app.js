@@ -176,7 +176,7 @@ async function initApp(user) {
   const now = new Date(); const h = now.getHours();
   const tit = document.getElementById('tb-title'); if(tit) tit.textContent = user.role==='coach'?'SQUAD TEAM':user.name.toUpperCase();
   const dat = document.getElementById('tb-date'); if(dat) dat.textContent = now.toLocaleDateString('es-UY',{weekday:'long',day:'numeric',month:'long'});
-  const logoSub2 = document.getElementById('logo-sub'); if(logoSub2) logoSub2.textContent = user.role==='coach'?'Coach OS':'Athlete';
+  const logoSub2 = document.getElementById('logo-sub'); if(logoSub2) logoSub2.textContent = user.role==='coach'?'Coach OS':(user.name||'ATHLETE').toUpperCase();
 
   // Load data
   load();
@@ -216,7 +216,7 @@ function showAthleteUI(user) {
   if (tog) tog.style.display = 'none';
   const av = document.getElementById('top-av');
   if (av) { av.title = 'Cerrar sesión'; av.onclick = confirmLogout; }
-  goSection('mi-rutina', null);
+  goSection('mi-perfil', null);
 }
 
 // ── GENERIC CONFIRM MODAL ──
@@ -556,9 +556,8 @@ function renderAthleteView(user) {
       <div style="background:#0a0a0a;border-radius:16px;padding:22px;color:white">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
           <div>
-            <div style="font-size:10px;color:#555;letter-spacing:2px;font-weight:700;margin-bottom:4px">RACHA</div>
-            <div style="font-size:76px;font-weight:900;color:var(--acc);line-height:1">${streak}</div>
-            <div style="font-size:13px;color:#666;margin-top:4px">días seguidos</div>
+            <div style="font-size:clamp(72px,20vw,120px);font-family:'Barlow Condensed',sans-serif;font-weight:900;color:var(--acc);line-height:1">${streak}</div>
+            <div style="font-size:11px;letter-spacing:2px;color:var(--sub);text-transform:uppercase;margin-top:4px">DÍAS CONSECUTIVOS</div>
           </div>
           <div style="text-align:right">
             <div style="font-size:10px;color:#555;letter-spacing:2px;font-weight:700;margin-bottom:6px">ESTA SEMANA</div>
@@ -570,66 +569,104 @@ function renderAthleteView(user) {
           <div style="background:var(--acc);height:100%;width:${streak>0?Math.min(85,55+streak*4):0}%;border-radius:4px"></div>
         </div>
       </div>`);
+
+      // ── CTA ENTRENAMIENTO ──
+      const _DOW_ES = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+      const _todayDow = new Date().getDay();
+      const _todayName = _DOW_ES[_todayDow].toLowerCase();
+      const _byDay = (_mrPlan && _mrAthId === user.id ? _mrPlan.byDay : null) || {};
+      const _days = Object.keys(_byDay);
+      let _todayDay = _days.find(d => d.toLowerCase().includes(_todayName));
+      if(!_todayDay && _days.length > 0 && _todayDow !== 0){
+        _todayDay = _days[(_todayDow - 1) % _days.length];
+      }
+      const _todayEx = _todayDay ? (_byDay[_todayDay] || []) : [];
+
+      if(_days.length > 0){
+        if(_todayEx.length > 0){
+          parts.push(`<div class="hoy-cta">
+            <div class="hoy-cta-label">HOY · ${_todayDay.toUpperCase()}</div>
+            <button class="btn-primary full-width" onclick="goSection('mi-rutina',document.querySelector('[data-tab=mi-rutina]'))">ENTRENAR →</button>
+          </div>`);
+        } else {
+          let _nextDay = '';
+          for(let i = 1; i <= 7; i++){
+            const nd = _DOW_ES[(_todayDow + i) % 7].toLowerCase();
+            const found = _days.find(d => d.toLowerCase().includes(nd));
+            if(found && (_byDay[found]||[]).length > 0){ _nextDay = found; break; }
+          }
+          parts.push(`<div class="hoy-cta">
+            <div class="hoy-cta-label">HOY · DESCANSO</div>
+            ${_nextDay ? '<div class="hoy-cta-sub">Tu próximo entreno: '+_nextDay+'</div>' : ''}
+          </div>`);
+        }
+      }
+      // Load plan in background if not yet available
+      if(!_days.length && window.db && typeof mrLoadPlan === 'function' && !_mrPlan){
+        mrLoadPlan(user.id).then(p => {
+          if(p){ _mrPlan = p; _mrAthId = user.id; if(currentUser && currentSection === 'mi-perfil') renderAthleteView(currentUser); }
+        }).catch(()=>{});
+      }
     }
 
     // ── FEEDBACK DEL COACH ──
     if(coachNote&&coachNote.text){
       parts.push(`
-      <div style="background:white;border:2px solid ${color}44;border-radius:16px;padding:20px">
+      <div style="background:var(--surf);border:2px solid ${color}44;border-radius:16px;padding:20px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
           <div style="width:30px;height:30px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">💬</div>
-          <div style="font-size:13px;font-weight:700;color:#0d1117">Feedback del coach${coachNote.date?' <span style="font-weight:400;color:#9ca3af;font-size:11px">· '+coachNote.date+'</span>':''}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">Feedback del coach${coachNote.date?' <span style="font-weight:400;color:var(--sub);font-size:11px">· '+coachNote.date+'</span>':''}</div>
         </div>
-        <div style="font-size:14px;color:#374151;line-height:1.7;font-style:italic">"${coachNote.text}"</div>
+        <div style="font-size:14px;color:var(--sub);line-height:1.7;font-style:italic">"${coachNote.text}"</div>
       </div>`);
     }
 
     // ── TRACKING DIARIO ──
     const waterOpts=[1,1.5,2,2.5,3];
     parts.push(`
-    <div style="background:white;border:1px solid #e8eaed;border-radius:16px;padding:20px">
-      <div style="font-size:13px;font-weight:700;color:#0d1117;margin-bottom:14px">📋 Registro de hoy</div>
+    <div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:20px">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px">📋 Registro de hoy</div>
       <div style="display:flex;flex-direction:column;gap:14px">
         <div>
-          <div style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:1px;margin-bottom:8px">PESO CORPORAL</div>
+          <div style="font-size:11px;font-weight:700;color:var(--sub);letter-spacing:1px;margin-bottom:8px">PESO CORPORAL</div>
           <div style="display:flex;gap:8px;align-items:center">
             <div style="position:relative;flex:1">
               <input id="ath-peso" type="number" step="0.1" inputmode="decimal" placeholder="kg"
                 value="${todayLog.weight||''}"
-                style="width:100%;padding:11px 36px 11px 14px;border:2px solid #e8eaed;border-radius:10px;font-size:16px;font-family:inherit;box-sizing:border-box;background:#f9fafb;outline:none"
-                onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor='#e8eaed'">
-              <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;color:#9ca3af">kg</span>
+                style="width:100%;padding:11px 36px 11px 14px;border:2px solid var(--border);border-radius:10px;font-size:16px;font-family:inherit;box-sizing:border-box;background:var(--bg);color:var(--text);outline:none"
+                onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor='var(--border)'">
+              <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--sub)">kg</span>
             </div>
             <button onclick="saveDaily('${user.id}','weight',document.getElementById('ath-peso').value)"
-              style="background:#0a0a0a;color:var(--acc);border:none;border-radius:10px;padding:11px 18px;font-weight:900;font-size:13px;cursor:pointer;white-space:nowrap">
+              style="background:var(--acc);color:#000;border:none;border-radius:10px;padding:11px 18px;font-weight:900;font-size:13px;cursor:pointer;white-space:nowrap;font-family:inherit">
               Guardar
             </button>
           </div>
-          ${todayLog.weight?'<div style="font-size:11px;color:#9ca3af;margin-top:5px">Hoy: <b style="color:#374151">'+todayLog.weight+' kg</b></div>':''}
+          ${todayLog.weight?'<div style="font-size:11px;color:var(--sub);margin-top:5px">Hoy: <b style="color:var(--text)">'+todayLog.weight+' kg</b></div>':''}
         </div>
         <div>
-          <div style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:1px;margin-bottom:8px">AGUA 💧</div>
+          <div style="font-size:11px;font-weight:700;color:var(--sub);letter-spacing:1px;margin-bottom:8px">AGUA 💧</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             ${waterOpts.map(v=>'<button onclick="saveDaily(\''+user.id+'\',\'water\','+v+')"'
-              +' style="flex:1;min-width:48px;padding:9px 4px;border:2px solid '+(todayLog.water==v?color:'#e8eaed')+';border-radius:9px;background:'+(todayLog.water==v?color+'15':'white')+';font-size:13px;font-weight:700;color:'+(todayLog.water==v?color:'#374151')+';cursor:pointer">'+v+'L</button>'
+              +' style="flex:1;min-width:48px;padding:9px 4px;border:2px solid '+(todayLog.water==v?color:'var(--border)')+';border-radius:9px;background:'+(todayLog.water==v?color+'15':'var(--surf2)')+';font-size:13px;font-weight:700;color:'+(todayLog.water==v?color:'var(--text)')+';cursor:pointer;font-family:inherit">'+v+'L</button>'
             ).join('')}
           </div>
         </div>
         <div>
-          <div style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:1px;margin-bottom:8px">PASOS 🚶</div>
+          <div style="font-size:11px;font-weight:700;color:var(--sub);letter-spacing:1px;margin-bottom:8px">PASOS 🚶</div>
           <div style="display:flex;gap:8px;align-items:center">
             <div style="position:relative;flex:1">
               <input id="ath-pasos" type="number" inputmode="numeric" placeholder="pasos"
                 value="${todayLog.steps||''}"
-                style="width:100%;padding:11px 14px;border:2px solid #e8eaed;border-radius:10px;font-size:16px;font-family:inherit;box-sizing:border-box;background:#f9fafb;outline:none"
-                onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor='#e8eaed'">
+                style="width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:10px;font-size:16px;font-family:inherit;box-sizing:border-box;background:var(--bg);color:var(--text);outline:none"
+                onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor='var(--border)'">
             </div>
             <button onclick="saveDaily('${user.id}','steps',document.getElementById('ath-pasos').value)"
-              style="background:#0a0a0a;color:var(--acc);border:none;border-radius:10px;padding:11px 18px;font-weight:900;font-size:13px;cursor:pointer;white-space:nowrap">
+              style="background:var(--acc);color:#000;border:none;border-radius:10px;padding:11px 18px;font-weight:900;font-size:13px;cursor:pointer;white-space:nowrap;font-family:inherit">
               Guardar
             </button>
           </div>
-          ${todayLog.steps?'<div style="font-size:11px;color:#9ca3af;margin-top:5px">Hoy: <b style="color:#374151">'+(todayLog.steps>=1000?(todayLog.steps/1000).toFixed(1)+'k':todayLog.steps)+' pasos</b></div>':''}
+          ${todayLog.steps?'<div style="font-size:11px;color:var(--sub);margin-top:5px">Hoy: <b style="color:var(--text)">'+(todayLog.steps>=1000?(todayLog.steps/1000).toFixed(1)+'k':todayLog.steps)+' pasos</b></div>':''}
         </div>
       </div>
     </div>`);
@@ -674,36 +711,36 @@ function renderAthleteView(user) {
       const vol=Math.round(calcVol(lastSess));
       const exList=(lastSess.exercises||[]).map(ex=>{
         const top=(ex.sets||[]).reduce((mx,st)=>((parseFloat(st.kg)||0)>(parseFloat(mx.kg)||0)?st:mx),{kg:0,reps:0});
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f3f4f6">'
-          +'<span style="font-size:13px;color:#374151">'+ex.name.split(' ').slice(0,4).join(' ')+'</span>'
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">'
+          +'<span style="font-size:13px;color:var(--text)">'+ex.name.split(' ').slice(0,4).join(' ')+'</span>'
           +(top.kg>0?'<span style="font-size:13px;font-weight:700;color:'+color+'">'+top.kg+' kg × '+top.reps+'</span>':'')+'</div>';
       }).join('');
       parts.push(`
-      <div style="background:white;border:1px solid #e8eaed;border-radius:16px;padding:20px">
+      <div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:20px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
           <div>
-            <div style="font-size:13px;font-weight:700;color:#0d1117">📅 Último entrenamiento</div>
-            <div style="font-size:12px;color:#9ca3af;margin-top:3px">${ds===0?'Hoy':ds===1?'Ayer':'Hace '+ds+' días'} · ${lastSess.name||'Sesión'}</div>
+            <div style="font-size:13px;font-weight:700;color:var(--text)">📅 Último entrenamiento</div>
+            <div style="font-size:12px;color:var(--sub);margin-top:3px">${ds===0?'Hoy':ds===1?'Ayer':'Hace '+ds+' días'} · ${lastSess.name||'Sesión'}</div>
           </div>
           <div style="text-align:right">
             <div style="font-size:20px;font-weight:800;color:${color}">${volFmt(vol)} kg</div>
-            <div style="font-size:11px;color:#9ca3af">${(lastSess.exercises||[]).length} ejercicios</div>
+            <div style="font-size:11px;color:var(--sub)">${(lastSess.exercises||[]).length} ejercicios</div>
           </div>
         </div>
-        ${exList||'<div style="color:#9ca3af;font-size:13px">Sin registro de cargas</div>'}
+        ${exList||'<div style="color:var(--sub);font-size:13px">Sin registro de cargas</div>'}
       </div>`);
     }
 
     // ── MIS RÉCORDS ──
     if(topPRs.length){
       const prRows=topPRs.map(([n,{kg}])=>
-        '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f3f4f6">'
-        +'<span style="font-size:13px;color:#374151">'+n.split(' ').slice(0,4).join(' ')+'</span>'
+        '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">'
+        +'<span style="font-size:13px;color:var(--text)">'+n.split(' ').slice(0,4).join(' ')+'</span>'
         +'<span style="font-size:14px;font-weight:800;color:'+color+'">'+kg+' kg</span></div>'
       ).join('');
       parts.push(`
-      <div style="background:white;border:1px solid #e8eaed;border-radius:16px;padding:20px">
-        <div style="font-size:13px;font-weight:700;color:#0d1117;margin-bottom:12px">🏆 Mis récords</div>
+      <div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:20px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">🏆 Mis récords</div>
         ${prRows}
       </div>`);
     }
@@ -716,17 +753,17 @@ function renderAthleteView(user) {
     // ── CONFIGURACIÓN ──
     const curUnit = DB.get('units_'+user.id) || 'kg';
     parts.push(`
-    <div style="background:white;border:1px solid #e8eaed;border-radius:16px;padding:20px">
-      <div style="font-size:13px;font-weight:700;color:#0d1117;margin-bottom:12px">⚙️ Configuración</div>
+    <div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:20px">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">⚙️ Configuración</div>
       <div style="display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:13px;color:#374151">Unidad de peso</span>
-        <div style="display:flex;gap:4px;background:#f3f4f6;border-radius:8px;padding:3px">
+        <span style="font-size:13px;color:var(--text)">Unidad de peso</span>
+        <div style="display:flex;gap:4px;background:var(--bg);border-radius:8px;padding:3px">
           <button onclick="setAthUnits('${user.id}','kg')" style="padding:5px 14px;border-radius:6px;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
-            background:${'kg'===curUnit?'white':'transparent'};color:${'kg'===curUnit?'#0d1117':'#6b7280'};
-            box-shadow:${'kg'===curUnit?'0 1px 3px rgba(0,0,0,.12)':'none'}">KG</button>
+            background:${'kg'===curUnit?'var(--surf2)':'transparent'};color:${'kg'===curUnit?'var(--text)':'var(--sub)'};
+            box-shadow:${'kg'===curUnit?'0 1px 3px rgba(0,0,0,.3)':'none'}">KG</button>
           <button onclick="setAthUnits('${user.id}','lbs')" style="padding:5px 14px;border-radius:6px;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
-            background:${'lbs'===curUnit?'white':'transparent'};color:${'lbs'===curUnit?'#0d1117':'#6b7280'};
-            box-shadow:${'lbs'===curUnit?'0 1px 3px rgba(0,0,0,.12)':'none'}">LBS</button>
+            background:${'lbs'===curUnit?'var(--surf2)':'transparent'};color:${'lbs'===curUnit?'var(--text)':'var(--sub)'};
+            box-shadow:${'lbs'===curUnit?'0 1px 3px rgba(0,0,0,.3)':'none'}">LBS</button>
         </div>
       </div>
     </div>`);

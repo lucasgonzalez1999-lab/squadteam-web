@@ -40,12 +40,12 @@ function sundayOf(monday){
 const MONTH_ES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 
 // ── Escala de color ─────────────────────────
-const TIER_COLORS = {
-  0: '#1a1a1a',
-  1: '#333333',
-  2: '#666666',
-  3: 'rgba(217,255,0,0.4)',
-  4: '#d9ff00'
+const TIER_STYLES = {
+  0: { fill:'#1f1f1f', opacity:1.0 }, // SIN DATOS
+  1: { fill:'#555555', opacity:1.0 }, // EN PROGRESO
+  2: { fill:'#d9ff00', opacity:0.30 }, // ACTIVO
+  3: { fill:'#d9ff00', opacity:0.55 }, // FUERTE
+  4: { fill:'#d9ff00', opacity:1.0 }  // DOMINANTE
 };
 
 // ── Mapeo SVG ───────────────────────────────
@@ -297,10 +297,13 @@ function svgBack(){
 // ── Aplica fills al SVG sin re-renderizar ───
 function applyTiers(root, tiers){
   for(const m in MUSCLE_TO_PATHS){
-    const color = TIER_COLORS[tiers[m] ?? 0];
+    const style = TIER_STYLES[tiers[m] ?? 0];
     MUSCLE_TO_PATHS[m].forEach(id => {
       const el = root.querySelector('#' + id);
-      if(el) el.setAttribute('fill', color);
+      if(el){
+        el.setAttribute('fill', style.fill);
+        el.setAttribute('fill-opacity', style.opacity);
+      }
     });
   }
 }
@@ -342,12 +345,11 @@ function mount(host, sessions){
           ${svgFront()}
           ${svgBack()}
         </div>
-        <aside class="mm-top3" id="mm-top3"></aside>
       </div>
 
       <div class="mm-empty hidden" id="mm-empty"></div>
 
-      <footer class="mm-foot" id="mm-foot"></footer>
+      <ul class="mm-top3" id="mm-top3"></ul>
     </section>
   `;
 
@@ -357,7 +359,6 @@ function mount(host, sessions){
   const btnNext  = host.querySelector('#mm-next');
   const top3El   = host.querySelector('#mm-top3');
   const emptyEl  = host.querySelector('#mm-empty');
-  const footEl   = host.querySelector('#mm-foot');
   const svgWrap  = host.querySelector('#mm-svg-wrap');
   const svgFrontEl = host.querySelector('#body-front');
   const svgBackEl  = host.querySelector('#body-back');
@@ -387,14 +388,10 @@ function mount(host, sessions){
     const noSessionsAtAll = !(sessions && sessions.length);
     if(!hasData){
       top3El.classList.add('hidden');
-      footEl.classList.add('hidden');
       emptyEl.classList.remove('hidden');
 
       let msg = 'Completá sesiones para ver tu perfil muscular.';
-      if(noSessionsAtAll){
-        msg = 'Completá sesiones para ver tu perfil muscular.';
-      } else {
-        // ¿Pasaron >14 días desde la última sesión?
+      if(!noSessionsAtAll){
         const lastDate = (sessions||[])
           .map(s => s.date)
           .filter(Boolean)
@@ -407,38 +404,19 @@ function mount(host, sessions){
         }
       }
       emptyEl.textContent = msg;
-      return;
+    } else {
+      emptyEl.classList.add('hidden');
+      top3El.classList.remove('hidden');
+
+      const top3 = getTopMacroGroups(volByMuscle);
+      top3El.innerHTML = top3.map(g => `
+        <li class="mm-top-item">
+          <span class="mm-top-name">${g.name}</span>
+          <div class="mm-bar"><div class="mm-bar-fill" style="width:${g.barPct}%"></div></div>
+          <span class="mm-top-label">${g.label}</span>
+        </li>
+      `).join('');
     }
-
-    emptyEl.classList.add('hidden');
-    top3El.classList.remove('hidden');
-    footEl.classList.remove('hidden');
-
-    // Top 3
-    const top3 = getTopMacroGroups(volByMuscle);
-    top3El.innerHTML = top3.map(g => {
-      const isStrong = (g.label === 'DOMINANTE' || g.label === 'FUERTE');
-      const labelCls = isStrong ? 'mm-label-strong' : 'mm-label-soft';
-      let barCls;
-      if(isStrong) barCls = 'mm-bar-fill-strong';
-      else if(g.label === 'ACTIVO') barCls = 'mm-bar-fill-mid';
-      else barCls = 'mm-bar-fill-low';
-
-      return `
-        <div class="mm-top-item">
-          <div class="mm-top-name">${g.name}</div>
-          <div class="mm-top-row">
-            <div class="mm-bar"><div class="${barCls}" style="width:${g.barPct}%"></div></div>
-            <div class="mm-top-label ${labelCls}">${g.label}</div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    // Footer: N grupos en lima · M silenciosos
-    const lima = MUSCLE_KEYS.filter(m => tiers[m] >= 3).length;
-    const silentes = MUSCLE_KEYS.filter(m => tiers[m] === 0).length;
-    footEl.textContent = `${lima} grupo${lima===1?'':'s'} en lima · ${silentes} silencioso${silentes===1?'':'s'}`;
 
     // Habilitar/deshabilitar ▶
     if(state.weekOffset >= 0){
@@ -510,7 +488,7 @@ window.MuscleMap = {
   EXERCISE_TO_MUSCLE,
   MUSCLE_TO_PATHS,
   MACRO_GROUPS,
-  TIER_COLORS
+  TIER_STYLES
 };
 
 })();

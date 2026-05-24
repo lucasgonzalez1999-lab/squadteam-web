@@ -41,9 +41,9 @@ const MONTH_ES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','n
 
 // ── Escala de color ─────────────────────────
 const TIER_STYLES = {
-  0: { fill:'#1f1f1f', opacity:1.0 }, // SIN DATOS
-  1: { fill:'#555555', opacity:1.0 }, // EN PROGRESO
-  2: { fill:'#d9ff00', opacity:0.30 }, // ACTIVO
+  0: { fill:'#26262c', opacity:1.0 }, // SIN DATOS (visible como guía anatómica)
+  1: { fill:'#555555', opacity:1.0 }, // EN PROGRESO / POR DESARROLLAR
+  2: { fill:'#d9ff00', opacity:0.30 }, // ACTIVO / EN DESARROLLO
   3: { fill:'#d9ff00', opacity:0.55 }, // FUERTE
   4: { fill:'#d9ff00', opacity:1.0 }  // DOMINANTE
 };
@@ -260,6 +260,10 @@ const BODY_SILHOUETTE = `
 function svgFront(){
   return `<svg id="body-front" class="mm-svg" viewBox="0 0 200 540" xmlns="http://www.w3.org/2000/svg">
     <g id="body-front-base" fill="#18181d" stroke="rgba(255,255,255,0.08)" stroke-width="0.6">${BODY_SILHOUETTE}</g>
+    <g id="body-front-hints" stroke="rgba(255,255,255,0.06)" stroke-width="0.6" fill="none">
+      <line x1="100" y1="108" x2="100" y2="170"/>
+      <line x1="100" y1="176" x2="100" y2="304"/>
+    </g>
     <g id="muscles-front" stroke="none">
       <path id="zone-hombro-izq"      d="M58 96 C46 100 36 110 32 124 L34 138 C42 134 52 132 60 134 L66 108 C64 100 62 96 58 96 Z" fill="#1f1f1f"/>
       <path id="zone-hombro-der"      d="M142 96 C154 100 164 110 168 124 L166 138 C158 134 148 132 140 134 L134 108 C136 100 138 96 142 96 Z" fill="#1f1f1f"/>
@@ -276,6 +280,10 @@ function svgFront(){
 function svgBack(){
   return `<svg id="body-back" class="mm-svg" viewBox="0 0 200 540" xmlns="http://www.w3.org/2000/svg">
     <g id="body-back-base" fill="#18181d" stroke="rgba(255,255,255,0.08)" stroke-width="0.6">${BODY_SILHOUETTE}</g>
+    <g id="body-back-hints" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" fill="none">
+      <line x1="100" y1="92" x2="100" y2="310"/>
+      <line x1="100" y1="360" x2="100" y2="420"/>
+    </g>
     <g id="muscles-back" stroke="none">
       <path id="zone-trapecio"        d="M86 86 L114 86 L128 104 C128 116 116 126 100 128 C84 126 72 116 72 104 Z" fill="#1f1f1f"/>
       <path id="zone-dorsal-izq"      d="M62 116 C54 128 48 148 50 182 C52 212 70 232 88 236 L98 236 L98 138 C94 130 84 122 70 120 Z" fill="#1f1f1f"/>

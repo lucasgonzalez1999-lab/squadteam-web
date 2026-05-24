@@ -304,10 +304,6 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; -webkit
 /* APP */
 #coach-app { display: none; }
 #coach-app.visible { display: flex; height: 100svh; overflow: hidden; background: #fafafa; }
-@keyframes livePulse {
-  0%,100% { opacity:1; transform:scale(1); }
-  50%      { opacity:.4; transform:scale(1.4); }
-}
 </style>
 <link rel="stylesheet" href="css/main.css?v=3">
 <link rel="stylesheet" href="css/nutrition-export.css">
@@ -648,7 +644,6 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="sec" id="sec-planilla"><div id="planilla-root"></div></div>
       <div class="sec" id="sec-nutricion"><div id="nutricion-content"></div></div>
       <div class="sec" id="sec-progreso"><div id="progreso-content"></div></div>
-      <div class="sec" id="sec-live"><div id="live-content"></div></div>
       <div class="sec" id="sec-pagos"><div id="pagos-content"></div></div>
       <div class="sec" id="sec-mi-rutina"><div id="mi-rutina-content"></div></div>
       <div class="sec" id="sec-mi-perfil"><div id="mi-perfil-content"></div></div>

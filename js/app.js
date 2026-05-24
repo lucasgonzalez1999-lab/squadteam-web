@@ -309,7 +309,6 @@ function goSection(id, el) {
   currentSection = id;
   if (id==='dashboard') renderDashboard();
   if (id==='clases')    renderClases();
-  if (id==='live')      renderLivePicker();
   if (id==='alumnos')   renderAlumnos();
   if (id==='planilla')  renderPlanilla();
   if (id==='nutricion') renderNutricion();
@@ -367,34 +366,14 @@ const DATA_SYNC_INTERVAL = 20000; // sync cada 20s
 
 function startGlobalPoller() {
   if (globalPoller) clearInterval(globalPoller);
-  globalPoller = setInterval(pollActiveSessions, 30000);
-  pollActiveSessions();
-}
-
-async function pollActiveSessions() {
-  try {
-    if (!Array.isArray(athletes) || !athletes.length) return;
-
-    // ── 1. Active sessions via Firebase SDK (incluye auth token) ──
-    let count = 0;
-    await Promise.all(athletes.map(async a => {
-      try {
-        const doc = await window.db.collection('activeSessions').doc(a.id).get();
-        if (doc.exists && doc.data()?.status === 'active') count++;
-      } catch(e) {}
-    }));
-    const badge = document.getElementById('live-badge');
-    if (badge) { badge.style.display = count > 0 ? 'inline-flex' : 'none'; badge.textContent = count; }
-    const liveInd = document.getElementById('live-indicator');
-    if (liveInd) liveInd.style.display = count > 0 ? 'flex' : 'none';
-    if (count > 0 && currentSection === 'live') renderLivePicker();
-
-    // ── 2. Sync datos desde Firebase (cada 60s) ──
-    if (Date.now() - _lastDataSync >= DATA_SYNC_INTERVAL) {
-      _lastDataSync = Date.now();
-      await quickSyncFromFirebase();
-    }
-  } catch(e) {}
+  globalPoller = setInterval(async () => {
+    try {
+      if (Date.now() - _lastDataSync >= DATA_SYNC_INTERVAL) {
+        _lastDataSync = Date.now();
+        await quickSyncFromFirebase();
+      }
+    } catch(e) {}
+  }, 30000);
 }
 
 // Sync liviano via Firebase SDK — incluye auth token automáticamente

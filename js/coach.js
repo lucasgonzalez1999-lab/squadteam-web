@@ -65,7 +65,6 @@ function cmdSearch(q){
   const r=document.getElementById('cmd-results');
   const sections=[
     {id:'dashboard',label:'Panel',sub:'Vista principal del equipo',tag:'Nav'},
-    {id:'live',label:'En Vivo',sub:'Sesiones en curso',tag:'Nav'},
     {id:'alumnos',label:'Alumnos',sub:'Lista de alumnos',tag:'Nav'},
     {id:'planilla',label:'Planes',sub:'Rutinas y planillas',tag:'Nav'},
     {id:'nutricion',label:'Nutrición',sub:'Dietas y macros',tag:'Nav'},
@@ -206,12 +205,7 @@ function renderDashboard(){
 
   // ── HERO DINÁMICO ──
   let heroBadgeClass,heroBadgeText,heroHeadline,heroSub;
-  const activeLive=parseInt(document.getElementById('live-badge')?.textContent||'0')||0;
-  if(activeLive>0){
-    heroBadgeClass='live';heroBadgeText='ACTIVIDAD EN VIVO';
-    heroHeadline=`${activeLive} ${activeLive===1?'ATLETA':'ATLETAS'} <span>ENTRENANDO</span>`;
-    heroSub='Sesión activa ahora mismo';
-  } else if(urgentAlerts>0){
+  if(urgentAlerts>0){
     heroBadgeClass='warn';heroBadgeText='REQUIERE ATENCIÓN';
     heroHeadline=`${urgentAlerts} ALUMNO${urgentAlerts>1?'S':''} <span>NECESITAN ACCIÓN</span>`;
     heroSub='Revisá el bloque de alertas';
@@ -280,10 +274,6 @@ function renderDashboard(){
       </div>
     </div>
     <div class="hero-actions">
-      <button class="hero-live-btn" onclick="goSection('live',null)">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        Nueva sesión
-      </button>
       <div class="hero-time" id="hero-clock"></div>
     </div>
   </div>
@@ -383,7 +373,6 @@ function renderDashboard(){
                   <div class="today-meta">${streak>0?'Racha '+streak+'d · ':''}${adh}% adherencia${payUrgent?' · <span style="color:var(--orange);font-weight:600">Pago pendiente</span>':''}</div>
                 </div>
                 ${statusHtml}
-                <button class="btn-icon accent" onclick="event.stopPropagation();startLiveFor('${a.id}')" title="Iniciar sesión">${ico.play}</button>
               </div>`;
             }).join('')}
         </div>
@@ -393,12 +382,11 @@ function renderDashboard(){
 
     <div class="dash-right">
 
-      <!-- ACTIVIDAD EN VIVO -->
+      <!-- ACTIVIDAD RECIENTE -->
       <div class="card" id="dash-feed-card">
         <div class="blk-head">
           <div class="blk-title" style="display:flex;align-items:center;gap:8px">
-            ACTIVIDAD
-            <span class="refresh-chip"><span class="refresh-dot"></span>en vivo</span>
+            ACTIVIDAD RECIENTE
           </div>
           <button class="blk-action" onclick="goSection('progreso',document.querySelector('[data-tab=progreso]'))">Ver todo →</button>
         </div>
@@ -554,7 +542,6 @@ function renderAlumnos(){
                 <button class="btn-icon" title="Planilla" onclick="openAthPlanilla('${a.id}')">📋</button>
                 <button class="btn-icon" title="Dieta" onclick="openAthDiet('${a.id}')">🥗</button>
                 <button class="btn-icon" title="Editar alumno" onclick="openEditAthleteModal('${a.id}')">✏️</button>
-                <button class="btn-icon green-fill" title="Iniciar sesión" onclick="startLiveFor('${a.id}')">▶</button>
               </div>
             </td>
           </tr>`;
@@ -1284,14 +1271,6 @@ function deleteSession(athId, idx, btn){
   });
 }
 
-function startLiveFor(id){
-  goSection('live',document.querySelector('[data-tab=live]'));
-  setTimeout(()=>{
-    const s=document.getElementById('live-ath-sel');
-    if(s){s.value=id;renderLivePicker();}
-  },200);
-}
-
 // ── NUTRICION ──
 function renderNutricion(){
   if(!Array.isArray(athletes)||!athletes.length) athletes=typeof DEFAULT_ATHLETES!=='undefined'?DEFAULT_ATHLETES:[];
@@ -1477,108 +1456,6 @@ function renderProgreso(){
       </div>`;
     }).join('')}
   </div>`;
-}
-
-// ── LIVE SECTION ──
-async function renderLivePicker(){
-  if(!Array.isArray(athletes)||!athletes.length) athletes=typeof DEFAULT_ATHLETES!=='undefined'?DEFAULT_ATHLETES:[];
-  const cont=document.getElementById('live-content');
-  if(!cont)return;
-
-  cont.innerHTML=`<div style="padding:20px;max-width:900px;margin:0 auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-      <div>
-        <div style="font-size:20px;font-weight:800;color:var(--text)">En Vivo</div>
-        <div style="font-size:13px;color:var(--sub);margin-top:2px">Sesiones activas en este momento</div>
-      </div>
-      <button onclick="renderLivePicker()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:7px 14px;font-size:12px;color:var(--sub);cursor:pointer;font-family:inherit;font-weight:600">↻ Actualizar</button>
-    </div>
-    <div id="live-cards" style="display:flex;flex-direction:column;gap:12px">
-      <div style="text-align:center;padding:40px;color:var(--sub);font-size:13px">Cargando sesiones...</div>
-    </div>
-  </div>`;
-
-  const cards=document.getElementById('live-cards');
-  try{
-    const results=await Promise.all(athletes.map(async a=>{
-      try{
-        const doc=await window.db.collection('activeSessions').doc(a.id).get();
-        if(!doc.exists) return null;
-        const d=doc.data()||{};
-        if(d.status!=='active') return null;
-        return {ath:a,data:d};
-      }catch(e){ return null; }
-    }));
-    const active=results.filter(Boolean);
-
-    if(!active.length){
-      cards.innerHTML=`<div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:48px;text-align:center">
-        <div style="font-size:32px;margin-bottom:12px">😴</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">Sin sesiones activas</div>
-        <div style="font-size:13px;color:var(--sub)">Cuando un alumno arranque una sesión aparece acá en tiempo real</div>
-      </div>`;
-      return;
-    }
-
-    cards.innerHTML=active.map(({ath,data})=>{
-      const color=ath.color||athColor(ath.id);
-      const plan=data.plan||{};
-      const exIdx=data.exerciseIndex??0;
-      const exercises=Array.isArray(plan.exercises)?plan.exercises:(Array.isArray(data.exercises)?data.exercises:[]);
-      const curEx=exercises[exIdx]||null;
-      const sets=data.sets||{};
-      const startMs=data.startTime?.toMillis?data.startTime.toMillis():(data.startTime||Date.now());
-      const elapsed=Math.floor((Date.now()-startMs)/60000);
-      const elStr=elapsed<60?elapsed+'min':(Math.floor(elapsed/60)+'h '+(elapsed%60)+'min');
-
-      const setsHtml=curEx?Object.entries(sets[curEx.name||'']||{}).map(([si,st])=>
-        `<span style="display:inline-flex;align-items:center;gap:3px;background:${color}18;color:${color};border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700">
-          S${parseInt(si)+1}: ${st.kg||'—'}kg × ${st.reps||'—'}
-        </span>`
-      ).join(''):'' ;
-
-      const exListHtml=exercises.slice(0,6).map((ex,i)=>
-        `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
-          <div style="width:20px;height:20px;border-radius:50%;background:${i===exIdx?color:'var(--bg)'};color:${i===exIdx?'#fff':'var(--sub)'};font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
-          <div style="font-size:12px;color:${i===exIdx?'var(--text)':'var(--sub)'};font-weight:${i===exIdx?700:400}">${ex.name||'Ejercicio'}</div>
-          ${i===exIdx?`<div style="margin-left:auto;width:7px;height:7px;border-radius:50%;background:${color};animation:livePulse 1.4s ease-in-out infinite"></div>`:''}
-        </div>`
-      ).join('');
-
-      return `<div style="background:var(--surf);border:1.5px solid ${color}44;border-radius:16px;overflow:hidden">
-        <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
-          <div style="display:flex;align-items:center;gap:12px">
-            <div style="width:40px;height:40px;border-radius:12px;background:${color}22;color:${color};font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${(ath.name||'?')[0].toUpperCase()}</div>
-            <div>
-              <div style="font-size:15px;font-weight:800;color:var(--text)">${ath.name}</div>
-              <div style="font-size:11px;color:var(--sub);margin-top:1px">${plan.name||data.planName||'Sesión libre'} · ${elStr}</div>
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:6px">
-            <div style="width:8px;height:8px;border-radius:50%;background:#22c55e;animation:livePulse 1.4s ease-in-out infinite"></div>
-            <span style="font-size:11px;font-weight:700;color:#22c55e">EN VIVO</span>
-          </div>
-        </div>
-        <div style="padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
-          <div>
-            <div style="font-size:10px;font-weight:700;color:var(--sub);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Ejercicio actual</div>
-            ${curEx
-              ?`<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px">${curEx.name||'—'}</div>
-                <div style="display:flex;flex-wrap:wrap;gap:4px">${setsHtml||'<span style="font-size:12px;color:var(--sub)">Sin series aún</span>'}</div>`
-              :'<div style="font-size:13px;color:var(--sub)">Sin ejercicio activo</div>'
-            }
-          </div>
-          <div>
-            <div style="font-size:10px;font-weight:700;color:var(--sub);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Plan (${exIdx+1}/${exercises.length||'?'})</div>
-            ${exListHtml||'<div style="font-size:12px;color:var(--sub)">Sin plan cargado</div>'}
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-
-  }catch(e){
-    cards.innerHTML=`<div style="text-align:center;padding:32px;color:var(--sub);font-size:13px">Error al cargar sesiones</div>`;
-  }
 }
 
 // ── PLANILLA SECTION (delegated to planilla functions) ──

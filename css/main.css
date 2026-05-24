@@ -1541,3 +1541,90 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
 .hoy-cta-sub{font-size:13px;color:var(--sub);}
 .btn-primary.full-width{width:100%;background:var(--acc);color:#000;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:18px;letter-spacing:1px;padding:16px;border:none;border-radius:var(--radius);cursor:pointer;display:block;}
 
+/* ════════════════════════════════════════
+   MUSCLE MAP CARD — Mi Historial · Perfil muscular
+════════════════════════════════════════ */
+.mm-card{
+  background:#0e0e12;
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:14px;
+  padding:16px;
+  margin-bottom:16px;
+}
+.mm-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;}
+.mm-title{
+  font-family:'Inter',sans-serif;font-weight:700;font-size:11px;
+  letter-spacing:1.5px;text-transform:uppercase;color:#48485a;margin:0;
+}
+.mm-sub{font-size:11px;color:#48485a;margin-top:4px;letter-spacing:.3px;}
+.mm-week-nav{display:flex;align-items:center;gap:4px;}
+.mm-nav-btn{
+  background:transparent;border:none;color:#48485a;
+  width:32px;height:32px;border-radius:8px;cursor:pointer;
+  font-size:12px;display:inline-flex;align-items:center;justify-content:center;
+  transition:background .15s,color .15s;font-family:inherit;
+}
+.mm-nav-btn:hover{background:#18181f;color:#ededf2;}
+.mm-nav-btn[disabled]{opacity:.35;cursor:not-allowed;}
+.mm-nav-btn[disabled]:hover{background:transparent;color:#48485a;}
+
+.mm-pills{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;}
+.mm-pill{
+  height:36px;border-radius:10px;cursor:pointer;
+  font-family:'Inter',sans-serif;font-weight:700;font-size:12px;
+  letter-spacing:1px;text-transform:uppercase;
+  background:#131318;border:1px solid rgba(255,255,255,.06);color:#9090a8;
+  transition:background .15s,color .15s,border-color .15s;
+}
+.mm-pill.active{background:#d9ff00;color:#040404;font-weight:800;border-color:transparent;}
+
+.mm-body{display:grid;grid-template-columns:1fr;gap:14px;align-items:start;}
+.mm-svg-wrap{display:flex;justify-content:center;gap:16px;opacity:1;}
+.mm-svg{width:200px;max-width:48vw;height:auto;display:block;}
+#body-front path,#body-back path{transition:fill 280ms cubic-bezier(.16,1,.3,1);}
+
+.mm-top3{display:flex;flex-direction:column;gap:18px;}
+.mm-top-item{display:flex;flex-direction:column;gap:6px;}
+.mm-top-name{
+  font-family:'Inter',sans-serif;font-weight:800;font-size:13px;
+  letter-spacing:.5px;text-transform:uppercase;color:#ededf2;
+}
+.mm-top-row{display:flex;align-items:center;gap:10px;}
+.mm-bar{flex:1;height:4px;background:#1a1a1a;border-radius:2px;overflow:hidden;}
+.mm-bar-fill-strong{height:100%;background:#d9ff00;border-radius:2px;transition:width 280ms cubic-bezier(.16,1,.3,1);}
+.mm-bar-fill-mid{height:100%;background:#666;border-radius:2px;transition:width 280ms cubic-bezier(.16,1,.3,1);}
+.mm-bar-fill-low{height:100%;background:#333;border-radius:2px;transition:width 280ms cubic-bezier(.16,1,.3,1);}
+.mm-top-label{
+  font-family:'Inter',sans-serif;font-size:11px;font-weight:700;
+  letter-spacing:.5px;flex-shrink:0;
+}
+.mm-label-strong{color:#d9ff00;}
+.mm-label-soft{color:#9090a8;}
+
+.mm-empty{
+  font-family:'Inter',sans-serif;font-weight:500;font-size:14px;
+  color:#48485a;max-width:280px;line-height:1.5;text-align:center;
+  margin:24px auto 8px;
+}
+.mm-foot{
+  margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06);
+  font-family:'Inter',sans-serif;font-weight:500;font-size:11px;color:#48485a;
+}
+.mm-card .hidden{display:none!important;}
+
+/* Mobile: una sola silueta visible según data-side */
+@media (max-width:767px){
+  .mm-card[data-side="front"] #body-back{display:none;}
+  .mm-card[data-side="back"] #body-front{display:none;}
+}
+
+/* Desktop: ambas siluetas + columna de top3 */
+@media (min-width:768px){
+  .mm-card{padding:24px;}
+  .mm-pills{display:none;}
+  .mm-body{grid-template-columns:220px 220px 1fr;gap:32px;}
+  .mm-svg-wrap{display:contents;}
+  .mm-svg{width:220px;max-width:none;height:500px;}
+  .mm-bar{max-width:160px;}
+}
+

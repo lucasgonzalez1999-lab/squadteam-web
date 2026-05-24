@@ -893,7 +893,14 @@ function renderAthHistorial(user) {
   const now = new Date();
 
   if(!ss.length){
-    cont.innerHTML = `<div class="sq-empty"><span class="sq-empty-title">Sin sesiones todavía</span><span class="sq-empty-sub">Registrá tu primer entrenamiento para verlo acá.</span></div>`;
+    cont.innerHTML = `<div style="max-width:600px;margin:0 auto;padding:16px">
+      <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:4px">Mi Historial</div>
+      <div style="font-size:13px;color:var(--sub);margin-bottom:16px">0 sesiones registradas</div>
+      <div id="mm-host"></div>
+      <div class="sq-empty"><span class="sq-empty-title">Sin sesiones todavía</span><span class="sq-empty-sub">Registrá tu primer entrenamiento para verlo acá.</span></div>
+    </div>`;
+    const hostEmpty = cont.querySelector('#mm-host');
+    if(hostEmpty && window.MuscleMap) MuscleMap.mount(hostEmpty, []);
     return;
   }
 
@@ -939,6 +946,8 @@ function renderAthHistorial(user) {
     <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:4px">Mi Historial</div>
     <div style="font-size:13px;color:var(--sub);margin-bottom:16px">${ss.length} sesiones registradas</div>
 
+    <div id="mm-host"></div>
+
     ${topPRs.length ? `
     <div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px">
       <div style="font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Mis récords</div>
@@ -957,6 +966,9 @@ function renderAthHistorial(user) {
       Ver más (${rows.length-15} restantes)
     </button>`:''}
   </div>`;
+
+  const mmHost = cont.querySelector('#mm-host');
+  if(mmHost && window.MuscleMap) MuscleMap.mount(mmHost, ss);
 
   window._histAllRows = rows;
 }

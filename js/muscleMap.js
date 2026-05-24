@@ -244,48 +244,48 @@ function getTopMacroGroups(volByMuscle){
 }
 
 // ── SVG builders ────────────────────────────
-// Silueta minimalista deportiva. Paths con curvas Bezier que siguen la
-// forma del cuerpo (no rectángulos blocky). viewBox 0 0 200 500.
-// Centro vertical x=100. Color base body = #18181d, zonas musculares = #1f1f1f.
+// Silueta atlética con proporciones humanas (cabeza chica, hombros anchos,
+// brazos largos pegados al cuerpo, cintura definida, piernas largas separadas).
+// viewBox 0 0 200 540. Paths Bezier suaves. Stroke fino para definir contorno.
 
 const BODY_SILHOUETTE = `
-  <path d="M100 10 C82 10 76 24 76 40 C76 56 84 66 90 70 L90 86 L110 86 L110 70 C116 66 124 56 124 40 C124 24 118 10 100 10 Z"/>
-  <path d="M62 86 C54 86 48 92 46 102 L42 145 C40 200 44 252 54 285 C58 296 64 298 72 298 L128 298 C136 298 142 296 146 285 C156 252 160 200 158 145 L154 102 C152 92 146 86 138 86 L62 86 Z"/>
-  <path d="M52 88 C40 92 32 100 28 114 L22 184 C20 244 24 282 32 296 C36 300 42 298 46 292 L52 240 L56 184 L60 118 C60 104 56 92 52 88 Z"/>
-  <path d="M148 88 C160 92 168 100 172 114 L178 184 C180 244 176 282 168 296 C164 300 158 298 154 292 L148 240 L144 184 L140 118 C140 104 144 92 148 88 Z"/>
-  <path d="M72 298 L99 298 L99 380 C99 422 95 458 90 484 L70 484 C65 458 65 422 68 380 Z"/>
-  <path d="M128 298 L101 298 L101 380 C101 422 105 458 110 484 L130 484 C135 458 135 422 132 380 Z"/>
+  <path d="M100 14 C84 14 76 28 76 46 C76 60 82 70 88 74 L88 86 L112 86 L112 74 C118 70 124 60 124 46 C124 28 116 14 100 14 Z"/>
+  <path d="M88 86 L62 94 C50 100 44 110 42 124 L38 175 L40 230 C42 270 48 305 56 332 L62 348 C64 354 70 356 76 356 L124 356 C130 356 136 354 138 348 L144 332 C152 305 158 270 160 230 L162 175 L158 124 C156 110 150 100 138 94 L112 86 Z"/>
+  <path d="M52 100 C42 104 32 114 30 130 L26 180 L24 240 L26 290 L30 320 L36 332 C40 336 46 336 50 332 L54 320 L56 290 L58 240 L60 180 L60 130 L62 110 Z"/>
+  <path d="M148 100 C158 104 168 114 170 130 L174 180 L176 240 L174 290 L170 320 L164 332 C160 336 154 336 150 332 L146 320 L144 290 L142 240 L140 180 L140 130 L138 110 Z"/>
+  <path d="M70 358 L98 358 L99 430 L97 490 L94 525 L74 525 L72 490 L70 430 Z"/>
+  <path d="M130 358 L102 358 L101 430 L103 490 L106 525 L126 525 L128 490 L130 430 Z"/>
 `;
 
 function svgFront(){
-  return `<svg id="body-front" class="mm-svg" viewBox="0 0 200 500" xmlns="http://www.w3.org/2000/svg">
-    <g id="body-front-base" fill="#18181d">${BODY_SILHOUETTE}</g>
-    <g id="muscles-front">
-      <path id="zone-pecho"           d="M64 100 C68 96 80 94 100 94 C120 94 132 96 136 100 L132 138 C128 148 118 152 108 150 L100 148 L92 150 C82 152 72 148 68 138 Z" fill="#1f1f1f"/>
-      <path id="zone-hombro-izq"      d="M50 90 C40 94 32 102 30 114 L32 128 C40 124 50 124 58 128 L62 102 C60 94 56 90 50 90 Z" fill="#1f1f1f"/>
-      <path id="zone-hombro-der"      d="M150 90 C160 94 168 102 170 114 L168 128 C160 124 150 124 142 128 L138 102 C140 94 144 90 150 90 Z" fill="#1f1f1f"/>
-      <path id="zone-bicep-izq"       d="M30 132 C28 134 26 142 26 152 L24 192 C24 202 30 204 34 202 L52 200 C56 198 56 190 54 182 L52 142 C50 136 46 132 40 132 Z" fill="#1f1f1f"/>
-      <path id="zone-bicep-der"       d="M170 132 C172 134 174 142 174 152 L176 192 C176 202 170 204 166 202 L148 200 C144 198 144 190 146 182 L148 142 C150 136 154 132 160 132 Z" fill="#1f1f1f"/>
-      <path id="zone-abdomen"         d="M84 156 C86 154 92 152 100 152 C108 152 114 154 116 156 L120 254 C118 262 110 266 100 266 C90 266 82 262 80 254 Z" fill="#1f1f1f"/>
-      <path id="zone-cuadricep-izq"   d="M72 312 C72 308 88 304 98 304 L98 396 C96 406 90 410 82 410 C74 410 70 404 70 394 Z" fill="#1f1f1f"/>
-      <path id="zone-cuadricep-der"   d="M128 312 C128 308 112 304 102 304 L102 396 C104 406 110 410 118 410 C126 410 130 404 130 394 Z" fill="#1f1f1f"/>
+  return `<svg id="body-front" class="mm-svg" viewBox="0 0 200 540" xmlns="http://www.w3.org/2000/svg">
+    <g id="body-front-base" fill="#18181d" stroke="rgba(255,255,255,0.08)" stroke-width="0.6">${BODY_SILHOUETTE}</g>
+    <g id="muscles-front" stroke="none">
+      <path id="zone-hombro-izq"      d="M58 96 C46 100 36 110 32 124 L34 138 C42 134 52 132 60 134 L66 108 C64 100 62 96 58 96 Z" fill="#1f1f1f"/>
+      <path id="zone-hombro-der"      d="M142 96 C154 100 164 110 168 124 L166 138 C158 134 148 132 140 134 L134 108 C136 100 138 96 142 96 Z" fill="#1f1f1f"/>
+      <path id="zone-pecho"           d="M68 108 C72 104 84 102 100 102 C116 102 128 104 132 108 L130 150 C126 162 116 168 108 166 L100 164 L92 166 C84 168 74 162 70 150 Z" fill="#1f1f1f"/>
+      <path id="zone-bicep-izq"       d="M30 138 C28 142 26 152 26 162 L24 210 C24 222 30 226 36 224 L52 222 C56 220 56 212 54 202 L54 162 C52 150 48 138 42 138 Z" fill="#1f1f1f"/>
+      <path id="zone-bicep-der"       d="M170 138 C172 142 174 152 174 162 L176 210 C176 222 170 226 164 224 L148 222 C144 220 144 212 146 202 L146 162 C148 150 152 138 158 138 Z" fill="#1f1f1f"/>
+      <path id="zone-abdomen"         d="M82 170 C84 168 92 166 100 166 C108 166 116 168 118 170 L122 290 C120 302 110 308 100 308 C90 308 80 302 78 290 Z" fill="#1f1f1f"/>
+      <path id="zone-cuadricep-izq"   d="M72 362 C72 360 88 358 98 358 L98 446 C96 456 90 460 82 460 C74 460 70 454 70 444 Z" fill="#1f1f1f"/>
+      <path id="zone-cuadricep-der"   d="M128 362 C128 360 112 358 102 358 L102 446 C104 456 110 460 118 460 C126 460 130 454 130 444 Z" fill="#1f1f1f"/>
     </g>
   </svg>`;
 }
 
 function svgBack(){
-  return `<svg id="body-back" class="mm-svg" viewBox="0 0 200 500" xmlns="http://www.w3.org/2000/svg">
-    <g id="body-back-base" fill="#18181d">${BODY_SILHOUETTE}</g>
-    <g id="muscles-back">
-      <path id="zone-trapecio"        d="M86 86 L114 86 L126 100 C126 112 116 122 100 124 C84 122 74 112 74 100 Z" fill="#1f1f1f"/>
-      <path id="zone-dorsal-izq"      d="M62 110 C54 122 48 142 50 174 C52 204 70 222 88 226 L98 226 L98 132 C94 124 84 116 70 114 Z" fill="#1f1f1f"/>
-      <path id="zone-dorsal-der"      d="M138 110 C146 122 152 142 150 174 C148 204 130 222 112 226 L102 226 L102 132 C106 124 116 116 130 114 Z" fill="#1f1f1f"/>
-      <path id="zone-lumbar"          d="M82 234 C84 232 92 230 100 230 C108 230 116 232 118 234 L122 282 C120 290 110 294 100 294 C90 294 80 290 78 282 Z" fill="#1f1f1f"/>
-      <path id="zone-gluteo"          d="M72 298 L128 298 C134 298 136 304 134 318 C130 344 118 360 100 360 C82 360 70 344 66 318 C64 304 66 298 72 298 Z" fill="#1f1f1f"/>
-      <path id="zone-isquio-izq"      d="M70 364 C72 362 88 360 98 360 L98 432 C96 442 90 446 82 446 C74 446 70 440 70 430 Z" fill="#1f1f1f"/>
-      <path id="zone-isquio-der"      d="M130 364 C128 362 112 360 102 360 L102 432 C104 442 110 446 118 446 C126 446 130 440 130 430 Z" fill="#1f1f1f"/>
-      <path id="zone-tricep-izq"      d="M28 134 C26 136 24 144 24 154 L22 196 C22 206 28 208 32 206 L52 204 C56 202 56 194 54 186 L52 144 C50 138 46 134 40 134 Z" fill="#1f1f1f"/>
-      <path id="zone-tricep-der"      d="M172 134 C174 136 176 144 176 154 L178 196 C178 206 172 208 168 206 L148 204 C144 202 144 194 146 186 L148 144 C150 138 154 134 160 134 Z" fill="#1f1f1f"/>
+  return `<svg id="body-back" class="mm-svg" viewBox="0 0 200 540" xmlns="http://www.w3.org/2000/svg">
+    <g id="body-back-base" fill="#18181d" stroke="rgba(255,255,255,0.08)" stroke-width="0.6">${BODY_SILHOUETTE}</g>
+    <g id="muscles-back" stroke="none">
+      <path id="zone-trapecio"        d="M86 86 L114 86 L128 104 C128 116 116 126 100 128 C84 126 72 116 72 104 Z" fill="#1f1f1f"/>
+      <path id="zone-dorsal-izq"      d="M62 116 C54 128 48 148 50 182 C52 212 70 232 88 236 L98 236 L98 138 C94 130 84 122 70 120 Z" fill="#1f1f1f"/>
+      <path id="zone-dorsal-der"      d="M138 116 C146 128 152 148 150 182 C148 212 130 232 112 236 L102 236 L102 138 C106 130 116 122 130 120 Z" fill="#1f1f1f"/>
+      <path id="zone-lumbar"          d="M82 246 C84 244 92 242 100 242 C108 242 116 244 118 246 L122 298 C120 306 110 310 100 310 C90 310 80 306 78 298 Z" fill="#1f1f1f"/>
+      <path id="zone-gluteo"          d="M72 358 L128 358 C134 358 136 366 134 380 C130 406 118 422 100 422 C82 422 70 406 66 380 C64 366 66 358 72 358 Z" fill="#1f1f1f"/>
+      <path id="zone-isquio-izq"      d="M70 426 C72 424 88 422 98 422 L98 490 C96 502 90 506 82 506 C74 506 70 500 70 490 Z" fill="#1f1f1f"/>
+      <path id="zone-isquio-der"      d="M130 426 C128 424 112 422 102 422 L102 490 C104 502 110 506 118 506 C126 506 130 500 130 490 Z" fill="#1f1f1f"/>
+      <path id="zone-tricep-izq"      d="M28 140 C26 144 24 154 24 164 L22 214 C22 226 28 230 34 228 L52 226 C56 224 56 216 54 206 L52 164 C50 152 46 140 40 140 Z" fill="#1f1f1f"/>
+      <path id="zone-tricep-der"      d="M172 140 C174 144 176 154 176 164 L178 214 C178 226 172 230 166 228 L148 226 C144 224 144 216 146 206 L148 164 C150 152 154 140 160 140 Z" fill="#1f1f1f"/>
     </g>
   </svg>`;
 }
@@ -343,6 +343,12 @@ function mount(host, sessions){
         </div>
       </div>
 
+      <div class="mm-legend" id="mm-legend">
+        <div class="mm-legend-item"><span class="mm-legend-dot mm-dot-dom"></span>DOMINANTE</div>
+        <div class="mm-legend-item"><span class="mm-legend-dot mm-dot-dev"></span>EN DESARROLLO</div>
+        <div class="mm-legend-item"><span class="mm-legend-dot mm-dot-low"></span>POR DESARROLLAR</div>
+      </div>
+
       <div class="mm-empty hidden" id="mm-empty"></div>
 
       <ul class="mm-top3" id="mm-top3"></ul>
@@ -355,6 +361,7 @@ function mount(host, sessions){
   const btnNext  = host.querySelector('#mm-next');
   const top3El   = host.querySelector('#mm-top3');
   const emptyEl  = host.querySelector('#mm-empty');
+  const legendEl = host.querySelector('#mm-legend');
   const svgWrap  = host.querySelector('#mm-svg-wrap');
   const svgFrontEl = host.querySelector('#body-front');
   const svgBackEl  = host.querySelector('#body-back');
@@ -384,6 +391,7 @@ function mount(host, sessions){
     const noSessionsAtAll = !(sessions && sessions.length);
     if(!hasData){
       top3El.classList.add('hidden');
+      legendEl.classList.add('hidden');
       emptyEl.classList.remove('hidden');
 
       let msg = 'Sin sesiones registradas.';
@@ -404,6 +412,7 @@ function mount(host, sessions){
     } else {
       emptyEl.classList.add('hidden');
       top3El.classList.remove('hidden');
+      legendEl.classList.remove('hidden');
 
       const top3 = getTopMacroGroups(volByMuscle);
       top3El.innerHTML = top3.map(g => `

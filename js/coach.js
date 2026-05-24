@@ -749,7 +749,7 @@ function _naRenderStep(step, data){
   const stepLabel = ['','Datos','Pago','Confirmar'][step];
   const dots = [1,2,3].map(i=>`<div style="width:8px;height:8px;border-radius:50%;background:${i===step?'var(--acc)':'var(--border2)'}"></div>`).join('');
   const header = `
-    <div style="padding:20px 22px 16px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--border)">
+    <div style="padding:20px 22px 16px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0">
       <div>
         <div style="font-size:15px;font-weight:800;color:var(--text)">Nuevo alumno</div>
         <div style="font-size:12px;color:var(--sub);margin-top:2px">Paso ${step} de 3 — ${stepLabel}</div>
@@ -766,7 +766,7 @@ function _naRenderStep(step, data){
 
   if(step===1){
     body=`
-      <div style="padding:18px 22px;display:flex;flex-direction:column;gap:14px">
+      <div style="padding:18px 22px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;min-height:0">
         <div>
           <div style="${lbl}">Nombre</div>
           <input id="na-name" type="text" placeholder="Nombre completo" autocomplete="off" style="${inp}"
@@ -789,9 +789,17 @@ function _naRenderStep(step, data){
             </label>
           </div>
         </div>
+        <label style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surf2);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;-webkit-tap-highlight-color:transparent">
+          <input type="checkbox" id="na-guest-s1" ${data.guest?'checked':''}
+            style="width:16px;height:16px;accent-color:var(--acc);cursor:pointer;flex-shrink:0">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text)">Invitado · no paga</div>
+            <div style="font-size:11px;color:var(--sub);margin-top:1px">No genera cobros ni recordatorios</div>
+          </div>
+        </label>
       </div>`;
     footer=`
-      <div style="padding:0 22px 20px;display:flex;gap:8px">
+      <div style="padding:14px 22px 20px;display:flex;gap:8px;border-top:1px solid var(--border);flex-shrink:0">
         <button onclick="_naClose()" style="flex:1;padding:10px 0;background:none;border:1px solid var(--border);border-radius:10px;color:var(--sub);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
         <button onclick="_naStep1Next()" style="flex:1;padding:10px 0;background:var(--acc);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Siguiente →</button>
       </div>`;
@@ -799,36 +807,25 @@ function _naRenderStep(step, data){
     const currencies=['UYU','USD','EUR'];
     const curOpts=currencies.map(c=>`<option value="${c}" ${(data.currency||'UYU')===c?'selected':''}>${c}</option>`).join('');
     body=`
-      <div style="padding:18px 22px;display:flex;flex-direction:column;gap:14px">
-        <label style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surf2);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;-webkit-tap-highlight-color:transparent">
-          <input type="checkbox" id="na-guest" ${data.guest?'checked':''}
-            onchange="_naToggleGuestFields(this.checked)"
-            style="width:16px;height:16px;accent-color:var(--acc);cursor:pointer;flex-shrink:0">
-          <div>
-            <div style="font-size:13px;font-weight:700;color:var(--text)">Invitado · no paga</div>
-            <div style="font-size:11px;color:var(--sub);margin-top:1px">No genera cobros ni recordatorios</div>
+      <div style="padding:18px 22px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;min-height:0">
+        <div style="display:flex;gap:10px">
+          <div style="flex:2">
+            <div style="${lbl}">Monto mensual</div>
+            <input id="na-amount" type="number" min="0" placeholder="0" style="${inp}" value="${data.amount||''}">
           </div>
-        </label>
-        <div id="na-pay-fields" style="display:${data.guest?'none':'flex'};flex-direction:column;gap:14px">
-          <div style="display:flex;gap:10px">
-            <div style="flex:2">
-              <div style="${lbl}">Monto mensual</div>
-              <input id="na-amount" type="number" min="0" placeholder="0" style="${inp}" value="${data.amount||''}">
-            </div>
-            <div style="flex:1">
-              <div style="${lbl}">Moneda</div>
-              <select id="na-currency" style="${inp};appearance:auto">${curOpts}</select>
-            </div>
+          <div style="flex:1">
+            <div style="${lbl}">Moneda</div>
+            <select id="na-currency" style="${inp};appearance:auto">${curOpts}</select>
           </div>
-          <div>
-            <div style="${lbl}">Día de vencimiento</div>
-            <input id="na-payday" type="number" min="1" max="31" placeholder="ej. 10" style="${inp}" value="${data.payday||''}">
-            <div style="font-size:11px;color:var(--sub);margin-top:5px">Día del mes en que se cobra (1–31)</div>
-          </div>
+        </div>
+        <div>
+          <div style="${lbl}">Día de vencimiento</div>
+          <input id="na-payday" type="number" min="1" max="31" placeholder="ej. 10" style="${inp}" value="${data.payday||''}">
+          <div style="font-size:11px;color:var(--sub);margin-top:5px">Día del mes en que se cobra (1–31)</div>
         </div>
       </div>`;
     footer=`
-      <div style="padding:0 22px 20px;display:flex;gap:8px">
+      <div style="padding:14px 22px 20px;display:flex;gap:8px;border-top:1px solid var(--border);flex-shrink:0">
         <button onclick="_naRenderStep(1,_naCollectStep2Back())" style="flex:1;padding:10px 0;background:none;border:1px solid var(--border);border-radius:10px;color:var(--sub);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">← Volver</button>
         <button onclick="_naStep2Next()" style="flex:1;padding:10px 0;background:var(--acc);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Siguiente →</button>
       </div>`;
@@ -836,7 +833,7 @@ function _naRenderStep(step, data){
     const email=`${data.id}@squadteam.uy`;
     const pin=data.pin;
     body=`
-      <div style="padding:18px 22px;display:flex;flex-direction:column;gap:14px">
+      <div style="padding:18px 22px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;min-height:0">
         <div style="background:var(--surf2);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px">
           <div style="font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Resumen</div>
           <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--sub)">Nombre</span><span style="font-weight:700;color:var(--text)">${data.name}</span></div>
@@ -857,29 +854,39 @@ function _naRenderStep(step, data){
         <div id="na-err" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 13px;font-size:12px;color:#dc2626"></div>
       </div>`;
     footer=`
-      <div style="padding:0 22px 20px;display:flex;gap:8px">
-        <button onclick="_naRenderStep(2,window._naDraft)" id="na-back-btn" style="flex:1;padding:10px 0;background:none;border:1px solid var(--border);border-radius:10px;color:var(--sub);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">← Volver</button>
+      <div style="padding:14px 22px 20px;display:flex;gap:8px;border-top:1px solid var(--border);flex-shrink:0">
+        <button onclick="_naBackFromStep3()" id="na-back-btn" style="flex:1;padding:10px 0;background:none;border:1px solid var(--border);border-radius:10px;color:var(--sub);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">← Volver</button>
         <button onclick="_naConfirm()" id="na-confirm-btn" style="flex:2;padding:10px 0;background:var(--acc);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Crear alumno</button>
       </div>`;
   }
 
-  ov.innerHTML=`<div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:400px;overflow:hidden">${header}${body}${footer}</div>`;
+  ov.innerHTML=`<div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:400px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden">${header}${body}${footer}</div>`;
   window._naDraft = data;
+}
+
+function _naBackFromStep3(){
+  const d = window._naDraft || {};
+  if(d.guest) _naRenderStep(1, d);
+  else _naRenderStep(2, d);
 }
 
 function _naStep1Next(){
   const name=(document.getElementById('na-name')?.value||'').trim();
   const pin=(document.getElementById('na-pin')?.value||'').trim();
   const type=document.querySelector('input[name="na-type"]:checked')?.value||'plan';
+  const guest=document.getElementById('na-guest-s1')?.checked||false;
   if(!name){toast('⚠ Ingresá el nombre');document.getElementById('na-name')?.focus();return;}
   if(pin.length<4){toast('⚠ La contraseña debe tener al menos 4 caracteres');document.getElementById('na-pin')?.focus();return;}
-  if(athletes.some(a=>a.id===_naGenId(name)&&false)){} // id check later
   let base=name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
   let id=base; let n=1;
   while(athletes.some(a=>a.id===id)){id=base+'_'+(n++);}
-  const data={...window._naDraft||{}, name, pin, type, id};
-  _naRenderStep(2, data);
-  setTimeout(()=>document.getElementById('na-amount')?.focus(), 80);
+  const data={...window._naDraft||{}, name, pin, type, id, guest};
+  if(guest){
+    _naRenderStep(3, {...data, amount:0, currency:'UYU', payday:null});
+  } else {
+    _naRenderStep(2, data);
+    setTimeout(()=>document.getElementById('na-amount')?.focus(), 80);
+  }
 }
 
 function _naCollectStep2Back(){
@@ -894,17 +901,7 @@ function _naGenId(name){
   return name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
 }
 
-function _naToggleGuestFields(checked){
-  const fields=document.getElementById('na-pay-fields');
-  if(fields) fields.style.display=checked?'none':'flex';
-}
-
 function _naStep2Next(){
-  const guest=document.getElementById('na-guest')?.checked||false;
-  if(guest){
-    _naRenderStep(3,{...window._naDraft||{},guest:true,amount:0,currency:'UYU',payday:null});
-    return;
-  }
   const amount=document.getElementById('na-amount')?.value||'';
   const currency=document.getElementById('na-currency')?.value||'UYU';
   const payday=document.getElementById('na-payday')?.value||'';

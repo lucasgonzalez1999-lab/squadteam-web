@@ -48,10 +48,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
 ════════════════════════════════════════ */
 .sidebar{
   width:var(--sidebar-w);min-width:var(--sidebar-w);
-  height:100vh;background:var(--surf);
+  height:100vh;
+  height:100dvh;
+  background:var(--surf);
   border-right:1px solid var(--border);
   display:flex;flex-direction:column;
-  overflow-y:auto;overflow-x:hidden;
+  overflow:hidden;
   z-index:300;transition:transform .28s cubic-bezier(.4,0,.2,1);
 }
 .sidebar::-webkit-scrollbar{width:0;}
@@ -75,7 +77,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
 }
 .logo-sub{font-size:10px;color:var(--sub);margin-top:2px;letter-spacing:.5px;text-transform:uppercase;}
 
-.sidebar-nav{flex:1;padding:10px 8px;}
+.sidebar-nav{flex:1;padding:10px 8px;overflow-y:auto;min-height:0;}
+.sidebar-nav::-webkit-scrollbar{width:0;}
 
 .nav-section{
   font-size:9px;font-weight:700;letter-spacing:2px;
@@ -112,6 +115,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
   padding:12px 12px calc(12px + env(safe-area-inset-bottom));
   border-top:1px solid var(--border);
   display:flex;align-items:center;gap:9px;
+  flex-shrink:0;
 }
 .foot-avatar{
   width:30px;height:30px;border-radius:50%;
@@ -122,12 +126,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
 .foot-name{font-size:12px;font-weight:600;color:var(--text);}
 .foot-role{font-size:10px;color:var(--sub);margin-top:1px;}
 .btn-logout{
-  margin-left:auto;background:none;border:none;
-  color:var(--sub);font-size:14px;cursor:pointer;
-  padding:5px;border-radius:6px;transition:color .15s,background .15s;
-  display:flex;align-items:center;
+  margin-left:auto;background:var(--surf2);border:1px solid var(--border);
+  color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;
+  padding:7px 10px;border-radius:8px;transition:color .15s,background .15s,border-color .15s;
+  display:flex;align-items:center;gap:6px;font-family:inherit;
+  letter-spacing:.5px;text-transform:uppercase;
 }
-.btn-logout:hover{color:var(--red);background:var(--red-dim);}
+.btn-logout svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;}
+.btn-logout:hover{color:var(--red);background:var(--red-dim);border-color:transparent;}
+.btn-logout:active{transform:scale(.97);}
 
 /* ════════════════════════════════════════
    TOPBAR

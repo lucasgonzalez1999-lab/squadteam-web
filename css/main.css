@@ -1619,11 +1619,30 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
   display:flex;justify-content:center;gap:16px;
   padding:12px 0 8px;
   opacity:1;
+  overflow:hidden;
 }
 .mm-svg{width:100%;max-width:320px;height:auto;display:block;aspect-ratio:1/1;}
 #muscles-front path, #muscles-front ellipse,
 #muscles-back path, #muscles-back ellipse{
   transition: fill 500ms ease, fill-opacity 500ms ease;
+}
+
+/* Scanning line lima sutil atravesando el cuerpo */
+.mm-scanline{
+  position:absolute;left:10%;right:10%;top:0;height:2px;
+  background:linear-gradient(90deg, transparent 0%, rgba(217,255,0,0.55) 50%, transparent 100%);
+  filter:blur(1px);
+  animation:mmScan 4.5s linear infinite;
+  pointer-events:none;z-index:2;
+}
+@keyframes mmScan{
+  0%   { transform: translateY(0);    opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(320px); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce){
+  .mm-scanline{animation:none;opacity:0;}
 }
 
 .mm-legend{
@@ -1702,5 +1721,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
   .mm-body{grid-template-columns:1fr 1fr;gap:24px;justify-items:center;width:100%;}
   .mm-svg-wrap{width:100%;}
   .mm-svg{width:100%;max-width:380px;}
+  @keyframes mmScan{
+    0%   { transform: translateY(0);    opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { transform: translateY(380px); opacity: 0; }
+  }
 }
 

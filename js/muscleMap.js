@@ -40,12 +40,13 @@ function sundayOf(monday){
 const MONTH_ES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 
 // ── Escala de color ─────────────────────────
-// Sin datos: base oscura (igual al body). Resto: lima con opacidad creciente.
+// 5 estados visuales según brief del CTO.
+// Body base #0a0a0a → tier 0 #1a1a1a es visible como guía anatómica sutil.
 const TIER_STYLES = {
-  0: { fill:'#1a1a1a', opacity:1.00 }, // SIN DATOS
-  1: { fill:'#d9ff00', opacity:0.15 }, // EN PROGRESO
-  2: { fill:'#d9ff00', opacity:0.35 }, // ACTIVO
-  3: { fill:'#d9ff00', opacity:0.60 }, // FUERTE
+  0: { fill:'#1a1a1a', opacity:1.00 }, // SIN DATOS (forma presente, casi invisible)
+  1: { fill:'#333333', opacity:1.00 }, // EN PROGRESO
+  2: { fill:'#666666', opacity:1.00 }, // ACTIVO
+  3: { fill:'#d9ff00', opacity:0.40 }, // FUERTE
   4: { fill:'#d9ff00', opacity:1.00 }  // DOMINANTE
 };
 
@@ -255,7 +256,7 @@ const PRO_BODY_PATH = "M104.265,117.959c-0.304,3.58,2.126,22.529,3.38,29.959c0.5
 function svgFront(){
   return `<svg id="body-front" class="mm-svg" viewBox="0 0 206 206" xmlns="http://www.w3.org/2000/svg">
     <g id="body-front-base">
-      <path d="${PRO_BODY_PATH}" fill="#1a1a1a"/>
+      <path d="${PRO_BODY_PATH}" fill="#0a0a0a"/>
     </g>
     <g id="muscles-front" stroke="none">
       <ellipse id="zone-hombro-izq"      cx="82" cy="44" rx="8" ry="4.5" transform="rotate(-30 82 44)" fill="#1a1a1a"/>
@@ -274,7 +275,7 @@ function svgFront(){
 function svgBack(){
   return `<svg id="body-back" class="mm-svg" viewBox="0 0 206 206" xmlns="http://www.w3.org/2000/svg">
     <g id="body-back-base">
-      <path d="${PRO_BODY_PATH}" fill="#1a1a1a"/>
+      <path d="${PRO_BODY_PATH}" fill="#0a0a0a"/>
     </g>
     <g id="muscles-back" stroke="none">
       <path    id="zone-trapecio"        d="M93 34 Q103 32 113 34 L117 46 Q103 50 89 46 Z" fill="#1a1a1a"/>
@@ -339,7 +340,6 @@ function mount(host, sessions){
 
       <div class="mm-body">
         <div class="mm-svg-wrap" id="mm-svg-wrap">
-          <div class="mm-scanline"></div>
           ${svgFront()}
           ${svgBack()}
         </div>
@@ -390,27 +390,12 @@ function mount(host, sessions){
 
     // Estado vacío
     const hasData = totalVol > 0;
-    const noSessionsAtAll = !(sessions && sessions.length);
     if(!hasData){
       top3El.classList.add('hidden');
       legendEl.classList.add('hidden');
       emptyEl.classList.remove('hidden');
 
-      let msg = 'Sin sesiones registradas.';
-      if(!noSessionsAtAll){
-        const lastDate = (sessions||[])
-          .map(s => s.date)
-          .filter(Boolean)
-          .sort()
-          .pop();
-        if(lastDate){
-          const lastT = new Date(lastDate + 'T12:00:00').getTime();
-          const days = Math.floor((Date.now() - lastT) / 86400000);
-          if(days > 14) msg = 'Sin actividad esta semana.';
-          else msg = 'Sin sesiones esta semana.';
-        }
-      }
-      emptyEl.textContent = msg;
+      emptyEl.textContent = 'Completá sesiones para ver tu perfil muscular.';
     } else {
       emptyEl.classList.add('hidden');
       top3El.classList.remove('hidden');

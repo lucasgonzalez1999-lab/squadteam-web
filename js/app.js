@@ -830,6 +830,115 @@ async function saveCheckin(athId) {
   }
 }
 
+// ── MUSCLE MAP ──
+function mmSetView(v) {
+  const front = document.getElementById('mm-svg-front');
+  const back  = document.getElementById('mm-svg-back');
+  const btnF  = document.getElementById('mm-btn-front');
+  const btnB  = document.getElementById('mm-btn-back');
+  if (!front || !back) return;
+  front.style.display = v === 'front' ? 'block' : 'none';
+  back.style.display  = v === 'back'  ? 'block' : 'none';
+  if (btnF) { btnF.classList.toggle('mm-btn-active', v === 'front'); }
+  if (btnB) { btnB.classList.toggle('mm-btn-active', v === 'back'); }
+}
+
+function mmBuildCard() {
+  const frontSVG = `
+<svg id="mm-svg-front" viewBox="0 0 200 480" xmlns="http://www.w3.org/2000/svg"
+     style="width:100%;max-width:180px;display:block;margin:0 auto">
+  <!-- BASE -->
+  <circle cx="100" cy="35" r="26" fill="#252525"/>
+  <rect x="88" y="59" width="24" height="16" rx="5" fill="#252525"/>
+  <path fill="#252525" d="M40,73 Q100,66 160,73 L152,242 Q100,252 48,242 Z"/>
+  <path fill="#252525" d="M18,80 Q13,118 11,184 Q12,238 15,260 Q21,270 31,266 Q40,262 42,252 L42,80 Z"/>
+  <path fill="#252525" d="M158,80 L158,252 Q160,262 169,266 Q179,270 185,260 Q188,238 189,184 Q187,118 182,80 Z"/>
+  <path fill="#252525" d="M48,244 Q43,286 45,336 Q51,349 67,347 Q81,343 83,329 Q84,280 81,244 Z"/>
+  <path fill="#252525" d="M119,244 Q116,280 117,329 Q119,343 133,347 Q149,349 155,336 Q157,286 152,244 Z"/>
+  <path fill="#252525" d="M47,349 Q43,390 45,434 Q53,447 67,445 Q79,443 81,430 Q83,388 79,349 Z"/>
+  <path fill="#252525" d="M121,349 Q117,388 119,430 Q121,443 133,445 Q147,447 155,434 Q157,390 153,349 Z"/>
+  <ellipse cx="64"  cy="452" rx="19" ry="10" fill="#252525"/>
+  <ellipse cx="136" cy="452" rx="19" ry="10" fill="#252525"/>
+
+  <!-- ZONAS MUSCULARES — FRENTE -->
+  <path id="mz-pecho-izq" fill="#3a3a3a"
+    d="M50,82 Q50,80 96,84 Q100,92 95,146 Q72,156 50,146 Q46,136 50,82 Z"/>
+  <path id="mz-pecho-der" fill="#3a3a3a"
+    d="M104,84 Q150,80 150,82 Q154,136 150,146 Q128,156 104,146 Q100,92 104,84 Z"/>
+  <path id="mz-hombro-izq" fill="#3a3a3a"
+    d="M22,78 Q13,88 13,112 Q21,122 36,115 Q42,102 38,78 Z"/>
+  <path id="mz-hombro-der" fill="#3a3a3a"
+    d="M178,78 Q162,78 162,102 Q168,120 179,115 Q187,112 187,88 Z"/>
+  <path id="mz-bicep-izq" fill="#3a3a3a"
+    d="M15,116 Q9,138 11,177 Q17,185 27,181 Q33,148 27,116 Z"/>
+  <path id="mz-bicep-der" fill="#3a3a3a"
+    d="M185,116 Q173,116 173,148 Q173,181 183,185 Q191,177 189,138 Z"/>
+  <path id="mz-abdomen" fill="#3a3a3a"
+    d="M58,150 L142,150 Q148,176 144,228 Q100,238 56,228 Q52,176 58,150 Z"/>
+  <path id="mz-cuad-izq" fill="#3a3a3a"
+    d="M52,252 Q45,284 47,325 Q57,338 71,334 Q79,320 79,284 Q77,252 67,248 Z"/>
+  <path id="mz-cuad-der" fill="#3a3a3a"
+    d="M133,248 Q123,252 121,284 Q121,320 129,334 Q143,338 153,325 Q155,284 148,252 Z"/>
+</svg>`;
+
+  const backSVG = `
+<svg id="mm-svg-back" viewBox="0 0 200 480" xmlns="http://www.w3.org/2000/svg"
+     style="width:100%;max-width:180px;display:none;margin:0 auto">
+  <!-- BASE (misma silueta) -->
+  <circle cx="100" cy="35" r="26" fill="#252525"/>
+  <rect x="88" y="59" width="24" height="16" rx="5" fill="#252525"/>
+  <path fill="#252525" d="M40,73 Q100,66 160,73 L152,242 Q100,252 48,242 Z"/>
+  <path fill="#252525" d="M18,80 Q13,118 11,184 Q12,238 15,260 Q21,270 31,266 Q40,262 42,252 L42,80 Z"/>
+  <path fill="#252525" d="M158,80 L158,252 Q160,262 169,266 Q179,270 185,260 Q188,238 189,184 Q187,118 182,80 Z"/>
+  <path fill="#252525" d="M48,244 Q43,286 45,336 Q51,349 67,347 Q81,343 83,329 Q84,280 81,244 Z"/>
+  <path fill="#252525" d="M119,244 Q116,280 117,329 Q119,343 133,347 Q149,349 155,336 Q157,286 152,244 Z"/>
+  <path fill="#252525" d="M47,349 Q43,390 45,434 Q53,447 67,445 Q79,443 81,430 Q83,388 79,349 Z"/>
+  <path fill="#252525" d="M121,349 Q117,388 119,430 Q121,443 133,445 Q147,447 155,434 Q157,390 153,349 Z"/>
+  <ellipse cx="64"  cy="452" rx="19" ry="10" fill="#252525"/>
+  <ellipse cx="136" cy="452" rx="19" ry="10" fill="#252525"/>
+
+  <!-- ZONAS MUSCULARES — ESPALDA -->
+  <path id="mz-trapecio" fill="#3a3a3a"
+    d="M62,74 Q100,65 138,74 Q150,89 142,104 Q100,97 58,104 Q50,89 62,74 Z"/>
+  <path id="mz-dorsal-izq" fill="#3a3a3a"
+    d="M42,104 Q33,134 35,179 Q51,194 67,184 Q74,148 67,104 Z"/>
+  <path id="mz-dorsal-der" fill="#3a3a3a"
+    d="M158,104 Q133,104 133,148 Q126,184 143,194 Q159,179 165,134 Z"/>
+  <path id="mz-lumbar" fill="#3a3a3a"
+    d="M66,188 Q100,198 134,188 L130,228 Q100,236 70,228 Z"/>
+  <path id="mz-gluteo-izq" fill="#3a3a3a"
+    d="M50,242 Q41,260 43,284 Q57,297 77,287 L81,242 Z"/>
+  <path id="mz-gluteo-der" fill="#3a3a3a"
+    d="M119,242 L123,287 Q143,297 157,284 Q159,260 150,242 Z"/>
+  <path id="mz-isquio-izq" fill="#3a3a3a"
+    d="M45,287 Q39,316 41,343 Q53,356 67,350 Q76,332 74,287 Z"/>
+  <path id="mz-isquio-der" fill="#3a3a3a"
+    d="M126,287 Q124,332 133,350 Q147,356 159,343 Q161,316 155,287 Z"/>
+  <path id="mz-tricep-izq" fill="#3a3a3a"
+    d="M15,116 Q9,140 11,178 Q19,188 29,184 Q35,150 27,116 Z"/>
+  <path id="mz-tricep-der" fill="#3a3a3a"
+    d="M185,116 Q173,116 165,150 Q165,184 173,188 Q183,188 189,178 Q191,140 185,116 Z"/>
+</svg>`;
+
+  return `
+<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;overflow:hidden">
+  <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-style:italic;font-size:18px;color:var(--text);letter-spacing:.5px;margin-bottom:2px">
+    TU PERFIL MUSCULAR
+  </div>
+  <div style="font-size:11px;color:var(--sub);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px">
+    SEMANA ACTUAL
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+    <button id="mm-btn-front" class="mm-btn mm-btn-active" onclick="mmSetView('front')">FRENTE</button>
+    <button id="mm-btn-back"  class="mm-btn" onclick="mmSetView('back')">ESPALDA</button>
+  </div>
+  <div style="display:flex;justify-content:center;padding:8px 0">
+    ${frontSVG}
+    ${backSVG}
+  </div>
+</div>`;
+}
+
 // ── ATHLETE HISTORIAL ──
 function renderAthHistorial(user) {
   if(!user || user.role !== 'athlete') return;
@@ -842,10 +951,14 @@ function renderAthHistorial(user) {
   const now = new Date();
 
   if(!ss.length){
-    cont.innerHTML = `<div style="padding:40px;text-align:center">
-      <div style="font-size:32px;margin-bottom:12px">📭</div>
-      <div style="font-size:15px;font-weight:700;color:var(--text)">Sin sesiones registradas</div>
-      <div style="font-size:13px;color:var(--sub);margin-top:6px">Completá tu primera rutina para verla acá</div>
+    cont.innerHTML = `<div style="max-width:600px;margin:0 auto;padding:16px">
+      <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:4px">Mi Historial</div>
+      <div style="font-size:13px;color:var(--sub);margin-bottom:16px">0 sesiones registradas</div>
+      ${mmBuildCard()}
+      <div class="sq-empty">
+        <span class="sq-empty-title">Sin sesiones todavía</span>
+        <span class="sq-empty-sub">Registrá tu primer entrenamiento para verlo acá.</span>
+      </div>
     </div>`;
     return;
   }
@@ -891,6 +1004,8 @@ function renderAthHistorial(user) {
   cont.innerHTML = `<div style="max-width:600px;margin:0 auto;padding:16px">
     <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:4px">Mi Historial</div>
     <div style="font-size:13px;color:var(--sub);margin-bottom:16px">${ss.length} sesiones registradas</div>
+
+    ${mmBuildCard()}
 
     ${topPRs.length ? `
     <div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px">

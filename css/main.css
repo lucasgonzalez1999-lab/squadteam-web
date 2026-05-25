@@ -1500,4 +1500,25 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
 .pg-hist-details{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;}
 .pg-hist-amount{font-size:15px;font-weight:800;}
 .pg-hist-method,.pg-hist-period,.pg-hist-note{font-size:11px;color:var(--sub);}
+
+/* ── MUSCLE MAP ── */
+.mm-btn{
+  flex:1;padding:8px 0;
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;font-size:12px;letter-spacing:1.5px;
+  border-radius:8px;border:1px solid var(--border);
+  background:var(--surf2);color:var(--sub);
+  cursor:pointer;transition:background 180ms,color 180ms,border-color 180ms;
+}
+.mm-btn.mm-btn-active{
+  background:var(--acc);color:#000;border-color:var(--acc);
+}
+#mm-svg-front path,
+#mm-svg-back  path,
+#mm-svg-front ellipse,
+#mm-svg-back  ellipse,
+#mm-svg-front circle,
+#mm-svg-back  circle{
+  transition:fill 450ms ease;
+}
 .pg-hist-note{font-style:italic;}

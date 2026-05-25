@@ -40,17 +40,18 @@ function sundayOf(monday){
 const MONTH_ES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 
 // ── Escala de color ─────────────────────────
+// Sin datos: base oscura (igual al body). Resto: lima con opacidad creciente.
 const TIER_STYLES = {
-  0: { fill:'#2e2e36', opacity:1.0 }, // SIN DATOS (guía anatómica visible)
-  1: { fill:'#555555', opacity:1.0 }, // POR DESARROLLAR
-  2: { fill:'#d9ff00', opacity:0.30 }, // ACTIVO
-  3: { fill:'#d9ff00', opacity:0.55 }, // EN DESARROLLO / FUERTE
-  4: { fill:'#d9ff00', opacity:1.0 }  // DOMINANTE
+  0: { fill:'#1a1a1a', opacity:1.00 }, // SIN DATOS
+  1: { fill:'#d9ff00', opacity:0.15 }, // EN PROGRESO
+  2: { fill:'#d9ff00', opacity:0.35 }, // ACTIVO
+  3: { fill:'#d9ff00', opacity:0.60 }, // FUERTE
+  4: { fill:'#d9ff00', opacity:1.00 }  // DOMINANTE
 };
 
 // ── Mapeo SVG ───────────────────────────────
 const MUSCLE_TO_PATHS = {
-  chest:      ['zone-pecho'],
+  chest:      ['zone-pecho-izq','zone-pecho-der'],
   shoulders:  ['zone-hombro-izq','zone-hombro-der'],
   biceps:     ['zone-bicep-izq','zone-bicep-der'],
   triceps:    ['zone-tricep-izq','zone-tricep-der'],
@@ -58,9 +59,9 @@ const MUSCLE_TO_PATHS = {
   traps:      ['zone-trapecio'],
   upperBack:  ['zone-dorsal-izq','zone-dorsal-der'],
   lowerBack:  ['zone-lumbar'],
-  glutes:     ['zone-gluteo'],
+  glutes:     ['zone-gluteo-izq','zone-gluteo-der'],
   hamstrings: ['zone-isquio-izq','zone-isquio-der'],
-  quads:      ['zone-cuadricep-izq','zone-cuadricep-der']
+  quads:      ['zone-cuad-izq','zone-cuad-der']
 };
 
 const MUSCLE_KEYS = Object.keys(MUSCLE_TO_PATHS);
@@ -254,21 +255,18 @@ const PRO_BODY_PATH = "M104.265,117.959c-0.304,3.58,2.126,22.529,3.38,29.959c0.5
 function svgFront(){
   return `<svg id="body-front" class="mm-svg" viewBox="0 0 206 206" xmlns="http://www.w3.org/2000/svg">
     <g id="body-front-base">
-      <path d="${PRO_BODY_PATH}" fill="#1a1a22"/>
+      <path d="${PRO_BODY_PATH}" fill="#1a1a1a"/>
     </g>
-    <g id="muscles-front" stroke="rgba(255,255,255,0.04)" stroke-width="0.3" stroke-linejoin="round">
-      <path    id="zone-hombro-izq"      class="mm-zone" d="M80 42 Q86 40 92 43 Q92 50 88 52 Q82 51 78 48 Z" fill="#2e2e36"/>
-      <path    id="zone-hombro-der"      class="mm-zone" d="M126 42 Q120 40 114 43 Q114 50 118 52 Q124 51 128 48 Z" fill="#2e2e36"/>
-      <path    id="zone-pecho"           class="mm-zone" d="M92 48 Q98 46 102 48 Q103 56 101 64 Q96 66 92 64 Q88 60 89 54 Z M114 48 Q108 46 104 48 Q103 56 105 64 Q110 66 114 64 Q118 60 117 54 Z" fill="#2e2e36"/>
-      <path    id="zone-bicep-izq"       class="mm-zone" d="M70 56 Q74 56 76 60 L77 78 Q74 82 70 80 Q66 78 66 74 L67 62 Q67 58 70 56 Z" fill="#2e2e36"/>
-      <path    id="zone-bicep-der"       class="mm-zone" d="M136 56 Q132 56 130 60 L129 78 Q132 82 136 80 Q140 78 140 74 L139 62 Q139 58 136 56 Z" fill="#2e2e36"/>
-      <path    id="zone-abdomen"         class="mm-zone" d="M96 66 Q103 64 110 66 Q111 78 110 90 Q103 94 96 90 Q95 78 96 66 Z" fill="#2e2e36"/>
-      <path    id="zone-cuadricep-izq"   class="mm-zone" d="M90 114 Q97 112 101 113 L101 146 Q96 150 91 148 Q88 132 90 114 Z" fill="#2e2e36"/>
-      <path    id="zone-cuadricep-der"   class="mm-zone" d="M116 114 Q109 112 105 113 L105 146 Q110 150 115 148 Q118 132 116 114 Z" fill="#2e2e36"/>
-    </g>
-    <g id="body-front-hints" stroke="rgba(255,255,255,0.05)" stroke-width="0.3" fill="none">
-      <line x1="103" y1="50" x2="103" y2="92"/>
-      <circle cx="103" cy="78" r="0.8" fill="rgba(255,255,255,0.15)" stroke="none"/>
+    <g id="muscles-front" stroke="none">
+      <ellipse id="zone-hombro-izq"      cx="82" cy="44" rx="8" ry="4.5" transform="rotate(-30 82 44)" fill="#1a1a1a"/>
+      <ellipse id="zone-hombro-der"      cx="124" cy="44" rx="8" ry="4.5" transform="rotate(30 124 44)" fill="#1a1a1a"/>
+      <path    id="zone-pecho-izq"       d="M92 50 Q97 48 101 50 Q102 58 101 66 Q96 68 92 66 Q88 60 89 55 Q89 51 92 50 Z" fill="#1a1a1a"/>
+      <path    id="zone-pecho-der"       d="M114 50 Q109 48 105 50 Q104 58 105 66 Q110 68 114 66 Q118 60 117 55 Q117 51 114 50 Z" fill="#1a1a1a"/>
+      <ellipse id="zone-bicep-izq"       cx="70" cy="68" rx="5.5" ry="11" fill="#1a1a1a"/>
+      <ellipse id="zone-bicep-der"       cx="136" cy="68" rx="5.5" ry="11" fill="#1a1a1a"/>
+      <path    id="zone-abdomen"         d="M96 70 Q103 68 110 70 Q112 80 111 92 Q108 102 103 102 Q98 102 95 92 Q94 80 96 70 Z" fill="#1a1a1a"/>
+      <path    id="zone-cuad-izq"        d="M90 116 Q98 113 102 115 Q103 130 101 146 Q97 150 92 148 Q88 132 90 116 Z" fill="#1a1a1a"/>
+      <path    id="zone-cuad-der"        d="M116 116 Q108 113 104 115 Q103 130 105 146 Q109 150 114 148 Q118 132 116 116 Z" fill="#1a1a1a"/>
     </g>
   </svg>`;
 }
@@ -276,22 +274,19 @@ function svgFront(){
 function svgBack(){
   return `<svg id="body-back" class="mm-svg" viewBox="0 0 206 206" xmlns="http://www.w3.org/2000/svg">
     <g id="body-back-base">
-      <path d="${PRO_BODY_PATH}" fill="#1a1a22"/>
+      <path d="${PRO_BODY_PATH}" fill="#1a1a1a"/>
     </g>
-    <g id="muscles-back" stroke="rgba(255,255,255,0.04)" stroke-width="0.3" stroke-linejoin="round">
-      <path    id="zone-trapecio"        class="mm-zone" d="M96 36 Q103 34 110 36 L114 44 Q103 48 92 44 Z" fill="#2e2e36"/>
-      <path    id="zone-dorsal-izq"      class="mm-zone" d="M88 46 Q95 44 101 46 L101 72 Q94 76 86 70 Q84 58 88 46 Z" fill="#2e2e36"/>
-      <path    id="zone-dorsal-der"      class="mm-zone" d="M118 46 Q111 44 105 46 L105 72 Q112 76 120 70 Q122 58 118 46 Z" fill="#2e2e36"/>
-      <path    id="zone-lumbar"          class="mm-zone" d="M96 76 Q103 74 110 76 L110 92 Q103 96 96 92 Z" fill="#2e2e36"/>
-      <path    id="zone-gluteo"          class="mm-zone" d="M92 100 Q103 98 114 100 Q116 112 113 122 Q103 126 93 122 Q90 112 92 100 Z" fill="#2e2e36"/>
-      <path    id="zone-isquio-izq"      class="mm-zone" d="M90 128 Q97 126 101 127 L101 160 Q96 163 91 161 Q88 144 90 128 Z" fill="#2e2e36"/>
-      <path    id="zone-isquio-der"      class="mm-zone" d="M116 128 Q109 126 105 127 L105 160 Q110 163 115 161 Q118 144 116 128 Z" fill="#2e2e36"/>
-      <path    id="zone-tricep-izq"      class="mm-zone" d="M70 56 Q74 56 76 60 L77 78 Q74 82 70 80 Q66 78 66 74 L67 62 Q67 58 70 56 Z" fill="#2e2e36"/>
-      <path    id="zone-tricep-der"      class="mm-zone" d="M136 56 Q132 56 130 60 L129 78 Q132 82 136 80 Q140 78 140 74 L139 62 Q139 58 136 56 Z" fill="#2e2e36"/>
-    </g>
-    <g id="body-back-hints" stroke="rgba(255,255,255,0.1)" stroke-width="0.4" fill="none">
-      <line x1="103" y1="40" x2="103" y2="96"/>
-      <line x1="103" y1="100" x2="103" y2="124"/>
+    <g id="muscles-back" stroke="none">
+      <path    id="zone-trapecio"        d="M93 34 Q103 32 113 34 L117 46 Q103 50 89 46 Z" fill="#1a1a1a"/>
+      <path    id="zone-dorsal-izq"      d="M89 48 Q96 46 101 47 L101 76 Q94 78 87 72 Q83 60 89 48 Z" fill="#1a1a1a"/>
+      <path    id="zone-dorsal-der"      d="M117 48 Q110 46 105 47 L105 76 Q112 78 119 72 Q123 60 117 48 Z" fill="#1a1a1a"/>
+      <path    id="zone-lumbar"          d="M96 80 Q103 78 110 80 L110 94 Q103 98 96 94 Z" fill="#1a1a1a"/>
+      <path    id="zone-gluteo-izq"      d="M92 102 Q97 100 102 101 Q103 112 101 122 Q96 124 92 122 Q89 112 92 102 Z" fill="#1a1a1a"/>
+      <path    id="zone-gluteo-der"      d="M114 102 Q109 100 104 101 Q103 112 105 122 Q110 124 114 122 Q117 112 114 102 Z" fill="#1a1a1a"/>
+      <path    id="zone-isquio-izq"      d="M90 128 Q98 126 102 127 Q103 142 101 158 Q97 161 92 159 Q88 144 90 128 Z" fill="#1a1a1a"/>
+      <path    id="zone-isquio-der"      d="M116 128 Q108 126 104 127 Q103 142 105 158 Q109 161 114 159 Q118 144 116 128 Z" fill="#1a1a1a"/>
+      <ellipse id="zone-tricep-izq"      cx="70" cy="68" rx="5.5" ry="11" fill="#1a1a1a"/>
+      <ellipse id="zone-tricep-der"      cx="136" cy="68" rx="5.5" ry="11" fill="#1a1a1a"/>
     </g>
   </svg>`;
 }
@@ -306,8 +301,6 @@ function applyTiers(root, tiers){
       if(!el) return;
       el.setAttribute('fill', style.fill);
       el.setAttribute('fill-opacity', style.opacity);
-      el.classList.toggle('mm-zone-dom', tier === 4);
-      el.classList.toggle('mm-zone-strong', tier === 3);
     });
   }
 }
@@ -346,7 +339,6 @@ function mount(host, sessions){
 
       <div class="mm-body">
         <div class="mm-svg-wrap" id="mm-svg-wrap">
-          <div class="mm-scanline"></div>
           ${svgFront()}
           ${svgBack()}
         </div>

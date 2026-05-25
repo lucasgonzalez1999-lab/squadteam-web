@@ -1619,39 +1619,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
   display:flex;justify-content:center;gap:16px;
   padding:12px 0 8px;
   opacity:1;
-  overflow:hidden;
 }
 .mm-svg{width:100%;max-width:320px;height:auto;display:block;aspect-ratio:1/1;}
-#body-front path, #body-front line, #body-front ellipse, #body-front circle,
-#body-back path, #body-back line, #body-back ellipse, #body-back circle{
-  transition:fill 320ms cubic-bezier(.16,1,.3,1), fill-opacity 320ms cubic-bezier(.16,1,.3,1), filter 320ms ease;
-}
-/* Glow neón en zonas dominantes */
-.mm-zone-dom{
-  filter:drop-shadow(0 0 4px rgba(217,255,0,0.7)) drop-shadow(0 0 12px rgba(217,255,0,0.4));
-  animation:mmPulse 2.4s ease-in-out infinite;
-}
-.mm-zone-strong{
-  filter:drop-shadow(0 0 2px rgba(217,255,0,0.35));
-}
-@keyframes mmPulse{
-  0%, 100% { fill-opacity: 1; }
-  50%      { fill-opacity: 0.72; }
-}
-
-/* Scanning line sutil sobre el cuerpo */
-.mm-scanline{
-  position:absolute;left:10%;right:10%;top:0;height:2px;
-  background:linear-gradient(90deg, transparent 0%, rgba(217,255,0,0.55) 50%, transparent 100%);
-  filter:blur(1px);
-  animation:mmScan 4.5s linear infinite;
-  pointer-events:none;z-index:2;
-}
-@keyframes mmScan{
-  0%   { transform: translateY(0);    opacity: 0; }
-  10%  { opacity: 1; }
-  90%  { opacity: 1; }
-  100% { transform: translateY(320px); opacity: 0; }
+#muscles-front path, #muscles-front ellipse,
+#muscles-back path, #muscles-back ellipse{
+  transition: fill 500ms ease, fill-opacity 500ms ease;
 }
 
 .mm-legend{
@@ -1730,17 +1702,5 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
   .mm-body{grid-template-columns:1fr 1fr;gap:24px;justify-items:center;width:100%;}
   .mm-svg-wrap{width:100%;}
   .mm-svg{width:100%;max-width:380px;}
-  @keyframes mmScan{
-    0%   { transform: translateY(0);    opacity: 0; }
-    10%  { opacity: 1; }
-    90%  { opacity: 1; }
-    100% { transform: translateY(380px); opacity: 0; }
-  }
-}
-
-/* Respeto preferencia de reducir movimiento */
-@media (prefers-reduced-motion: reduce){
-  .mm-zone-dom{animation:none;}
-  .mm-scanline{animation:none;opacity:0;}
 }
 

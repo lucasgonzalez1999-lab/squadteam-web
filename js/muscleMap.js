@@ -43,11 +43,11 @@ const MONTH_ES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','n
 // 5 estados visuales según brief del CTO.
 // Body base #0a0a0a → tier 0 #1a1a1a es visible como guía anatómica sutil.
 const TIER_STYLES = {
-  0: { fill:'#1a1a1a', opacity:1.00 }, // SIN DATOS (forma presente, casi invisible)
-  1: { fill:'#333333', opacity:1.00 }, // EN PROGRESO
-  2: { fill:'#666666', opacity:1.00 }, // ACTIVO
-  3: { fill:'#d9ff00', opacity:0.40 }, // FUERTE
-  4: { fill:'#d9ff00', opacity:1.00 }  // DOMINANTE
+  0: { fill:'#2e2e2e', opacity:1.00 },
+  1: { fill:'#444444', opacity:1.00 },
+  2: { fill:'#777777', opacity:1.00 },
+  3: { fill:'#d9ff00', opacity:0.45 },
+  4: { fill:'#d9ff00', opacity:1.00 }
 };
 
 // ── Mapeo SVG ───────────────────────────────
@@ -256,7 +256,7 @@ const PRO_BODY_PATH = "M104.265,117.959c-0.304,3.58,2.126,22.529,3.38,29.959c0.5
 function svgFront(){
   return `<svg id="body-front" class="mm-svg" viewBox="0 0 206 206" xmlns="http://www.w3.org/2000/svg">
     <g id="body-front-base">
-      <path d="${PRO_BODY_PATH}" fill="#0a0a0a"/>
+      <path d="${PRO_BODY_PATH}" fill="#202020"/>
     </g>
     <g id="muscles-front" stroke="none">
       <ellipse id="zone-hombro-izq"      cx="82" cy="44" rx="8" ry="4.5" transform="rotate(-30 82 44)" fill="#1a1a1a"/>
@@ -275,7 +275,7 @@ function svgFront(){
 function svgBack(){
   return `<svg id="body-back" class="mm-svg" viewBox="0 0 206 206" xmlns="http://www.w3.org/2000/svg">
     <g id="body-back-base">
-      <path d="${PRO_BODY_PATH}" fill="#0a0a0a"/>
+      <path d="${PRO_BODY_PATH}" fill="#202020"/>
     </g>
     <g id="muscles-back" stroke="none">
       <path    id="zone-trapecio"        d="M93 34 Q103 32 113 34 L117 46 Q103 50 89 46 Z" fill="#1a1a1a"/>
@@ -346,9 +346,10 @@ function mount(host, sessions){
       </div>
 
       <div class="mm-legend" id="mm-legend">
-        <div class="mm-legend-item"><span class="mm-legend-dot mm-dot-dom"></span>DOMINANTE</div>
-        <div class="mm-legend-item"><span class="mm-legend-dot mm-dot-dev"></span>EN DESARROLLO</div>
-        <div class="mm-legend-item"><span class="mm-legend-dot mm-dot-low"></span>POR DESARROLLAR</div>
+        <div class="mm-legend-item"><span class="mm-legend-dot mm-dot-dom"></span>ALTO ESTÍMULO</div>
+        <div class="mm-legend-item"><span class="mm-legend-dot mm-dot-dev"></span>MEDIO ESTÍMULO</div>
+        <div class="mm-legend-item"><span class="mm-legend-dot mm-dot-low"></span>BAJO ESTÍMULO</div>
+        <div class="mm-legend-item"><span class="mm-legend-dot mm-dot-none"></span>SIN DATOS</div>
       </div>
 
       <div class="mm-empty hidden" id="mm-empty"></div>
@@ -379,36 +380,75 @@ function mount(host, sessions){
     const m  = MONTH_ES[monday.getMonth()];
     lblWeek.textContent = `Semana ${wk} · ${m}`;
 
-    // Cálculos
-    const volByMuscle = computeMuscleVolume(sessions, monday, sunday);
-    const totalVol = MUSCLE_KEYS.reduce((s,k) => s + volByMuscle[k], 0);
-    const tiers = computeTiers(volByMuscle);
+    let volByMuscle = computeMuscleVolume(sessions, monday, sunday);
+    let totalVol = MUSCLE_KEYS.reduce((s,k) => s + volByMuscle[k], 0);
+    let isHistoric = false;
 
-    // Pintar fills (ambos SVGs siempre, no se re-renderiza markup)
+    if(totalVol === 0 && sessions.length > 0){
+      const allStart = new Date(0);
+      const allEnd   = new Date(Date.now() + 86400000);
+      volByMuscle = computeMuscleVolume(sessions, allStart, allEnd);
+      totalVol    = MUSCLE_KEYS.reduce((s,k) => s + volByMuscle[k], 0);
+      isHistoric  = true;
+    }
+
+    const tiers = computeTiers(volByMuscle);
     applyTiers(svgFrontEl, tiers);
     applyTiers(svgBackEl,  tiers);
 
-    // Estado vacío
+    if(isHistoric){
+      lblWeek.textContent = 'Perfil histórico · ' + MONTH_ES[new Date().getMonth()].toUpperCase();
+    }
+
     const hasData = totalVol > 0;
     if(!hasData){
       top3El.classList.add('hidden');
       legendEl.classList.add('hidden');
       emptyEl.classList.remove('hidden');
-
-      emptyEl.textContent = 'Completá sesiones para ver tu perfil muscular.';
+      emptyEl.textContent = sessions.length > 0
+        ? 'Aún faltan datos para calcular un perfil completo.'
+        : 'Completá tu primera sesión para ver tu perfil muscular.';
     } else {
       emptyEl.classList.add('hidden');
       top3El.classList.remove('hidden');
       legendEl.classList.remove('hidden');
 
       const top3 = getTopMacroGroups(volByMuscle);
-      top3El.innerHTML = top3.map(g => `
+
+      const macroVols = Object.entries(MACRO_GROUPS).map(([name, keys]) => ({
+        name,
+        vol: keys.reduce((s,m) => s + (volByMuscle[m]||0), 0)
+      })).filter(x => x.vol > 0).sort((a,b) => a.vol - b.vol);
+      const leastGroup = macroVols[0] || null;
+
+      const weekSessions = (sessions||[]).filter(s => {
+        if(!s.date) return false;
+        const d = new Date(s.date + 'T12:00:00');
+        return d >= monday && d <= sunday;
+      }).length;
+
+      top3El.innerHTML = `
+        <li class="mm-metric-row">
+          <div class="mm-metric">
+            <span class="mm-metric-label">MÁS TRABAJADO</span>
+            <span class="mm-metric-val">${top3[0] ? top3[0].name : '—'}</span>
+          </div>
+          <div class="mm-metric">
+            <span class="mm-metric-label">MENOS TRABAJADO</span>
+            <span class="mm-metric-val">${leastGroup ? leastGroup.name : '—'}</span>
+          </div>
+          <div class="mm-metric">
+            <span class="mm-metric-label">SESIONES SEMANA</span>
+            <span class="mm-metric-val">${weekSessions}</span>
+          </div>
+        </li>
+        ${top3.map(g => `
         <li class="mm-top-item">
           <span class="mm-top-name">${g.name}</span>
           <div class="mm-bar"><div class="mm-bar-fill" style="width:${g.barPct}%"></div></div>
           <span class="mm-top-label">${g.label}</span>
-        </li>
-      `).join('');
+        </li>`).join('')}
+      `;
     }
 
     // Habilitar/deshabilitar ▶

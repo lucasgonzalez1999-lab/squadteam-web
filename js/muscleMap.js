@@ -257,17 +257,17 @@ function svgFront(){
       <path d="${PRO_BODY_PATH}" fill="#1a1a22"/>
     </g>
     <g id="muscles-front" stroke="rgba(255,255,255,0.06)" stroke-width="0.4" stroke-linejoin="round">
-      <ellipse id="zone-hombro-izq"      class="mm-zone" cx="80" cy="60" rx="8" ry="5" fill="#2e2e36"/>
-      <ellipse id="zone-hombro-der"      class="mm-zone" cx="126" cy="60" rx="8" ry="5" fill="#2e2e36"/>
-      <path    id="zone-pecho"           class="mm-zone" d="M86 62 Q103 60 120 62 L118 80 Q110 84 103 82 Q96 84 88 80 Z" fill="#2e2e36"/>
-      <ellipse id="zone-bicep-izq"       class="mm-zone" cx="74" cy="86" rx="6" ry="12" fill="#2e2e36"/>
-      <ellipse id="zone-bicep-der"       class="mm-zone" cx="132" cy="86" rx="6" ry="12" fill="#2e2e36"/>
-      <path    id="zone-abdomen"         class="mm-zone" d="M93 86 Q103 84 113 86 L112 124 Q103 127 94 124 Z" fill="#2e2e36"/>
-      <path    id="zone-cuadricep-izq"   class="mm-zone" d="M88 132 Q96 130 102 131 L101 168 Q94 170 87 167 Z" fill="#2e2e36"/>
-      <path    id="zone-cuadricep-der"   class="mm-zone" d="M118 132 Q110 130 104 131 L105 168 Q112 170 119 167 Z" fill="#2e2e36"/>
+      <ellipse id="zone-hombro-izq"      class="mm-zone" cx="84" cy="46" rx="8" ry="5" fill="#2e2e36"/>
+      <ellipse id="zone-hombro-der"      class="mm-zone" cx="122" cy="46" rx="8" ry="5" fill="#2e2e36"/>
+      <path    id="zone-pecho"           class="mm-zone" d="M86 48 Q103 46 120 48 L118 68 Q110 72 103 70 Q96 72 88 68 Z" fill="#2e2e36"/>
+      <ellipse id="zone-bicep-izq"       class="mm-zone" cx="76" cy="68" rx="6" ry="10" fill="#2e2e36"/>
+      <ellipse id="zone-bicep-der"       class="mm-zone" cx="130" cy="68" rx="6" ry="10" fill="#2e2e36"/>
+      <path    id="zone-abdomen"         class="mm-zone" d="M93 72 Q103 70 113 72 L112 104 Q103 108 94 104 Z" fill="#2e2e36"/>
+      <path    id="zone-cuadricep-izq"   class="mm-zone" d="M89 116 Q97 114 102 115 L102 148 Q95 152 88 148 Z" fill="#2e2e36"/>
+      <path    id="zone-cuadricep-der"   class="mm-zone" d="M117 116 Q109 114 104 115 L104 148 Q111 152 118 148 Z" fill="#2e2e36"/>
     </g>
     <g id="body-front-hints" stroke="rgba(255,255,255,0.06)" stroke-width="0.4" fill="none">
-      <line x1="103" y1="88" x2="103" y2="124"/>
+      <line x1="103" y1="74" x2="103" y2="106"/>
     </g>
   </svg>`;
 }
@@ -278,19 +278,19 @@ function svgBack(){
       <path d="${PRO_BODY_PATH}" fill="#1a1a22"/>
     </g>
     <g id="muscles-back" stroke="rgba(255,255,255,0.06)" stroke-width="0.4" stroke-linejoin="round">
-      <path    id="zone-trapecio"        class="mm-zone" d="M93 50 Q103 48 113 50 L116 58 Q103 62 90 58 Z" fill="#2e2e36"/>
-      <path    id="zone-dorsal-izq"      class="mm-zone" d="M85 62 Q90 60 99 61 L99 96 Q90 96 83 88 Q82 76 85 62 Z" fill="#2e2e36"/>
-      <path    id="zone-dorsal-der"      class="mm-zone" d="M121 62 Q116 60 107 61 L107 96 Q116 96 123 88 Q124 76 121 62 Z" fill="#2e2e36"/>
-      <path    id="zone-lumbar"          class="mm-zone" d="M93 98 Q103 96 113 98 L112 124 Q103 126 94 124 Z" fill="#2e2e36"/>
-      <path    id="zone-gluteo"          class="mm-zone" d="M88 128 Q103 126 118 128 L116 144 Q103 148 90 144 Z" fill="#2e2e36"/>
-      <path    id="zone-isquio-izq"      class="mm-zone" d="M88 148 Q96 146 102 147 L101 180 Q94 182 87 179 Z" fill="#2e2e36"/>
-      <path    id="zone-isquio-der"      class="mm-zone" d="M118 148 Q110 146 104 147 L105 180 Q112 182 119 179 Z" fill="#2e2e36"/>
-      <ellipse id="zone-tricep-izq"      class="mm-zone" cx="74" cy="86" rx="6" ry="12" fill="#2e2e36"/>
-      <ellipse id="zone-tricep-der"      class="mm-zone" cx="132" cy="86" rx="6" ry="12" fill="#2e2e36"/>
+      <path    id="zone-trapecio"        class="mm-zone" d="M94 38 Q103 36 112 38 L116 46 Q103 50 90 46 Z" fill="#2e2e36"/>
+      <path    id="zone-dorsal-izq"      class="mm-zone" d="M86 50 Q92 48 99 49 L99 80 Q91 80 84 74 Q83 62 86 50 Z" fill="#2e2e36"/>
+      <path    id="zone-dorsal-der"      class="mm-zone" d="M120 50 Q114 48 107 49 L107 80 Q115 80 122 74 Q123 62 120 50 Z" fill="#2e2e36"/>
+      <path    id="zone-lumbar"          class="mm-zone" d="M93 84 Q103 82 113 84 L112 104 Q103 108 94 104 Z" fill="#2e2e36"/>
+      <path    id="zone-gluteo"          class="mm-zone" d="M88 108 Q103 106 118 108 L116 124 Q103 128 90 124 Z" fill="#2e2e36"/>
+      <path    id="zone-isquio-izq"      class="mm-zone" d="M88 130 Q97 128 102 129 L102 162 Q95 165 88 162 Z" fill="#2e2e36"/>
+      <path    id="zone-isquio-der"      class="mm-zone" d="M118 130 Q109 128 104 129 L104 162 Q111 165 118 162 Z" fill="#2e2e36"/>
+      <ellipse id="zone-tricep-izq"      class="mm-zone" cx="76" cy="68" rx="6" ry="10" fill="#2e2e36"/>
+      <ellipse id="zone-tricep-der"      class="mm-zone" cx="130" cy="68" rx="6" ry="10" fill="#2e2e36"/>
     </g>
     <g id="body-back-hints" stroke="rgba(255,255,255,0.14)" stroke-width="0.5" fill="none">
-      <line x1="103" y1="50" x2="103" y2="124"/>
-      <line x1="103" y1="128" x2="103" y2="148"/>
+      <line x1="103" y1="40" x2="103" y2="106"/>
+      <line x1="103" y1="108" x2="103" y2="128"/>
     </g>
   </svg>`;
 }

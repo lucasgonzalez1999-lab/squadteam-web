@@ -244,70 +244,53 @@ function getTopMacroGroups(volByMuscle){
 }
 
 // ── SVG builders ────────────────────────────
-// Silueta atlética con proporciones humanas reales (cabeza ~1/8 del cuerpo,
-// hombros anchos, brazos largos pegados al cuerpo, cintura definida, piernas
-// largas separadas). viewBox 0 0 200 600 (aspect 1:3).
-// Cabeza/cuello distintos entre frente y espalda; cuerpo idéntico.
+// Silueta humana profesional (SVG Repo asset, public domain).
+// Un solo path que dibuja toda la figura (cabeza, cuello, hombros, brazos,
+// torso, piernas, pies). viewBox 0 0 206.326 206.326 (cuadrado).
+// Las zonas musculares se posicionan como overlay con coords adaptadas.
 
-const BODY_REST = `
-  <path d="M88 110 L60 120 C46 128 38 142 36 158 L30 215 L28 270 C30 295 36 318 44 338 L48 360 L42 380 C40 395 42 405 48 412 L70 412 L100 414 L130 412 L152 412 C158 405 160 395 158 380 L152 360 L156 338 C164 318 170 295 172 270 L170 215 L164 158 C162 142 154 128 140 120 L112 110 Z"/>
-  <path d="M58 124 C46 130 34 144 30 162 L24 220 L22 286 L24 340 L30 380 L38 402 C42 412 50 414 56 410 L60 402 L62 380 L64 340 L66 286 L66 220 L64 162 L64 134 Z"/>
-  <path d="M142 124 C154 130 166 144 170 162 L176 220 L178 286 L176 340 L170 380 L162 402 C158 412 150 414 144 410 L140 402 L138 380 L136 340 L134 286 L134 220 L136 162 L136 134 Z"/>
-  <path d="M70 414 L99 414 L100 500 L98 555 L95 585 L94 595 L72 595 L70 585 L68 555 L68 500 Z"/>
-  <path d="M130 414 L101 414 L100 500 L102 555 L105 585 L106 595 L128 595 L130 585 L132 555 L132 500 Z"/>
-`;
-
-// Frente: cabeza con curva de mandíbula y cuello con clavículas sutiles
-const HEAD_FRONT = `
-  <path d="M100 18 C82 18 74 34 74 56 C74 70 78 80 84 86 L86 96 L88 110 L112 110 L114 96 L116 86 C122 80 126 70 126 56 C126 34 118 18 100 18 Z"/>
-`;
-
-// Espalda: cabeza más esférica/lisa, cuello recto trapezoidal
-const HEAD_BACK = `
-  <ellipse cx="100" cy="56" rx="23" ry="34"/>
-  <path d="M86 90 L114 90 L114 110 L86 110 Z"/>
-`;
+const PRO_BODY_PATH = "M104.265,117.959c-0.304,3.58,2.126,22.529,3.38,29.959c0.597,3.52,2.234,9.255,1.645,12.3 c-0.841,4.244-1.084,9.736-0.621,12.934c0.292,1.942,1.211,10.899-0.104,14.175c-0.688,1.718-1.949,10.522-1.949,10.522 c-3.285,8.294-1.431,7.886-1.431,7.886c1.017,1.248,2.759,0.098,2.759,0.098c1.327,0.846,2.246-0.201,2.246-0.201 c1.139,0.943,2.467-0.116,2.467-0.116c1.431,0.743,2.758-0.627,2.758-0.627c0.822,0.414,1.023-0.109,1.023-0.109 c2.466-0.158-1.376-8.05-1.376-8.05c-0.92-7.088,0.913-11.033,0.913-11.033c6.004-17.805,6.309-22.53,3.909-29.24 c-0.676-1.937-0.847-2.704-0.536-3.545c0.719-1.941,0.195-9.748,1.072-12.848c1.692-5.979,3.361-21.142,4.231-28.217 c1.169-9.53-4.141-22.308-4.141-22.308c-1.163-5.2,0.542-23.727,0.542-23.727c2.381,3.705,2.29,10.245,2.29,10.245 c-0.378,6.859,5.541,17.342,5.541,17.342c2.844,4.332,3.921,8.442,3.921,8.747c0,1.248-0.273,4.269-0.273,4.269l0.109,2.631 c0.049,0.67,0.426,2.977,0.365,4.092c-0.444,6.862,0.646,5.571,0.646,5.571c0.92,0,1.931-5.522,1.931-5.522 c0,1.424-0.348,5.687,0.42,7.295c0.919,1.918,1.595-0.329,1.607-0.78c0.243-8.737,0.768-6.448,0.768-6.448 c0.511,7.088,1.139,8.689,2.265,8.135c0.853-0.407,0.073-8.506,0.073-8.506c1.461,4.811,2.569,5.577,2.569,5.577 c2.411,1.693,0.92-2.983,0.585-3.909c-1.784-4.92-1.839-6.625-1.839-6.625c2.229,4.421,3.909,4.257,3.909,4.257 c2.174-0.694-1.9-6.954-4.287-9.953c-1.218-1.528-2.789-3.574-3.245-4.789c-0.743-2.058-1.304-8.674-1.304-8.674 c-0.225-7.807-2.155-11.198-2.155-11.198c-3.3-5.282-3.921-15.135-3.921-15.135l-0.146-16.635 c-1.157-11.347-9.518-11.429-9.518-11.429c-8.451-1.258-9.627-3.988-9.627-3.988c-1.79-2.576-0.767-7.514-0.767-7.514 c1.485-1.208,2.058-4.415,2.058-4.415c2.466-1.891,2.345-4.658,1.206-4.628c-0.914,0.024-0.707-0.733-0.707-0.733 C115.068,0.636,104.01,0,104.01,0h-1.688c0,0-11.063,0.636-9.523,13.089c0,0,0.207,0.758-0.715,0.733 c-1.136-0.03-1.242,2.737,1.215,4.628c0,0,0.572,3.206,2.058,4.415c0,0,1.023,4.938-0.767,7.514c0,0-1.172,2.73-9.627,3.988 c0,0-8.375,0.082-9.514,11.429l-0.158,16.635c0,0-0.609,9.853-3.922,15.135c0,0-1.921,3.392-2.143,11.198 c0,0-0.563,6.616-1.303,8.674c-0.451,1.209-2.021,3.255-3.249,4.789c-2.408,2.993-6.455,9.24-4.29,9.953 c0,0,1.689,0.164,3.909-4.257c0,0-0.046,1.693-1.827,6.625c-0.35,0.914-1.839,5.59,0.573,3.909c0,0,1.117-0.767,2.569-5.577 c0,0-0.779,8.099,0.088,8.506c1.133,0.555,1.751-1.047,2.262-8.135c0,0,0.524-2.289,0.767,6.448 c0.012,0.451,0.673,2.698,1.596,0.78c0.779-1.608,0.429-5.864,0.429-7.295c0,0,0.999,5.522,1.933,5.522 c0,0,1.099,1.291,0.648-5.571c-0.073-1.121,0.32-3.422,0.369-4.092l0.106-2.631c0,0-0.274-3.014-0.274-4.269 c0-0.311,1.078-4.415,3.921-8.747c0,0,5.913-10.488,5.532-17.342c0,0-0.082-6.54,2.299-10.245c0,0,1.69,18.526,0.545,23.727 c0,0-5.319,12.778-4.146,22.308c0.864,7.094,2.53,22.237,4.226,28.217c0.886,3.094,0.362,10.899,1.072,12.848 c0.32,0.847,0.152,1.627-0.536,3.545c-2.387,6.71-2.083,11.436,3.921,29.24c0,0,1.848,3.945,0.914,11.033 c0,0-3.836,7.892-1.379,8.05c0,0,0.192,0.523,1.023,0.109c0,0,1.327,1.37,2.761,0.627c0,0,1.328,1.06,2.463,0.116 c0,0,0.91,1.047,2.237,0.201c0,0,1.742,1.175,2.777-0.098c0,0,1.839,0.408-1.435-7.886c0,0-1.254-8.793-1.945-10.522 c-1.318-3.275-0.387-12.251-0.106-14.175c0.453-3.216,0.21-8.695-0.618-12.934c-0.606-3.038,1.035-8.774,1.641-12.3 c1.245-7.423,3.685-26.373,3.38-29.959l1.008,0.354C103.809,118.312,104.265,117.959,104.265,117.959z";
 
 function svgFront(){
-  return `<svg id="body-front" class="mm-svg" viewBox="0 0 200 600" xmlns="http://www.w3.org/2000/svg">
-    <g id="body-front-base" fill="#18181d" stroke="rgba(255,255,255,0.1)" stroke-width="0.6" stroke-linejoin="round">${HEAD_FRONT}${BODY_REST}</g>
-    <g id="muscles-front" stroke="rgba(255,255,255,0.06)" stroke-width="0.5" stroke-linejoin="round">
-      <path id="zone-hombro-izq"      class="mm-zone" d="M64 122 C50 128 40 140 36 156 L38 174 C46 170 56 168 66 170 L72 138 C70 128 68 122 64 122 Z" fill="#2e2e36"/>
-      <path id="zone-hombro-der"      class="mm-zone" d="M136 122 C150 128 160 140 164 156 L162 174 C154 170 144 168 134 170 L128 138 C130 128 132 122 136 122 Z" fill="#2e2e36"/>
-      <path id="zone-pecho"           class="mm-zone" d="M72 138 C78 132 90 130 100 130 C110 130 122 132 128 138 L126 192 C122 206 110 214 102 210 L100 206 L98 210 C90 214 78 206 74 192 Z" fill="#2e2e36"/>
-      <path id="zone-bicep-izq"       class="mm-zone" d="M28 174 C26 180 24 192 24 204 L22 262 C22 276 28 282 34 280 L56 276 C60 272 60 264 58 254 L58 204 C56 188 52 174 46 174 Z" fill="#2e2e36"/>
-      <path id="zone-bicep-der"       class="mm-zone" d="M172 174 C174 180 176 192 176 204 L178 262 C178 276 172 282 166 280 L144 276 C140 272 140 264 142 254 L142 204 C144 188 148 174 154 174 Z" fill="#2e2e36"/>
-      <path id="zone-abdomen"         class="mm-zone" d="M84 210 C86 206 94 204 100 204 C106 204 114 206 116 210 L120 360 C118 374 110 380 100 380 C90 380 82 374 80 360 Z" fill="#2e2e36"/>
-      <path id="zone-cuadricep-izq"   class="mm-zone" d="M72 420 C72 416 88 414 98 414 L98 506 C96 518 90 524 82 524 C74 524 70 514 70 504 Z" fill="#2e2e36"/>
-      <path id="zone-cuadricep-der"   class="mm-zone" d="M128 420 C128 416 112 414 102 414 L102 506 C104 518 110 524 118 524 C126 524 130 514 130 504 Z" fill="#2e2e36"/>
+  return `<svg id="body-front" class="mm-svg" viewBox="0 0 206 206" xmlns="http://www.w3.org/2000/svg">
+    <g id="body-front-base">
+      <path d="${PRO_BODY_PATH}" fill="#1a1a22"/>
     </g>
-    <g id="body-front-hints" stroke="rgba(255,255,255,0.07)" stroke-width="0.5" fill="none">
-      <line x1="100" y1="214" x2="100" y2="375"/>
-      <circle cx="100" cy="295" r="1.2" fill="rgba(255,255,255,0.2)" stroke="none"/>
-      <line x1="92" y1="248" x2="108" y2="248" opacity="0.6"/>
-      <line x1="92" y1="284" x2="108" y2="284" opacity="0.6"/>
-      <line x1="92" y1="322" x2="108" y2="322" opacity="0.6"/>
+    <g id="muscles-front" stroke="rgba(255,255,255,0.06)" stroke-width="0.4" stroke-linejoin="round">
+      <ellipse id="zone-hombro-izq"      class="mm-zone" cx="80" cy="60" rx="8" ry="5" fill="#2e2e36"/>
+      <ellipse id="zone-hombro-der"      class="mm-zone" cx="126" cy="60" rx="8" ry="5" fill="#2e2e36"/>
+      <path    id="zone-pecho"           class="mm-zone" d="M86 62 Q103 60 120 62 L118 80 Q110 84 103 82 Q96 84 88 80 Z" fill="#2e2e36"/>
+      <ellipse id="zone-bicep-izq"       class="mm-zone" cx="74" cy="86" rx="6" ry="12" fill="#2e2e36"/>
+      <ellipse id="zone-bicep-der"       class="mm-zone" cx="132" cy="86" rx="6" ry="12" fill="#2e2e36"/>
+      <path    id="zone-abdomen"         class="mm-zone" d="M93 86 Q103 84 113 86 L112 124 Q103 127 94 124 Z" fill="#2e2e36"/>
+      <path    id="zone-cuadricep-izq"   class="mm-zone" d="M88 132 Q96 130 102 131 L101 168 Q94 170 87 167 Z" fill="#2e2e36"/>
+      <path    id="zone-cuadricep-der"   class="mm-zone" d="M118 132 Q110 130 104 131 L105 168 Q112 170 119 167 Z" fill="#2e2e36"/>
+    </g>
+    <g id="body-front-hints" stroke="rgba(255,255,255,0.06)" stroke-width="0.4" fill="none">
+      <line x1="103" y1="88" x2="103" y2="124"/>
     </g>
   </svg>`;
 }
 
 function svgBack(){
-  return `<svg id="body-back" class="mm-svg" viewBox="0 0 200 600" xmlns="http://www.w3.org/2000/svg">
-    <g id="body-back-base" fill="#18181d" stroke="rgba(255,255,255,0.1)" stroke-width="0.6" stroke-linejoin="round">${HEAD_BACK}${BODY_REST}</g>
-    <g id="muscles-back" stroke="rgba(255,255,255,0.06)" stroke-width="0.5" stroke-linejoin="round">
-      <path id="zone-trapecio"        class="mm-zone" d="M84 110 L116 110 L130 132 C130 146 116 158 100 160 C84 158 70 146 70 132 Z" fill="#2e2e36"/>
-      <path id="zone-dorsal-izq"      class="mm-zone" d="M62 146 C54 158 48 180 50 216 C52 248 70 268 88 272 L98 272 L98 172 C94 162 84 152 70 150 Z" fill="#2e2e36"/>
-      <path id="zone-dorsal-der"      class="mm-zone" d="M138 146 C146 158 152 180 150 216 C148 248 130 268 112 272 L102 272 L102 172 C106 162 116 152 130 150 Z" fill="#2e2e36"/>
-      <path id="zone-lumbar"          class="mm-zone" d="M82 282 C84 280 92 278 100 278 C108 278 116 280 118 282 L122 348 C120 358 110 362 100 362 C90 362 80 358 78 348 Z" fill="#2e2e36"/>
-      <path id="zone-gluteo"          class="mm-zone" d="M70 414 L130 414 C136 414 138 424 136 440 C132 470 118 488 100 488 C82 488 68 470 64 440 C62 424 64 414 70 414 Z" fill="#2e2e36"/>
-      <path id="zone-isquio-izq"      class="mm-zone" d="M70 492 C72 490 88 488 98 488 L98 562 C96 574 90 580 82 580 C74 580 70 572 70 562 Z" fill="#2e2e36"/>
-      <path id="zone-isquio-der"      class="mm-zone" d="M130 492 C128 490 112 488 102 488 L102 562 C104 574 110 580 118 580 C126 580 130 572 130 562 Z" fill="#2e2e36"/>
-      <path id="zone-tricep-izq"      class="mm-zone" d="M26 176 C24 182 22 194 22 206 L20 266 C20 280 26 286 32 284 L54 280 C58 276 58 268 56 258 L56 206 C54 190 50 176 44 176 Z" fill="#2e2e36"/>
-      <path id="zone-tricep-der"      class="mm-zone" d="M174 176 C176 182 178 194 178 206 L180 266 C180 280 174 286 168 284 L146 280 C142 276 142 268 144 258 L144 206 C146 190 150 176 156 176 Z" fill="#2e2e36"/>
+  return `<svg id="body-back" class="mm-svg" viewBox="0 0 206 206" xmlns="http://www.w3.org/2000/svg">
+    <g id="body-back-base">
+      <path d="${PRO_BODY_PATH}" fill="#1a1a22"/>
     </g>
-    <g id="body-back-hints" stroke="rgba(255,255,255,0.14)" stroke-width="0.8" fill="none">
-      <line x1="100" y1="116" x2="100" y2="280"/>
-      <line x1="100" y1="416" x2="100" y2="486"/>
+    <g id="muscles-back" stroke="rgba(255,255,255,0.06)" stroke-width="0.4" stroke-linejoin="round">
+      <path    id="zone-trapecio"        class="mm-zone" d="M93 50 Q103 48 113 50 L116 58 Q103 62 90 58 Z" fill="#2e2e36"/>
+      <path    id="zone-dorsal-izq"      class="mm-zone" d="M85 62 Q90 60 99 61 L99 96 Q90 96 83 88 Q82 76 85 62 Z" fill="#2e2e36"/>
+      <path    id="zone-dorsal-der"      class="mm-zone" d="M121 62 Q116 60 107 61 L107 96 Q116 96 123 88 Q124 76 121 62 Z" fill="#2e2e36"/>
+      <path    id="zone-lumbar"          class="mm-zone" d="M93 98 Q103 96 113 98 L112 124 Q103 126 94 124 Z" fill="#2e2e36"/>
+      <path    id="zone-gluteo"          class="mm-zone" d="M88 128 Q103 126 118 128 L116 144 Q103 148 90 144 Z" fill="#2e2e36"/>
+      <path    id="zone-isquio-izq"      class="mm-zone" d="M88 148 Q96 146 102 147 L101 180 Q94 182 87 179 Z" fill="#2e2e36"/>
+      <path    id="zone-isquio-der"      class="mm-zone" d="M118 148 Q110 146 104 147 L105 180 Q112 182 119 179 Z" fill="#2e2e36"/>
+      <ellipse id="zone-tricep-izq"      class="mm-zone" cx="74" cy="86" rx="6" ry="12" fill="#2e2e36"/>
+      <ellipse id="zone-tricep-der"      class="mm-zone" cx="132" cy="86" rx="6" ry="12" fill="#2e2e36"/>
+    </g>
+    <g id="body-back-hints" stroke="rgba(255,255,255,0.14)" stroke-width="0.5" fill="none">
+      <line x1="103" y1="50" x2="103" y2="124"/>
+      <line x1="103" y1="128" x2="103" y2="148"/>
     </g>
   </svg>`;
 }

@@ -623,6 +623,11 @@ function renderAthleteView(user) {
 
     // ── TRACKING DIARIO ──
     const waterOpts=[1,1.5,2,2.5,3];
+    const waterIsCustom = todayLog.water != null && !waterOpts.includes(+todayLog.water);
+    const waterCustomLabel = waterIsCustom
+      ? (Number.isInteger(+todayLog.water) ? todayLog.water+'L' : (+todayLog.water).toString().replace('.',',')+'L')
+      : 'Otro';
+    const stepsFmt = todayLog.steps ? Number(todayLog.steps).toLocaleString('es-AR') : '';
     parts.push(`
     <div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:20px">
       <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px">📋 Registro de hoy</div>
@@ -650,23 +655,26 @@ function renderAthleteView(user) {
             ${waterOpts.map(v=>'<button onclick="saveDaily(\''+user.id+'\',\'water\','+v+')"'
               +' style="flex:1;min-width:48px;padding:9px 4px;border:2px solid '+(todayLog.water==v?color:'var(--border)')+';border-radius:9px;background:'+(todayLog.water==v?color+'15':'var(--surf2)')+';font-size:13px;font-weight:700;color:'+(todayLog.water==v?color:'var(--text)')+';cursor:pointer;font-family:inherit">'+v+'L</button>'
             ).join('')}
+            <button onclick="promptCustomWater('${user.id}',${todayLog.water||0})"
+              style="flex:1;min-width:48px;padding:9px 4px;border:2px solid ${waterIsCustom?color:'var(--border)'};border-radius:9px;background:${waterIsCustom?color+'15':'var(--surf2)'};font-size:13px;font-weight:700;color:${waterIsCustom?color:'var(--text)'};cursor:pointer;font-family:inherit">${waterCustomLabel}</button>
           </div>
         </div>
         <div>
           <div style="font-size:11px;font-weight:700;color:var(--sub);letter-spacing:1px;margin-bottom:8px">PASOS 🚶</div>
           <div style="display:flex;gap:8px;align-items:center">
             <div style="position:relative;flex:1">
-              <input id="ath-pasos" type="number" inputmode="numeric" placeholder="pasos"
-                value="${todayLog.steps||''}"
+              <input id="ath-pasos" type="text" inputmode="numeric" placeholder="pasos"
+                value="${stepsFmt}"
+                oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/\\B(?=(\\d{3})+(?!\\d))/g,'.')"
                 style="width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:10px;font-size:16px;font-family:inherit;box-sizing:border-box;background:var(--bg);color:var(--text);outline:none"
                 onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor='var(--border)'">
             </div>
-            <button onclick="saveDaily('${user.id}','steps',document.getElementById('ath-pasos').value)"
+            <button onclick="saveDaily('${user.id}','steps',document.getElementById('ath-pasos').value.replace(/\\./g,''))"
               style="background:var(--acc);color:#000;border:none;border-radius:10px;padding:11px 18px;font-weight:900;font-size:13px;cursor:pointer;white-space:nowrap;font-family:inherit">
               Guardar
             </button>
           </div>
-          ${todayLog.steps?'<div style="font-size:11px;color:var(--sub);margin-top:5px">Hoy: <b style="color:var(--text)">'+(todayLog.steps>=1000?(todayLog.steps/1000).toFixed(1)+'k':todayLog.steps)+' pasos</b></div>':''}
+          ${todayLog.steps?'<div style="font-size:11px;color:var(--sub);margin-top:5px">Hoy: <b style="color:var(--text)">'+Number(todayLog.steps).toLocaleString('es-AR')+' pasos</b></div>':''}
         </div>
       </div>
     </div>`);
@@ -798,6 +806,18 @@ async function saveDaily(athId, field, value) {
   try{ await fbSet('dailyLogs', athId+'_'+todayKey, log); }catch(e){}
   toast('Guardado ✓');
   if(currentUser&&currentUser.id===athId) renderAthleteView(currentUser);
+}
+
+// Prompt para litros de agua personalizados (botón "Otro")
+function promptCustomWater(athId, current){
+  const raw = prompt('¿Cuántos litros tomaste hoy?\nPodés usar decimales: 1.75, 0.8, etc.', current ? String(current).replace('.',',') : '');
+  if(raw === null) return;
+  const v = parseFloat(String(raw).replace(',','.'));
+  if(isNaN(v) || v <= 0){
+    toast('Valor inválido');
+    return;
+  }
+  saveDaily(athId, 'water', v);
 }
 
 // Alias para el poller de sesión live en storage.js

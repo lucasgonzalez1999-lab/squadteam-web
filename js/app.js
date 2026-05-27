@@ -655,7 +655,7 @@ function renderAthleteView(user) {
             ${waterOpts.map(v=>'<button onclick="saveDaily(\''+user.id+'\',\'water\','+v+')"'
               +' style="flex:1;min-width:48px;padding:9px 4px;border:2px solid '+(todayLog.water==v?color:'var(--border)')+';border-radius:9px;background:'+(todayLog.water==v?color+'15':'var(--surf2)')+';font-size:13px;font-weight:700;color:'+(todayLog.water==v?color:'var(--text)')+';cursor:pointer;font-family:inherit">'+v+'L</button>'
             ).join('')}
-            <button onclick="promptCustomWater('${user.id}',${todayLog.water||0})"
+            <button onclick="openCustomWaterInput(this,'${user.id}')"
               style="flex:1;min-width:48px;padding:9px 4px;border:2px solid ${waterIsCustom?color:'var(--border)'};border-radius:9px;background:${waterIsCustom?color+'15':'var(--surf2)'};font-size:13px;font-weight:700;color:${waterIsCustom?color:'var(--text)'};cursor:pointer;font-family:inherit">${waterCustomLabel}</button>
           </div>
         </div>
@@ -808,16 +808,46 @@ async function saveDaily(athId, field, value) {
   if(currentUser&&currentUser.id===athId) renderAthleteView(currentUser);
 }
 
-// Prompt para litros de agua personalizados (botón "Otro")
-function promptCustomWater(athId, current){
-  const raw = prompt('¿Cuántos litros tomaste hoy?\nPodés usar decimales: 1.75, 0.8, etc.', current ? String(current).replace('.',',') : '');
-  if(raw === null) return;
-  const v = parseFloat(String(raw).replace(',','.'));
-  if(isNaN(v) || v <= 0){
-    toast('Valor inválido');
-    return;
-  }
-  saveDaily(athId, 'water', v);
+// Reemplaza el botón "Otro" por un input inline para litros custom.
+function openCustomWaterInput(btn, athId){
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.step = '0.1';
+  input.min = '0';
+  input.inputMode = 'decimal';
+  input.placeholder = 'L';
+  const acc = getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#d9ff00';
+  input.style.cssText = 'flex:1;min-width:64px;padding:9px 6px;border:2px solid '+acc+';border-radius:9px;background:var(--bg);color:var(--text);font-size:13px;font-weight:700;outline:none;font-family:inherit;text-align:center;';
+
+  let committed = false;
+  const commit = () => {
+    if(committed) return;
+    committed = true;
+    const raw = input.value.trim();
+    if(!raw){
+      if(currentUser && currentUser.id===athId) renderAthleteView(currentUser);
+      return;
+    }
+    const v = parseFloat(String(raw).replace(',','.'));
+    if(!isNaN(v) && v > 0){
+      saveDaily(athId, 'water', v);
+    } else {
+      toast('Valor inválido');
+      if(currentUser && currentUser.id===athId) renderAthleteView(currentUser);
+    }
+  };
+
+  input.addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); input.blur(); }
+    if(e.key === 'Escape'){
+      committed = true;
+      if(currentUser && currentUser.id===athId) renderAthleteView(currentUser);
+    }
+  });
+  input.addEventListener('blur', commit);
+
+  btn.replaceWith(input);
+  input.focus();
 }
 
 // Alias para el poller de sesión live en storage.js

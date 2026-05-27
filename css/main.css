@@ -1615,13 +1615,33 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
 
 .mm-body{display:grid;grid-template-columns:1fr;gap:14px;align-items:start;}
 .mm-svg-wrap{
+  position:relative;
   display:flex;justify-content:center;gap:16px;
   padding:12px 0 8px;
+  overflow:hidden;
 }
 .mm-svg{width:100%;max-width:200px;height:auto;display:block;}
 #muscles-front path, #muscles-front ellipse,
 #muscles-back path, #muscles-back ellipse{
   transition: fill 500ms ease, fill-opacity 500ms ease;
+}
+
+/* Scanning line lima atravesando el cuerpo (efecto inspección) */
+.mm-scanline{
+  position:absolute;left:10%;right:10%;top:0;height:2px;
+  background:linear-gradient(90deg, transparent 0%, rgba(217,255,0,0.55) 50%, transparent 100%);
+  filter:blur(1px);
+  animation:mmScan 4.5s linear infinite;
+  pointer-events:none;z-index:2;
+}
+@keyframes mmScan{
+  0%   { top:0%;    opacity:0; }
+  10%  { opacity:1; }
+  90%  { opacity:1; }
+  100% { top:100%;  opacity:0; }
+}
+@media (prefers-reduced-motion: reduce){
+  .mm-scanline{animation:none;opacity:0;}
 }
 
 .mm-legend{

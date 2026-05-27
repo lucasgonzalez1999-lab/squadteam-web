@@ -501,6 +501,7 @@ function mount(host, sessions){
 
       <div class="mm-body">
         <div class="mm-svg-wrap" id="mm-svg-wrap">
+          <div class="mm-scanline"></div>
           ${svgFront()}
           ${svgBack()}
         </div>

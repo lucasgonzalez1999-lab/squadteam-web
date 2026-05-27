@@ -517,6 +517,15 @@ function mount(host, sessions){
       <div class="mm-empty hidden" id="mm-empty"></div>
 
       <ul class="mm-top3" id="mm-top3"></ul>
+
+      <button type="button" class="mm-share-cta hidden" id="mm-share-cta">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+          <polyline points="16 6 12 2 8 6"/>
+          <line x1="12" y1="2" x2="12" y2="15"/>
+        </svg>
+        COMPARTIR PROGRESO
+      </button>
     </section>
   `;
 
@@ -531,6 +540,10 @@ function mount(host, sessions){
   const svgFrontEl = host.querySelector('#body-front');
   const svgBackEl  = host.querySelector('#body-back');
   const pills    = host.querySelectorAll('.mm-pill');
+  const shareCta = host.querySelector('#mm-share-cta');
+
+  // Estado compartido con el modal de share (lo refresca refresh())
+  let shareCtx = null;
 
   function refresh(){
     const monday = new Date(baseMonday);
@@ -567,6 +580,8 @@ function mount(host, sessions){
       top3El.classList.add('hidden');
       legendEl.classList.add('hidden');
       emptyEl.classList.remove('hidden');
+      shareCta.classList.add('hidden');
+      shareCtx = null;
       emptyEl.textContent = sessions.length > 0
         ? 'Aún faltan datos para calcular un perfil completo.'
         : 'Completá tu primera sesión para ver tu perfil muscular.';
@@ -574,6 +589,7 @@ function mount(host, sessions){
       emptyEl.classList.add('hidden');
       top3El.classList.remove('hidden');
       legendEl.classList.remove('hidden');
+      shareCta.classList.remove('hidden');
 
       const top3 = getTopMacroGroups(volByMuscle);
 
@@ -611,6 +627,12 @@ function mount(host, sessions){
           <span class="mm-top-label">${g.label}</span>
         </li>`).join('')}
       `;
+
+      // Refresca el contexto para el modal de share
+      shareCtx = {
+        weekLabel: lblWeek.textContent,
+        dominantMacro: top3[0] ? top3[0].name : '—'
+      };
     }
 
     // Habilitar/deshabilitar ▶
@@ -646,6 +668,17 @@ function mount(host, sessions){
   }
   pills.forEach(p => p.addEventListener('click', () => setSide(p.dataset.pill)));
   pills.forEach(p => p.classList.toggle('active', p.dataset.pill === state.side));
+
+  // ── CTA Compartir ──
+  shareCta.addEventListener('click', () => {
+    if(!shareCtx || !window.MuscleMapShare) return;
+    const activeSvg = state.side === 'back' ? svgBackEl : svgFrontEl;
+    window.MuscleMapShare.open({
+      svgEl: activeSvg,
+      weekLabel: shareCtx.weekLabel,
+      dominantMacro: shareCtx.dominantMacro
+    });
+  });
 
   // ── Swipe horizontal (mobile) ──
   let touchStart = null, touchId = null;

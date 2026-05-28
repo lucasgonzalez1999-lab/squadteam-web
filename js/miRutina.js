@@ -600,14 +600,22 @@ async function mrSave(){
 
   if(!exList.length){ toast('Completá al menos un set antes de guardar'); return; }
 
+  // Si hay un coach asumiendo la identidad del alumno (modo entrenar presencial)
+  // y NO es self-entreno (_coachOriginalProfile.id !== _mrAthId), taggear la fuente.
+  const coachOrig = window._coachOriginalProfile;
+  const isCoachTraining = coachOrig && coachOrig.role === 'coach' && coachOrig.id !== _mrAthId;
   const sessionObj = {
     date:   today(),
     name:   _mrDay,
     dia:    _mrDay,
     week:   _mrWeek,
-    source: 'web',
+    source: isCoachTraining ? 'coach-presencial' : 'web',
     exercises: exList,
   };
+  if(isCoachTraining){
+    sessionObj.coachId = coachOrig.id;
+    sessionObj.coachName = coachOrig.name;
+  }
 
   // Save to global sessions array (same as bot)
   const existing = getAthSessions(_mrAthId);

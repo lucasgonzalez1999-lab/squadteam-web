@@ -1093,9 +1093,17 @@ function exportAthleteCard(athId){
   toast('📸 Story exportada!');
 }
 
-// ── PREVIEW MODE ──
+// ── MODO ENTRENAR ALUMNO ──
+// El coach asume la identidad del alumno para cargar sets desde su panel.
+// Se usa para entrenamientos presenciales: la sesión queda guardada en el
+// alumno correcto (PRs, perfil muscular, gráficos), y se taggea con
+// source: 'coach-presencial' para distinguirla.
 let _previewCoachProfile = null;
 window._prevAthMap = {};
+// Expone el stash del coach a otros módulos (miRutina lo usa para el tag).
+Object.defineProperty(window, '_coachOriginalProfile', {
+  get(){ return _previewCoachProfile; }
+});
 
 function openPreviewPicker() {
   const ath = Array.isArray(athletes) ? athletes.filter(a => !a.inactive) : [];
@@ -1108,13 +1116,13 @@ function openPreviewPicker() {
   ov.innerHTML = `
     <div style="background:var(--surf);border:1px solid var(--border2);border-radius:18px;width:100%;max-width:360px;overflow:hidden">
       <div style="padding:20px 22px 14px;border-bottom:1px solid var(--border)">
-        <div style="font-size:15px;font-weight:800;color:var(--text)">Ver como alumno</div>
-        <div style="font-size:12px;color:var(--sub);margin-top:4px">Elegí un alumno para previsualizar su vista</div>
+        <div style="font-size:15px;font-weight:800;color:var(--text)">Entrenar alumno</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:4px">Elegí un alumno para cargar su sesión desde el panel</div>
       </div>
       <div style="padding:10px;max-height:60vh;overflow-y:auto">
         ${ath.map(a => {
           const color = a.color || athColor(a.id);
-          return `<button onclick="enterPreviewMode('${a.id}');document.getElementById('preview-picker-ov')?.remove()"
+          return `<button onclick="enterTrainingMode('${a.id}');document.getElementById('preview-picker-ov')?.remove()"
             style="width:100%;display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;border:none;background:none;cursor:pointer;text-align:left;font-family:inherit;-webkit-tap-highlight-color:transparent"
             onmouseover="this.style.background='var(--surf2)'" onmouseout="this.style.background='none'">
             <div style="width:36px;height:36px;border-radius:10px;background:${color}22;color:${color};font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${(a.name||'?')[0].toUpperCase()}</div>
@@ -1126,7 +1134,7 @@ function openPreviewPicker() {
     </div>`;
 }
 
-function enterPreviewMode(athId) {
+function enterTrainingMode(athId) {
   const a = window._prevAthMap[athId] || (Array.isArray(athletes) ? athletes.find(x => x.id === athId) : null);
   if (!a) return;
   const profile = { id: a.id, name: a.name, role: 'athlete', color: a.color || athColor(a.id) };
@@ -1138,12 +1146,14 @@ function enterPreviewMode(athId) {
     if (el) { el.textContent = athInitial(profile.name); el.style.background = profile.color + '20'; el.style.color = profile.color; }
   });
   const fn = document.getElementById('foot-name'); if (fn) fn.textContent = profile.name;
-  const fr = document.getElementById('foot-role'); if (fr) fr.textContent = 'Previsualización';
+  const fr = document.getElementById('foot-role'); if (fr) fr.textContent = 'Entrenando · Coach';
   const tit = document.getElementById('tb-title'); if (tit) tit.textContent = profile.name.toUpperCase();
-  const sub = document.getElementById('logo-sub'); if (sub) sub.textContent = 'Preview';
-  _showPreviewBanner('👁 Vista de ' + profile.name);
-  toast('👁 Vista de ' + profile.name);
+  const sub = document.getElementById('logo-sub'); if (sub) sub.textContent = 'Modo Entrenar';
+  _showPreviewBanner('🏋️ Entrenando con ' + profile.name);
+  toast('🏋️ Entrenando con ' + profile.name);
 }
+// Alias retrocompatible (cualquier código viejo que aún use enterPreviewMode)
+window.enterPreviewMode = enterTrainingMode;
 
 function enterSelfAthleteMode() {
   const coach = currentUser;
@@ -1171,8 +1181,40 @@ function _showPreviewBanner(label) {
   banner.style.display = 'flex';
 }
 
-function exitPreviewMode() {
+// Detecta si el alumno actual tiene sets cargados pero no guardados.
+function _hasUnsavedTrainingDraft(athId){
+  if(!athId) return false;
+  const todayKey = new Date().toISOString().slice(0,10);
+  for(let i = 0; i < localStorage.length; i++){
+    const key = localStorage.key(i) || '';
+    if(key.startsWith('mr_draft_'+athId+'_'+todayKey+'_')){
+      try {
+        const raw = localStorage.getItem(key);
+        if(!raw) continue;
+        const draft = JSON.parse(raw);
+        // Hay algún set con kg o reps cargados?
+        if(draft && typeof draft === 'object'){
+          for(const exName in draft){
+            const sets = draft[exName] || {};
+            for(const k in sets){
+              const v = sets[k] || {};
+              if(v.kg || v.reps) return true;
+            }
+          }
+        }
+      } catch(_){}
+    }
+  }
+  return false;
+}
+
+function exitTrainingMode() {
   if (!_previewCoachProfile) return;
+  const athId = currentUser?.id;
+  if(_hasUnsavedTrainingDraft(athId)){
+    const ok = confirm('Tenés sets sin guardar en ' + (currentUser?.name || 'este alumno') + '.\n\n¿Cerrar igual? (los sets quedan en draft por si volvés)');
+    if(!ok) return;
+  }
   currentUser = _previewCoachProfile;
   _previewCoachProfile = null;
   const banner = document.getElementById('preview-banner');
@@ -1190,6 +1232,8 @@ function exitPreviewMode() {
   goSection('dashboard', null);
   toast('✅ De vuelta al panel');
 }
+// Alias retrocompatible (HTML viejo aún llama exitPreviewMode)
+window.exitPreviewMode = exitTrainingMode;
 
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', () => {

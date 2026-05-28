@@ -538,6 +538,7 @@ function renderAlumnos(){
             <td>${sparkline(vols)}</td>
             <td>
               <div class="action-btns">
+                <button class="btn-train" title="Entrenar a ${a.name}" onclick="enterTrainingMode('${a.id}')">🏋️ Entrenar</button>
                 <button class="btn-icon" title="Ver perfil" onclick="openAthProfile('${a.id}')">👤</button>
                 <button class="btn-icon" title="Planilla" onclick="openAthPlanilla('${a.id}')">📋</button>
                 <button class="btn-icon" title="Dieta" onclick="openAthDiet('${a.id}')">🥗</button>

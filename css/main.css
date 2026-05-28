@@ -1875,8 +1875,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
   .mm-card{padding:28px;}
   .mm-title{font-size:22px;}
   .mm-pills{display:none;}
-  .mm-body{grid-template-columns:1fr 1fr;gap:24px;justify-items:center;width:100%;}
-  .mm-svg-wrap{width:100%;}
+  .mm-body{grid-template-columns:1fr;justify-items:center;width:100%;}
+  .mm-svg-wrap{width:100%;max-width:560px;gap:32px;}
   .mm-svg{width:100%;max-width:240px;}
 }
 

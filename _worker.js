@@ -113,7 +113,9 @@ async function verifyIdToken(idToken) {
 /* ─── Service account → Google access token ─────────────────── */
 
 async function getAdminToken(env) {
-  const sa  = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT);
+  const sa  = typeof env.FIREBASE_SERVICE_ACCOUNT === 'string'
+    ? JSON.parse(env.FIREBASE_SERVICE_ACCOUNT)
+    : env.FIREBASE_SERVICE_ACCOUNT;
   const now = Math.floor(Date.now() / 1000);
 
   const header  = b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));

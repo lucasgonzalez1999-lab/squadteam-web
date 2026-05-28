@@ -367,7 +367,7 @@ function nbAutoCuadrar(){
   _nbPlan.meals = newMeals;
   nbSavePlan();
   nbRefresh();
-  if(typeof toast==='function') toast('⚡ Dieta auto-cuadrada!');
+  if(typeof toast==='function') toast('Dieta auto-cuadrada');
 }
 
 // ── QUICK TEXT MODE ──

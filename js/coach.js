@@ -491,8 +491,8 @@ function renderAlumnos(){
     <button class="btn-primary" onclick="openNewAthleteModal()">+ Nuevo alumno</button>
   </div>
   <div class="search-bar">
-    <input class="search-input" placeholder="🔍 Buscar alumno..." oninput="filterAlumnos(this.value)" id="ath-search">
-    <button class="btn-filter">🎯 Filtros</button>
+    <input class="search-input" placeholder="Buscar alumno..." oninput="filterAlumnos(this.value)" id="ath-search">
+    <button class="btn-filter">Filtros</button>
     <button class="btn-filter">↕ Ordenar</button>
   </div>
   <div class="card" style="padding:0;overflow:hidden">

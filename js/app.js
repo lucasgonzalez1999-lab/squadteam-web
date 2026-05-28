@@ -72,7 +72,7 @@ async function renderLogin() {
     `<button class="user-btn" onclick="_loginPick(${i})" data-id="${u.id}">` +
     `<div class="user-av" style="background:${u.color}20;color:${u.color}">${athInitial(u.name)}</div>` +
     `<div class="user-btn-name">${u.name}</div>` +
-    `<div class="user-btn-role">${u.role==='coach'?'⚡ Coach':'🏋️'}</div>` +
+    `<div class="user-btn-role">${u.role==='coach'?'Coach':'Atleta'}</div>` +
     `</button>`
   ).join('');
 }
@@ -748,7 +748,7 @@ function renderAthleteView(user) {
       ).join('');
       parts.push(`
       <div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:20px">
-        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">🏆 Mis récords</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">Mis récords</div>
         ${prRows}
       </div>`);
     }
@@ -1052,7 +1052,7 @@ function exportAthleteCard(athId){
   ctx.fillStyle=color+'22'; ctx.fillRect(0,0,1080,600);
   // Logo
   ctx.fillStyle=color; ctx.font='bold 48px Inter,Arial';
-  ctx.fillText('⚡ SQUAD TEAM',80,100);
+  ctx.fillText('SQUAD TEAM',80,100);
   // Avatar circle
   ctx.fillStyle=color+'33';
   ctx.beginPath();ctx.arc(540,320,140,0,Math.PI*2);ctx.fill();
@@ -1074,7 +1074,7 @@ function exportAthleteCard(athId){
   });
   // PRs
   ctx.fillStyle='#ffffff'; ctx.font='bold 40px Inter,Arial'; ctx.textAlign='left';
-  ctx.fillText('🏆 PERSONAL RECORDS',80,920);
+  ctx.fillText('PERSONAL RECORDS',80,920);
   topPRs.forEach(([name,kg],i)=>{
     ctx.fillStyle='#e4e4e7'; ctx.font='32px Inter,Arial';
     ctx.fillText(name.split(' ').slice(0,3).join(' '),80,990+i*60);

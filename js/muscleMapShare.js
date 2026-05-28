@@ -9,16 +9,16 @@
 
 // ── Frases auto-generadas según el macro grupo dominante ──
 const AUTO_PHRASES = {
-  PECHO:   'Pecho on fire 🔥',
-  ESPALDA: 'Espalda de armario',
-  PIERNA:  'Leg day approved 💪',
-  BRAZO:   'Brazos al palo',
-  HOMBRO:  'Hombros de samurái',
-  CORE:    'Six-pack en construcción'
+  PECHO:   'Semana de pecho',
+  ESPALDA: 'Semana de espalda',
+  PIERNA:  'Semana de pierna',
+  BRAZO:   'Semana de brazo',
+  HOMBRO:  'Semana de hombro',
+  CORE:    'Semana de core'
 };
 
 function autoPhrase(macroName){
-  return AUTO_PHRASES[macroName] || 'Semana on fire 🔥';
+  return AUTO_PHRASES[macroName] || 'Mi semana';
 }
 
 // ── Canvas builder ─────────────────────────

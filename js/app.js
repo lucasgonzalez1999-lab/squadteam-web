@@ -1169,8 +1169,8 @@ function enterSelfAthleteMode() {
   const fr = document.getElementById('foot-role'); if (fr) fr.textContent = 'Coach · Alumno';
   const tit = document.getElementById('tb-title'); if (tit) tit.textContent = profile.name.toUpperCase();
   const sub = document.getElementById('logo-sub'); if (sub) sub.textContent = 'Mi Entreno';
-  _showPreviewBanner('💪 Mi Entrenamiento');
-  toast('💪 Modo entrenamiento');
+  _showPreviewBanner('Mi entrenamiento');
+  toast('Modo entrenamiento');
 }
 
 function _showPreviewBanner(label) {
@@ -1230,7 +1230,7 @@ function exitTrainingMode() {
   const tit = document.getElementById('tb-title'); if (tit) tit.textContent = 'SQUAD TEAM';
   const sub = document.getElementById('logo-sub'); if (sub) sub.textContent = 'Coach OS';
   goSection('dashboard', null);
-  toast('✅ De vuelta al panel');
+  toast('De vuelta al panel');
 }
 // Alias retrocompatible (HTML viejo aún llama exitPreviewMode)
 window.exitPreviewMode = exitTrainingMode;

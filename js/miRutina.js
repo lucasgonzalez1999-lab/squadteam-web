@@ -635,7 +635,7 @@ async function mrSave(){
   window.db.collection('sessions').doc(_mrAthId).set({ draft: null }, { merge: true }).catch(()=>{});
   _mrSaved = true;
 
-  toast(fbOk ? '✅ ' + _mrDay + ' guardado — semana ' + _mrWeek : '⚠️ Guardado localmente (sin conexión)');
+  toast(fbOk ? _mrDay + ' guardado — semana ' + _mrWeek : 'Guardado localmente (sin conexión)');
   try{
     const vol=exList.reduce((t,ex)=>t+ex.sets.reduce((s,set)=>s+(parseFloat(set.kg)||0)*(parseInt(set.reps)||0),0),0);
     document.dispatchEvent(new CustomEvent('sq:session:saved',{

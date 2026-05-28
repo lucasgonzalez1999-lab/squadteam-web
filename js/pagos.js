@@ -412,7 +412,7 @@ async function pgConfirmPaid(athId){
   await pgSaveHistory(athId, hist.slice(0, 100)); // keep last 100
 
   pgModalBg().classList.add('hidden');
-  toast(`✅ Pago de ${a.name} registrado`);
+  toast(`Pago de ${a.name} registrado`);
   renderPagos();
 }
 

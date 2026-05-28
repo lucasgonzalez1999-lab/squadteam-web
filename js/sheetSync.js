@@ -358,7 +358,7 @@ async function runPlanSync(athId){
 
     if(log) log.innerHTML = `<pre style="margin:0;white-space:pre-wrap;font-size:11px">✅ Plan de ${a?.name} sincronizado:\n\n${dayList}\n\nSemana actual: ${ssCurrentWeek(plan.startDate, plan.weeks)}/${plan.weeks}${importLine}</pre>`;
     if(btn){ btn.textContent = 'Re-sincronizar'; btn.disabled = false; }
-    toast(`✅ Plan de ${a?.name} sincronizado${imported > 0 ? ` · ${imported} sesiones importadas` : ''}`);
+    toast(`Plan de ${a?.name} sincronizado${imported > 0 ? ` · ${imported} sesiones importadas` : ''}`);
   } catch(e){
     if(log) log.innerHTML = `<span style="color:#ef4444">❌ ${e.message}</span>`;
     if(btn){ btn.textContent = 'Sincronizar plan'; btn.disabled = false; }

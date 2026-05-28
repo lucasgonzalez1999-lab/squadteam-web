@@ -1,0 +1,7 @@
+_worker.js
+wrangler.jsonc
+.git
+.gitignore
+.firebaserc
+firebase.json
+firestore.rules

@@ -1,0 +1,189 @@
+/**
+ * Squad Team — Cloudflare Worker
+ *
+ * Handles API routes; all other requests are served as static assets.
+ *
+ * Required secret (set once via Cloudflare dashboard → Workers → Settings → Variables):
+ *   FIREBASE_SERVICE_ACCOUNT  ← paste the full JSON from Firebase Console →
+ *                               Project Settings → Service accounts →
+ *                               Generate new private key
+ */
+
+const FIREBASE_PROJECT = 'squadteam-55dea';
+const FIREBASE_API_KEY = 'AIzaSyA9I05xscqMsotp_Ke7D9sbHw2pqHP9DQY';
+
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: CORS });
+    }
+
+    if (url.pathname === '/api/admin/resetPin' && request.method === 'POST') {
+      return handleResetPin(request, env);
+    }
+
+    // All non-API requests → static assets
+    return env.ASSETS.fetch(request);
+  },
+};
+
+/* ─── Admin PIN reset ────────────────────────────────────────── */
+
+async function handleResetPin(request, env) {
+  try {
+    if (!env.FIREBASE_SERVICE_ACCOUNT) {
+      return errJson('El worker no tiene configurado FIREBASE_SERVICE_ACCOUNT. Añadilo en Cloudflare → Workers → Settings → Variables.', 503);
+    }
+
+    // 1. Validate caller's Firebase ID token
+    const authHeader = request.headers.get('Authorization') || '';
+    if (!authHeader.startsWith('Bearer ')) return errJson('No autorizado', 401);
+
+    const idToken    = authHeader.slice(7);
+    const callerUid  = await verifyIdToken(idToken);
+    if (!callerUid)  return errJson('Token inválido', 401);
+
+    // 2. Get service-account admin token
+    const adminToken = await getAdminToken(env);
+
+    // 3. Check caller has coach role in Firestore
+    const callerDoc  = await firestoreGet(`users/${callerUid}`, adminToken);
+    if (callerDoc?.role !== 'coach') return errJson('Permitido solo para coaches', 403);
+
+    // 4. Parse body
+    const { athId, newPin } = await request.json();
+    if (!athId || !newPin || String(newPin).trim().length < 4) {
+      return errJson('Parámetros inválidos (athId + newPin mínimo 4 chars)', 400);
+    }
+    const pinStr = String(newPin).trim();
+
+    // 5. Resolve athlete's Firebase Auth UID by email
+    const email   = `${athId}@squadteam.uy`;
+    const athLook = await fetchAdmin(
+      `https://identitytoolkit.googleapis.com/v1/projects/${FIREBASE_PROJECT}/accounts:lookup`,
+      adminToken, { email: [email] }
+    );
+    const athUid  = athLook.users?.[0]?.localId;
+    if (!athUid)  return errJson('Alumno no encontrado en Firebase Auth', 404);
+
+    // 6. Force-update Firebase Auth password (admin, no current password needed)
+    const updateRes = await fetchAdmin(
+      `https://identitytoolkit.googleapis.com/v1/projects/${FIREBASE_PROJECT}/accounts:update`,
+      adminToken, { localId: athUid, password: `sq${pinStr}` }
+    );
+    if (updateRes.error) return errJson(updateRes.error.message || 'Error al actualizar Auth', 500);
+
+    // 7. Sync Firestore pins/{athId}
+    await fetch(
+      `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/pins/${athId}`,
+      {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+        body:    JSON.stringify({ fields: { pin: { stringValue: pinStr } } }),
+      }
+    );
+
+    return okJson({ ok: true, message: 'PIN actualizado correctamente' });
+
+  } catch (e) {
+    return errJson(e.message || 'Error interno', 500);
+  }
+}
+
+/* ─── Firebase ID token validation ──────────────────────────── */
+
+async function verifyIdToken(idToken) {
+  // Use Firebase's own lookup endpoint — it validates the token server-side
+  const res  = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${FIREBASE_API_KEY}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken }) }
+  );
+  const data = await res.json();
+  return data.users?.[0]?.localId ?? null;
+}
+
+/* ─── Service account → Google access token ─────────────────── */
+
+async function getAdminToken(env) {
+  const sa  = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT);
+  const now = Math.floor(Date.now() / 1000);
+
+  const header  = b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+  const payload = b64url(JSON.stringify({
+    iss:   sa.client_email,
+    sub:   sa.client_email,
+    aud:   'https://oauth2.googleapis.com/token',
+    scope: 'https://www.googleapis.com/auth/identitytoolkit https://www.googleapis.com/auth/datastore',
+    iat:   now,
+    exp:   now + 3600,
+  }));
+
+  const sigInput = `${header}.${payload}`;
+  const keyPem   = sa.private_key
+    .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+    .replace(/-----END PRIVATE KEY-----/g,   '')
+    .replace(/\n/g, '');
+
+  const keyData  = Uint8Array.from(atob(keyPem), c => c.charCodeAt(0));
+  const cryptoKey = await crypto.subtle.importKey(
+    'pkcs8', keyData,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false, ['sign']
+  );
+  const sigBytes = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', cryptoKey, new TextEncoder().encode(sigInput));
+  const jwt      = `${sigInput}.${b64url_arr(new Uint8Array(sigBytes))}`;
+
+  const tokenRes  = await fetch('https://oauth2.googleapis.com/token', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body:    `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
+  });
+  const tokenData = await tokenRes.json();
+  if (!tokenData.access_token) throw new Error('No se pudo obtener admin token: ' + JSON.stringify(tokenData));
+  return tokenData.access_token;
+}
+
+/* ─── Helpers ────────────────────────────────────────────────── */
+
+async function fetchAdmin(url, adminToken, body) {
+  const res = await fetch(url, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+    body:    JSON.stringify(body),
+  });
+  return res.json();
+}
+
+async function firestoreGet(docPath, adminToken) {
+  const res = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/${docPath}`,
+    { headers: { 'Authorization': `Bearer ${adminToken}` } }
+  );
+  if (!res.ok) return null;
+  const doc = await res.json();
+  if (!doc.fields) return null;
+  return Object.fromEntries(
+    Object.entries(doc.fields).map(([k, v]) => [k, v.stringValue ?? v.integerValue ?? v.booleanValue ?? null])
+  );
+}
+
+function b64url(str) {
+  return btoa(str).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+function b64url_arr(arr) {
+  return btoa(String.fromCharCode(...arr)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+function okJson(data) {
+  return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS } });
+}
+function errJson(msg, code) {
+  return new Response(JSON.stringify({ error: msg }), { status: code, headers: { 'Content-Type': 'application/json', ...CORS } });
+}

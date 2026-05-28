@@ -472,7 +472,7 @@ async function ckSaveForm(){
 
   await ckSave(athId, list);
   ckModalBg().classList.add('hidden');
-  toast('✅ Check-in guardado');
+  toast('Check-in guardado');
   ckLoadAth(athId);
 }
 
@@ -672,7 +672,7 @@ async function ckAthConfirm(athId, ckId_, action){
   ck.athleteConfirmed = true;
   ck.status = 'reviewed';
   await ckSave(athId, list);
-  toast('✅ ¡Confirmado!');
+  toast('Confirmado');
   ckAthleteView(document.getElementById('checkins-content'), currentUser);
 }
 
@@ -702,7 +702,7 @@ async function ckAthSendDoubt(athId, ckId_){
   ck.status = 'needs_response';
   await ckSave(athId, list);
   document.getElementById('ck-doubt-bg').classList.add('hidden');
-  toast('✅ Pregunta enviada');
+  toast('Pregunta enviada');
   ckAthleteView(document.getElementById('checkins-content'), currentUser);
 }
 

@@ -410,7 +410,7 @@ async function runStatsSync(athId){
     const stats = await stSyncStats(athId, url, logLine);
     logLine(`<br>✅ <strong style="color:var(--acc)">${stats.exercises.length} ejercicios importados</strong>`);
     if(btn){ btn.textContent='Re-sincronizar'; btn.disabled=false; }
-    toast(`✅ Stats de ${athletes.find(x=>x.id===athId)?.name||athId} actualizadas`);
+    toast(`Stats de ${athletes.find(x=>x.id===athId)?.name||athId} actualizadas`);
 
     // Refresh display if stats section open
     if(currentSection==='progreso') renderProgreso();

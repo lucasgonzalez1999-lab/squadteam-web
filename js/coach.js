@@ -965,7 +965,7 @@ async function _naConfirm(){
 
     _naClose();
     renderAlumnos();
-    toast(`✅ ${data.name} creado — PIN ${data.pin}`);
+    toast(`${data.name} creado — PIN ${data.pin}`);
   } catch(e){
     btn.disabled=false; btn.textContent='Crear alumno'; backBtn.disabled=false;
     const msg=e.code==='auth/email-already-in-use'?'Ya existe una cuenta con ese nombre (ID duplicado). Cambiá el nombre ligeramente.'
@@ -1134,7 +1134,7 @@ async function _eaChangePin(athId){
     const data = await res.json();
     if(!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
     document.getElementById('ea-new-pin').value = '';
-    show('PIN actualizado correctamente ✓', true);
+    show('PIN actualizado', true);
   } catch(e){
     show(e.message || 'Error inesperado');
   } finally {
@@ -1163,8 +1163,8 @@ async function _saveEditAthlete(id){
   DB.set('athletes', athletes);
   try{
     await window.db.collection('config').doc('athletes').set({ list: JSON.stringify(athletes) });
-    toast(`✅ ${a.name} actualizado`);
-  }catch(e){ toast(`✅ ${a.name} guardado localmente`); }
+    toast(`${a.name} actualizado`);
+  }catch(e){ toast(`${a.name} guardado localmente`); }
   document.getElementById('edit-ath-ov')?.remove();
   renderAlumnos();
 }
@@ -1253,10 +1253,10 @@ function deleteSession(athId, idx, btn){
       sessions[athId]=ss;
       DB.set('sessions',sessions);
       window.db?.collection('sessions').doc(athId).set({data:JSON.stringify(ss)}).then(()=>{
-        toast('✅ Sesión eliminada');
+        toast('Sesión eliminada');
         showAthSessions(athId);
       }).catch(()=>{
-        toast('✅ Eliminada localmente');
+        toast('Eliminada localmente');
         showAthSessions(athId);
       });
     }
@@ -1994,7 +1994,7 @@ async function xlsxImport(){
     sessions[athId] = newSessions;
     DB.set('sessions', sessions);
     await window.db?.collection('sessions').doc(athId).set({data:JSON.stringify(newSessions)});
-    toast('✅ Sesión de '+a.name+' importada!');
+    toast('Sesión de '+a.name+' importada');
     if(status) status.innerHTML = '<span style="color:#16a34a">✅ '+exercises.length+' ejercicios importados para '+a.name+' el '+date+'</span>';
   }catch(e){
     toast('Error al guardar');

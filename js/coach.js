@@ -1092,15 +1092,24 @@ function openEditAthleteModal(id){
       </div>
       <div style="border-top:1px solid var(--border);padding-top:14px">
         <div style="${lbl}">Cambiar PIN</div>
-        <div style="display:flex;gap:8px;margin-top:6px">
-          <input id="ea-new-pin" type="password" placeholder="Contraseña nueva (mín. 4 caracteres)"
-            style="${inp};flex:1">
-          <button id="ea-pin-btn" onclick="_eaChangePin('${a.id}')"
-            style="padding:10px 14px;background:var(--surf2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">
-            Actualizar
-          </button>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
+          <input id="ea-current-pin" type="password" autocomplete="off"
+            placeholder="PIN actual del alumno (si lo recordás)"
+            style="${inp}">
+          <div style="display:flex;gap:8px">
+            <input id="ea-new-pin" type="password" autocomplete="new-password"
+              placeholder="Contraseña nueva (mín. 4 caracteres)"
+              style="${inp};flex:1">
+            <button id="ea-pin-btn" onclick="_eaChangePin('${a.id}')"
+              style="padding:10px 14px;background:var(--surf2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">
+              Actualizar
+            </button>
+          </div>
         </div>
         <div id="ea-pin-msg" style="font-size:11px;margin-top:6px;display:none"></div>
+        <div style="font-size:10px;color:var(--sub);margin-top:6px;line-height:1.4">
+          Si el alumno no recuerda su PIN actual, pedíselo. Una vez actualizado queda guardado para futuros cambios.
+        </div>
       </div>
     </div>
     <div style="padding:14px 22px 20px;display:flex;gap:8px;border-top:1px solid var(--border);flex-shrink:0">
@@ -1112,35 +1121,47 @@ function openEditAthleteModal(id){
 }
 
 async function _eaChangePin(athId){
-  const newPin = String(document.getElementById('ea-new-pin')?.value||'').trim();
+  const newPin       = String(document.getElementById('ea-new-pin')?.value||'').trim();
+  const currentInput = String(document.getElementById('ea-current-pin')?.value||'').trim();
   const msgEl  = document.getElementById('ea-pin-msg');
   const btn    = document.getElementById('ea-pin-btn');
   const show   = (txt, ok) => { msgEl.textContent=txt; msgEl.style.color=ok?'#22c55e':'#ef4444'; msgEl.style.display='block'; };
 
-  if(newPin.length < 4){ show('Mínimo 4 caracteres'); return; }
+  if(newPin.length < 4){ show('Mínimo 4 caracteres en la nueva contraseña'); return; }
 
   btn.disabled=true; btn.textContent='Cambiando...'; msgEl.style.display='none';
   try{
     const pinDoc = await window.db.collection('pins').doc(athId).get();
     const stored = pinDoc.data()?.pin;
-    if(!stored){ show('PIN original no guardado. Recreá el alumno para poder cambiarlo.'); return; }
+    // Prioridad: lo que tipeó el coach > lo que tenemos guardado.
+    // Si nada de eso existe, no podemos re-autenticar.
+    const useCurrent = currentInput || stored;
+    if(!useCurrent){
+      show('Ingresá el PIN actual del alumno arriba para poder cambiarlo');
+      return;
+    }
 
     const secondaryApp = firebase.initializeApp(firebase.app().options,'pin_chg_'+Date.now());
     const secondaryAuth = secondaryApp.auth();
     try{
-      const cred = await secondaryAuth.signInWithEmailAndPassword(`${athId}@squadteam.uy`, `sq${stored}`);
+      const cred = await secondaryAuth.signInWithEmailAndPassword(`${athId}@squadteam.uy`, `sq${useCurrent}`);
       await cred.user.updatePassword(`sq${newPin}`);
       await window.db.collection('pins').doc(athId).set({pin:newPin});
-      document.getElementById('ea-new-pin').value='';
+      const cur = document.getElementById('ea-current-pin'); if(cur) cur.value='';
+      const nw  = document.getElementById('ea-new-pin');     if(nw)  nw.value='';
       show('PIN actualizado correctamente', true);
     } finally {
       await secondaryAuth.signOut().catch(()=>{});
       await secondaryApp.delete().catch(()=>{});
     }
   } catch(e){
-    const msg = e.code==='auth/wrong-password'?'PIN guardado no coincide con Firebase'
-      : e.code==='auth/user-not-found'?'Usuario no encontrado'
-      : e.message;
+    const code = e && e.code;
+    const msg = code==='auth/wrong-password' || code==='auth/invalid-credential'
+        ? 'El PIN actual no coincide. Pedíselo al alumno y reintentá.'
+      : code==='auth/user-not-found'    ? 'Este alumno no tiene cuenta en Firebase Auth.'
+      : code==='auth/too-many-requests' ? 'Demasiados intentos. Esperá unos minutos.'
+      : code==='auth/requires-recent-login' ? 'Sesión vencida. Cerrá y volvé a entrar.'
+      : (e && e.message) || 'Error inesperado';
     show(msg);
   } finally {
     btn.disabled=false; btn.textContent='Actualizar';

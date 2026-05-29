@@ -610,6 +610,11 @@ function _pbNormStr(s){
     .replace(/\btric(eps)?\b/g,'triceps')
     .replace(/\bbic(eps)?\b/g,'biceps')
     .replace(/\belev(acion)?\b/g,'elevacion')
+    .replace(/\bvuelos?\s+laterales?\b/g,'elevacion lateral')
+    .replace(/\bvuelos?\s+frontales?\b/g,'elevacion frontal')
+    .replace(/\bvuelos?\s+posteriores?\b/g,'vuelos posteriores')
+    .replace(/\bhombro\s+posterior\b/g,'vuelos posteriores')
+    .replace(/\bfondos?\s+libres?\b/g,'fondos paralelas')
     .replace(/[\s\-_/]+/g,' ')
     .trim();
 }

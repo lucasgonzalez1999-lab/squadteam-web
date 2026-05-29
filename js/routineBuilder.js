@@ -334,10 +334,13 @@ function pbRenderEditor(cont){
 }
 
 function pbRenderExCard(ex, ei, wl, color){
-  const rir_opts=['RIR 3-4','RIR 2-3','RIR 1-2','RIR 0-1','DELOAD','—'];
+  const base_opts=['RIR 3-4','RIR 2-3','RIR 1-2','RIR 0-1','DELOAD','—'];
   const rows=wl.map(wk=>{
     const wd=ex.weekData?.[wk]||{};
     const isDL=wk==='DL';
+    const current=wd.rir||(isDL?'DELOAD':'RIR 2-3');
+    // Si el RIR no está en la lista base, agregarlo dinámicamente
+    const rir_opts=base_opts.includes(current)?base_opts:[current,...base_opts];
     return `<tr style="border-top:1px solid var(--border)">
       <td style="padding:5px 8px 5px 0;font-size:11px;font-weight:700;color:${isDL?'#ca8a04':color};white-space:nowrap">${wk}</td>
       <td style="padding:4px 3px">
@@ -353,7 +356,7 @@ function pbRenderExCard(ex, ei, wl, color){
       <td style="padding:4px 3px">
         <select oninput="pbSetWeek(${ei},'${wk}','rir',this.value)"
           style="background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:4px 6px;color:var(--text);font-family:inherit;font-size:11px;max-width:90px">
-          ${rir_opts.map(r=>`<option value="${r}" ${(wd.rir||(isDL?'DELOAD':'RIR 2-3'))===r?'selected':''}>${r}</option>`).join('')}
+          ${rir_opts.map(r=>`<option value="${r}" ${current===r?'selected':''}>${r}</option>`).join('')}
         </select>
       </td>
     </tr>`;

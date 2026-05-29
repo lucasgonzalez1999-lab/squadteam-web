@@ -353,18 +353,20 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; -webkit
     </div>
     <div class="sq-form-title" id="sq-form-title">Bienvenido.</div>
     <div class="sq-form-sub" id="sq-form-sub">Ingresá tus credenciales.</div>
-    <div class="sq-field">
-      <label class="sq-label">USUARIO</label>
-      <input id="sq-user" class="sq-input" type="text" placeholder="tu nombre"
-        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-    </div>
-    <div class="sq-field">
-      <label class="sq-label">CONTRASEÑA</label>
-      <input id="sq-pin" class="sq-input" type="password"
-        placeholder="••••••" autocomplete="current-password">
-    </div>
-    <div class="sq-err-msg" id="sq-err">Usuario o contraseña incorrecta</div>
-    <button class="sq-btn" id="sq-btn" onclick="sqSubmit()">ENTRAR</button>
+    <form onsubmit="event.preventDefault(); sqSubmit(); return false;" style="display:contents">
+      <div class="sq-field">
+        <label class="sq-label">USUARIO</label>
+        <input id="sq-user" class="sq-input" type="text" placeholder="tu nombre"
+          autocomplete="username" autocorrect="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="sq-field">
+        <label class="sq-label">CONTRASEÑA</label>
+        <input id="sq-pin" class="sq-input" type="password"
+          placeholder="••••••" autocomplete="current-password">
+      </div>
+      <div class="sq-err-msg" id="sq-err">Usuario o contraseña incorrecta</div>
+      <button class="sq-btn" id="sq-btn" type="submit">ENTRAR</button>
+    </form>
     <div class="sq-back" onclick="sqBack()">← Volver</div>
   </div>
 

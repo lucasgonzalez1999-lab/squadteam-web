@@ -4,7 +4,7 @@
 'use strict';
 
 // VAPID public key — obtenida en Firebase Console → Project Settings → Cloud Messaging → Web Push certificates.
-const VAPID_PUBLIC_KEY = 'BCl09mTtNgL7tBjxe4M6lQiNGmgL4MJ6cMlAxsTBupQDpY-zVrNUaYwjeIbE1bw7Ow1jKkjijBLfHzbB9R-AhsM';
+const VAPID_PUBLIC_KEY = 'BK_WH8G58vElD4c8S6X-Il6Pmsm7y-u3TEUzZgi9O47aeIvTSgmVtcMSN0sx8JmIMKwiq5Yk2jANWLPaQO0sdbA';
 
 let _messaging = null;
 

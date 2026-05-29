@@ -150,14 +150,27 @@ async function handleResetPin(request, env) {
     let athUid = athLook.users?.[0]?.localId;
 
     if (!athUid) {
-      // Account doesn't exist yet — create via public signUp endpoint (no admin perms needed)
+      // Account may not exist yet — try to create via public signUp
       const createRes = await fetch(
         `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_API_KEY}`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password: `sq${pinStr}`, returnSecureToken: false }) }
       ).then(r => r.json());
-      if (createRes.error) return errJson('No se pudo crear cuenta: ' + (createRes.error.message || 'error'), 500);
-      athUid = createRes.localId;
+
+      if (createRes.localId) {
+        athUid = createRes.localId;
+      } else if (createRes.error?.message === 'EMAIL_EXISTS') {
+        // Account exists but admin lookup couldn't find it → IAM permission issue
+        const lookupErr = athLook.error?.message || 'lookup returned no users';
+        return errJson(
+          'La service account no puede leer Firebase Auth (' + lookupErr + '). ' +
+          'Agrega el rol "Firebase Authentication Admin" en Google Cloud Console → IAM ' +
+          'a la service account, esperá 1 min y volvé a intentar.',
+          500
+        );
+      } else {
+        return errJson('No se pudo crear cuenta: ' + (createRes.error?.message || 'error'), 500);
+      }
     }
 
     // 6. Force-update Firebase Auth password (admin, no current password needed)

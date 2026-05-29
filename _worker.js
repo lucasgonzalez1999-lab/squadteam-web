@@ -150,11 +150,12 @@ async function handleResetPin(request, env) {
     let athUid = athLook.users?.[0]?.localId;
 
     if (!athUid) {
-      // Account doesn't exist yet — create it
-      const createRes = await fetchAdmin(
-        `https://identitytoolkit.googleapis.com/v1/projects/${FIREBASE_PROJECT}/accounts`,
-        adminToken, { email, password: `sq${pinStr}`, displayName: athId }
-      );
+      // Account doesn't exist yet — create via public signUp endpoint (no admin perms needed)
+      const createRes = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_API_KEY}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password: `sq${pinStr}`, returnSecureToken: false }) }
+      ).then(r => r.json());
       if (createRes.error) return errJson('No se pudo crear cuenta: ' + (createRes.error.message || 'error'), 500);
       athUid = createRes.localId;
     }

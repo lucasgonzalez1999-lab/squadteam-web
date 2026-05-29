@@ -119,9 +119,10 @@ async function handleResetPin(request, env) {
     // 2. Get service-account admin token
     const adminToken = await getAdminToken(env);
 
-    // 3. Check caller has coach role in Firestore
+    // 3. Check caller has coach or owner role in Firestore
     const callerDoc  = await firestoreGet(`users/${callerUid}`, adminToken);
-    if (callerDoc?.role !== 'coach') return errJson('Permitido solo para coaches', 403);
+    const isAllowed  = callerDoc?.role === 'coach' || callerDoc?.role === 'owner' || callerDoc?.isOwner === true || callerDoc?.isOwner === 'true';
+    if (!isAllowed) return errJson('Permitido solo para coaches', 403);
 
     // 4. Parse body
     const { athId, newPin } = await request.json();

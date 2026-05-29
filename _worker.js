@@ -119,11 +119,19 @@ async function handleResetPin(request, env) {
     // 2. Get service-account admin token
     const adminToken = await getAdminToken(env);
 
-    // 3. Check caller has coach or owner role in Firestore
-    const callerDoc  = await firestoreGet(`users/${callerUid}`, adminToken);
-    const isAllowed  = callerDoc?.role === 'coach' || callerDoc?.role === 'owner' || callerDoc?.isOwner === true || callerDoc?.isOwner === 'true';
-    if (!isAllowed) {
-      return errJson(`Permitido solo para coaches (uid=${callerUid}, role=${callerDoc?.role||'null'}, isOwner=${callerDoc?.isOwner ?? 'null'}, doc=${callerDoc?'ok':'missing'})`, 403);
+    // 3. Check caller has coach or owner role
+    // Primary: Firestore users/{uid}.role === 'coach'|'owner'
+    // Fallback: COACH_UIDS env var (comma-separated list of allowed UIDs)
+    const callerDoc   = await firestoreGet(`users/${callerUid}`, adminToken);
+    const fsAllowed   = callerDoc?.role === 'coach' || callerDoc?.role === 'owner' || callerDoc?.isOwner === true || callerDoc?.isOwner === 'true';
+    const envAllowed  = (env.COACH_UIDS || '').split(',').map(s => s.trim()).filter(Boolean).includes(callerUid);
+    if (!fsAllowed && !envAllowed) {
+      return errJson(
+        `Permitido solo para coaches. ` +
+        `(uid=${callerUid}, doc=${callerDoc ? 'ok' : 'missing'}, role=${callerDoc?.role ?? 'null'}) ` +
+        `Agrega tu UID a la variable COACH_UIDS en Cloudflare si tu doc de Firestore no tiene role:coach.`,
+        403
+      );
     }
 
     // 4. Parse body

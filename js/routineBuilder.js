@@ -849,6 +849,25 @@ function pbParseCSV(text, dayOverride=null){
       continue;
     }
 
+    // RIR-by-week row → "RIR" en col + valores por columna (uno por semana)
+    if(lastRow && /^rir\b/i.test(exVal)){
+      const perWeek=[];
+      for(let cIdx=1;cIdx<line.length;cIdx++){
+        const v=(line[cIdx]||'').trim();
+        if(!v) continue;
+        // Acepta "2-3", "RIR 2-3", "DELOAD", "0", etc.
+        if(/^(rir\s*)?[\d\-–\sa]+$/i.test(v) || /deload/i.test(v)){
+          perWeek.push(pbNormRIR(v));
+        }
+      }
+      if(perWeek.length>=2){
+        lastRow.rir_by_week=perWeek;
+        lastRow.rir=perWeek[0];
+        lastRow._rirFound=true;
+      }
+      continue;
+    }
+
     // Skip known non-exercise labels
     if(_pbSkip(exVal)) continue;
 
@@ -940,7 +959,10 @@ function pbConfirmImport(replace=true){
       const weekData={};
       wl.forEach((wk,i)=>{
         const isDL=wk==='DL';
-        weekData[wk]={series:parseInt(r.sets)||3,reps:isDL?'12-15':r.reps||'8-12',rir:isDL?'DELOAD':r.rir||getRIR(i+1,wl.length)};
+        // Si el archivo trajo RIR por semana, usar ese valor; sino fallback al RIR general o progresión auto
+        const rirFromFile=Array.isArray(r.rir_by_week)?r.rir_by_week[i]:null;
+        const rir=isDL?'DELOAD':(rirFromFile||r.rir||getRIR(i+1,wl.length));
+        weekData[wk]={series:parseInt(r.sets)||3,reps:isDL?'12-15':r.reps||'8-12',rir};
       });
       const ex={name:r.exercise,notes:r.note||'',weekData};
       if(r.startKg) ex.startKg=r.startKg;

@@ -31,8 +31,13 @@ const SQ_AUTH = (() => {
       if(!user){ cb(null); return; }
       try{
         const doc = await window.db.collection('users').doc(user.uid).get();
-        cb(doc.exists ? doc.data() : null);
-      }catch(e){ cb(null); }
+        if(doc.exists){ cb(doc.data()); return; }
+      }catch(e){}
+      // No Firestore doc — try session cache or local athletes list
+      const cached = (typeof DB !== 'undefined') ? DB.get('session') : null;
+      if(cached){ cb(cached); return; }
+      const local = (window._loginUsers || []).find(u => u.id === user.email?.split('@')[0]);
+      cb(local ? { id:local.id, name:local.name, role:local.role||'athlete', color:local.color } : null);
     });
   }
 

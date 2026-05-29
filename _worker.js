@@ -141,14 +141,23 @@ async function handleResetPin(request, env) {
     }
     const pinStr = String(newPin).trim();
 
-    // 5. Resolve athlete's Firebase Auth UID by email
+    // 5. Resolve athlete's Firebase Auth UID by email — create account if missing
     const email   = `${athId}@squadteam.uy`;
     const athLook = await fetchAdmin(
       `https://identitytoolkit.googleapis.com/v1/projects/${FIREBASE_PROJECT}/accounts:lookup`,
       adminToken, { email: [email] }
     );
-    const athUid  = athLook.users?.[0]?.localId;
-    if (!athUid)  return errJson('Alumno no encontrado en Firebase Auth', 404);
+    let athUid = athLook.users?.[0]?.localId;
+
+    if (!athUid) {
+      // Account doesn't exist yet — create it
+      const createRes = await fetchAdmin(
+        `https://identitytoolkit.googleapis.com/v1/projects/${FIREBASE_PROJECT}/accounts`,
+        adminToken, { email, password: `sq${pinStr}`, displayName: athId }
+      );
+      if (createRes.error) return errJson('No se pudo crear cuenta: ' + (createRes.error.message || 'error'), 500);
+      athUid = createRes.localId;
+    }
 
     // 6. Force-update Firebase Auth password (admin, no current password needed)
     const updateRes = await fetchAdmin(

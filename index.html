@@ -460,14 +460,18 @@ function sqSubmit(){
   }
 
   var btn=document.getElementById('sq-btn');
+  if(btn.classList.contains('sq-loading')) return; // guard double submit
   btn.textContent='···'; btn.classList.add('sq-loading');
   errEl.classList.remove('sq-show');
+
+  var resetBtn=function(){ btn.textContent='ENTRAR'; btn.classList.remove('sq-loading'); };
 
   // Firebase Auth — contraseña = 'sq' + pin
   var email=match.id+'@squadteam.uy';
   window.auth.signInWithEmailAndPassword(email,'sq'+pin)
     .then(function(cred){
-      return window.db.collection('users').doc(cred.user.uid).get();
+      return window.db.collection('users').doc(cred.user.uid).get()
+        .catch(function(){ return {exists:false,data:function(){return match;}}; });
     })
     .then(function(doc){
       var profile=doc.exists?doc.data():match;
@@ -476,7 +480,7 @@ function sqSubmit(){
       if(typeof initApp==='function') initApp(profile); else location.reload();
     })
     .catch(function(){
-      btn.textContent='ENTRAR'; btn.classList.remove('sq-loading');
+      resetBtn();
       errEl.classList.add('sq-show');
       pinInp.classList.add('sq-err-inp');
       document.getElementById('sq-auth').classList.add('sq-shake');

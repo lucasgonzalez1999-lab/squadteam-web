@@ -444,13 +444,17 @@ function sqSubmit(){
   var pinInp=document.getElementById('sq-pin');
   if(!uname||!pin){ errEl.classList.add('sq-show'); return; }
 
-  // Buscar usuario por nombre (sin PIN — validación en Firebase Auth)
-  // _loginUsers se carga dinámicamente desde Firebase por renderLogin()
-  var match=(window._loginUsers||_USERS).find(function(u){
+  // Buscar usuario — usar lista cargada si tiene datos, sino fallback a _USERS
+  var list=(window._loginUsers&&window._loginUsers.length)?window._loginUsers:_USERS;
+  var match=list.find(function(u){
     var nameOk=sqNorm(u.name)===sqNorm(uname)||u.id===sqNorm(uname);
     var roleOk=_sqRole==='coach'?u.role==='coach':u.role==='athlete';
     return nameOk&&roleOk;
   });
+  // Si no se encontró pero _loginUsers aún no cargó (race condition), intentar directo
+  if(!match && _sqRole!=='coach'){
+    match={ id:sqNorm(uname), name:uname, role:'athlete', color:'#6366f1' };
+  }
   if(!match){
     errEl.classList.add('sq-show');
     userInp.classList.add('sq-err-inp');

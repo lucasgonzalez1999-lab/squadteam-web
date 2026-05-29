@@ -11,9 +11,14 @@ const SQ_AUTH = (() => {
   async function signIn(userId, pin){
     await window.auth.signInWithEmailAndPassword(toEmail(userId), toPass(pin));
     const uid  = window.auth.currentUser.uid;
-    const doc  = await window.db.collection('users').doc(uid).get();
-    if(!doc.exists) throw new Error('Perfil no encontrado en Firestore');
-    return doc.data(); // {id, name, role, color}
+    try {
+      const doc = await window.db.collection('users').doc(uid).get();
+      if(doc.exists) return doc.data();
+    } catch(e) {}
+    // No Firestore doc yet — build profile from local athletes list
+    const local = (window._loginUsers || []).find(u => u.id === userId);
+    if(local) return { id:local.id, name:local.name, role:local.role||'athlete', color:local.color };
+    throw new Error('Perfil no encontrado');
   }
 
   async function signOut(){

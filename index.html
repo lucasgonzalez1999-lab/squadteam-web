@@ -479,8 +479,9 @@ function sqSubmit(){
       try{ localStorage.setItem('st_session',JSON.stringify(profile)); }catch(e){}
       if(typeof initApp==='function') initApp(profile); else location.reload();
     })
-    .catch(function(){
+    .catch(function(err){
       resetBtn();
+      errEl.textContent = err?.code || 'Usuario o contraseña incorrecta';
       errEl.classList.add('sq-show');
       pinInp.classList.add('sq-err-inp');
       document.getElementById('sq-auth').classList.add('sq-shake');

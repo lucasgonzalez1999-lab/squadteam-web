@@ -190,7 +190,7 @@ async function handleResetPin(request, env) {
       }
     );
 
-    return okJson({ ok: true, message: 'PIN actualizado correctamente' });
+    return okJson({ ok: true, message: 'PIN actualizado correctamente', email });
 
   } catch (e) {
     return errJson(e.message || 'Error interno', 500);

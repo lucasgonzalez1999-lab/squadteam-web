@@ -1134,7 +1134,7 @@ async function _eaChangePin(athId){
     const data = await res.json();
     if(!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
     document.getElementById('ea-new-pin').value = '';
-    show('PIN actualizado', true);
+    show('PIN actualizado · ' + (data.email || athId), true);
   } catch(e){
     show(e.message || 'Error inesperado');
   } finally {

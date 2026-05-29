@@ -606,19 +606,26 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
   }
   .ath-table tr:hover{background:var(--surf2);}
   .ath-table td{display:none;border:none !important;padding:0;}
-  /* Name — full first line */
-  .ath-table td:nth-child(1){display:flex;margin-bottom:10px;padding-right:110px;}
+  /* Name — full first line, allow truncation */
+  .ath-table td:nth-child(1){display:flex;margin-bottom:10px;min-width:0;}
+  .ath-table td:nth-child(1) .ath-cell{min-width:0;flex:1;}
+  .ath-table td:nth-child(1) .ath-cell > div:last-child{min-width:0;flex:1;overflow:hidden;}
+  .ath-table .ath-nm,
+  .ath-table .ath-subs{
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;
+  }
   /* Session, streak, adherence, payment — second line */
   .ath-table td:nth-child(3),
   .ath-table td:nth-child(4),
   .ath-table td:nth-child(5),
   .ath-table td:nth-child(6){display:inline-flex;align-items:center;margin-right:8px;font-size:12px;}
-  /* Actions — absolute top-right */
+  /* Actions — third line, full width row at the bottom */
   .ath-table td:nth-child(8){
-    display:flex;position:absolute;top:10px;right:10px;
+    display:flex;margin-top:10px;justify-content:flex-end;
   }
-  .ath-table td:nth-child(8) .action-btns{gap:4px;}
-  .ath-table td:nth-child(8) .btn-icon{width:30px;height:30px;font-size:13px;}
+  .ath-table td:nth-child(8) .action-btns{gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+  .ath-table td:nth-child(8) .btn-icon{width:32px;height:32px;font-size:13px;}
+  .ath-table td:nth-child(8) .btn-train{padding:7px 12px;font-size:12px;}
 }
 .sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .sec-title{font-size:13px;font-weight:700;color:var(--text);}

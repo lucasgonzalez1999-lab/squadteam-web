@@ -597,16 +597,70 @@ async function pbSave(){
 
 // ── IMPORT FROM SPREADSHEET ──
 
+// Normaliza abreviaciones y tildes para fuzzy match
+function _pbNormStr(s){
+  return s.toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'') // sin tildes
+    .replace(/\bc\/?\s*manc(uernas?)?\b/g,'con mancuernas')
+    .replace(/\bc\/?\s*barra\b/g,'con barra')
+    .replace(/\bmanc\b/g,'mancuernas')
+    .replace(/\bmaq\b/g,'maquina')
+    .replace(/\bmaquina\b/g,'maquina')
+    .replace(/\binc\b/g,'inclinado')
+    .replace(/\btric(eps)?\b/g,'triceps')
+    .replace(/\bbic(eps)?\b/g,'biceps')
+    .replace(/\belev(acion)?\b/g,'elevacion')
+    .replace(/[\s\-_/]+/g,' ')
+    .trim();
+}
+
+// Tipo principal del ejercicio (press, remo, jalon, etc.) — para evitar matches cruzados
+const _PB_TYPES = ['remo','jalon','press','curl','elevacion','vuelos','sentadilla','prensa','peso muerto','fondos','apertura','hip','glute','gemelo','femoral','abdomen','plancha','extension','crunch','encogimiento','face pull','pull over','pullover','pull down','dominadas','zancada','hiperextension','good morning','crossover','patada','aductor','abductor','nordic'];
+
+function _pbTypeOf(n){
+  for(const t of _PB_TYPES) if(n.includes(t)) return t;
+  return null;
+}
+
 function pbFuzzyMatchEx(name){
   if(!name||!name.trim()) return name;
   const all=pbAllEx();
-  const n=name.toLowerCase().trim();
-  let m=all.find(e=>e.name.toLowerCase()===n); if(m) return m.name;
-  m=all.find(e=>e.name.toLowerCase().includes(n)); if(m) return m.name;
-  m=all.find(e=>n.includes(e.name.toLowerCase())); if(m) return m.name;
-  const words=n.split(/[\s\-_/]+/).filter(w=>w.length>3);
-  m=all.find(e=>words.some(w=>e.name.toLowerCase().includes(w))); if(m) return m.name;
-  return name;
+  const n=_pbNormStr(name);
+  if(!n) return name;
+
+  // 1. Match exacto (normalizado)
+  let m=all.find(e=>_pbNormStr(e.name)===n);
+  if(m) return m.name;
+
+  const inputType=_pbTypeOf(n);
+  const inputWords=n.split(' ').filter(w=>w.length>=3);
+
+  // 2. Scoring — priorizar mismo tipo y mayor coincidencia de palabras
+  let bestMatch=null, bestScore=0;
+  for(const e of all){
+    const en=_pbNormStr(e.name);
+    const enWords=en.split(' ').filter(w=>w.length>=3);
+    const exType=_pbTypeOf(en);
+
+    let score=0;
+    // Penaliza fuertemente si los tipos son diferentes (remo vs jalon, press vs curl)
+    if(inputType && exType && inputType!==exType) continue;
+
+    // Cuenta palabras compartidas
+    for(const w of inputWords){
+      if(enWords.includes(w)) score+=3;
+      else if(enWords.some(ew=>ew.startsWith(w)||w.startsWith(ew))) score+=1;
+    }
+    // Bonus si el input contiene el nombre completo o viceversa
+    if(en.includes(n)||n.includes(en)) score+=2;
+    // Bonus si todas las palabras clave del candidato están en el input
+    if(enWords.length && enWords.every(ew=>inputWords.some(iw=>iw.startsWith(ew)||ew.startsWith(iw)))) score+=3;
+
+    if(score>bestScore){ bestScore=score; bestMatch=e.name; }
+  }
+
+  // Solo aceptar si el score es suficientemente alto
+  return bestScore>=3 ? bestMatch : name;
 }
 
 function pbNormRIR(val){

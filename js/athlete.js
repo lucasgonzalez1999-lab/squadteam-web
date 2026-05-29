@@ -88,14 +88,31 @@ function renderAthHoy(id){
   }
 
   // ── Push notifications opt-in ──
-  if(window.SQ_PUSH && SQ_PUSH.supported() && SQ_PUSH.permission() === 'default'){
-    html+=`<div id="push-optin" style="background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-top:var(--s2);display:flex;align-items:center;gap:12px">
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;color:var(--text)">Notificaciones</div>
-        <div style="font-size:11px;color:var(--sub);margin-top:2px">Avisame cuando el coach actualice mi plan</div>
-      </div>
-      <button onclick="enablePushForMe('${id}')" style="background:var(--acc);color:#000;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">Activar</button>
-    </div>`;
+  if(window.SQ_PUSH){
+    const sup = SQ_PUSH.supported();
+    const perm = SQ_PUSH.permission();
+    if(!sup){
+      html+=`<div style="background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-top:var(--s2)">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Notificaciones</div>
+        <div style="font-size:11px;color:var(--sub);line-height:1.5">Este navegador no soporta push. En iOS necesitás iOS 16.4+ y la app agregada a pantalla de inicio.</div>
+      </div>`;
+    } else if(perm === 'default'){
+      html+=`<div id="push-optin" style="background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-top:var(--s2);display:flex;align-items:center;gap:12px">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--text)">Notificaciones</div>
+          <div style="font-size:11px;color:var(--sub);margin-top:2px">Avisame cuando el coach actualice mi plan</div>
+        </div>
+        <button onclick="enablePushForMe('${id}')" style="background:var(--acc);color:#000;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">Activar</button>
+      </div>`;
+    } else if(perm === 'denied'){
+      html+=`<div style="background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-top:var(--s2)">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Notificaciones bloqueadas</div>
+        <div style="font-size:11px;color:var(--sub);line-height:1.5">Habilitalas desde ajustes del navegador para recibir avisos del coach.</div>
+      </div>`;
+    } else if(perm === 'granted'){
+      // intentar re-sincronizar token silenciosamente
+      SQ_PUSH.enableFor(id).catch(()=>{});
+    }
   }
 
   cont.innerHTML=html;

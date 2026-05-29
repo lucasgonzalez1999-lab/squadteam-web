@@ -849,17 +849,20 @@ function pbParseCSV(text, dayOverride=null){
       continue;
     }
 
-    // RIR-by-week row → "RIR" en col + valores por columna (uno por semana)
-    if(lastRow && /^rir\b/i.test(exVal)){
+    // RIR-by-week row → "RIR" / "RIR EN RESERVA" / "RIR (rep en reserva)" en col + valores por columna
+    if(lastRow && /^\s*rir\b/i.test(exVal)){
       const perWeek=[];
-      for(let cIdx=1;cIdx<line.length;cIdx++){
+      // Buscar valores RIR en todas las columnas posteriores al label
+      const startCol=Math.max(1,(ci.ex||0)+1);
+      for(let cIdx=startCol;cIdx<line.length;cIdx++){
         const v=(line[cIdx]||'').trim();
         if(!v) continue;
-        // Acepta "2-3", "RIR 2-3", "DELOAD", "0", etc.
-        if(/^(rir\s*)?[\d\-–\sa]+$/i.test(v) || /deload/i.test(v)){
+        // "2-3", "0-1", "0", "1", "DELOAD", "RIR 2-3", "rir 0-1" → válido
+        if(/^(rir\s*)?(\d+\s*[-–]\s*\d+|\d+)$/i.test(v) || /^deload$/i.test(v)){
           perWeek.push(pbNormRIR(v));
         }
       }
+      console.log('[sq:import:rir]', lastRow.exercise, '→', perWeek);
       if(perWeek.length>=2){
         lastRow.rir_by_week=perWeek;
         lastRow.rir=perWeek[0];

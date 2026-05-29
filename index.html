@@ -470,6 +470,13 @@ function sqSubmit(){
 
   var resetBtn=function(){ btn.textContent='ENTRAR'; btn.classList.remove('sq-loading'); };
 
+  // Safety timeout — si algo cuelga después de 12s, libera el botón con un mensaje
+  var timeoutId = setTimeout(function(){
+    resetBtn();
+    errEl.textContent = 'Tiempo agotado — probá de nuevo';
+    errEl.classList.add('sq-show');
+  }, 12000);
+
   // Firebase Auth — contraseña = 'sq' + pin
   var email=match.id+'@squadteam.uy';
   window.auth.signInWithEmailAndPassword(email,'sq'+pin)
@@ -478,14 +485,23 @@ function sqSubmit(){
         .catch(function(){ return {exists:false,data:function(){return match;}}; });
     })
     .then(function(doc){
+      clearTimeout(timeoutId);
       var profile=doc.exists?doc.data():match;
       try{ localStorage.setItem('sq_lu_'+_sqRole, match.name); }catch(e){}
       try{ localStorage.setItem('st_session',JSON.stringify(profile)); }catch(e){}
-      if(typeof initApp==='function') initApp(profile); else location.reload();
+      try {
+        if(typeof initApp==='function') initApp(profile); else location.reload();
+      } catch(e) {
+        resetBtn();
+        errEl.textContent = 'Error iniciando app: ' + (e?.message || e);
+        errEl.classList.add('sq-show');
+        console.error('[sq:initApp]', e);
+      }
     })
     .catch(function(err){
+      clearTimeout(timeoutId);
       resetBtn();
-      errEl.textContent = err?.code || 'Usuario o contraseña incorrecta';
+      errEl.textContent = err?.code || err?.message || 'Usuario o contraseña incorrecta';
       errEl.classList.add('sq-show');
       pinInp.classList.add('sq-err-inp');
       document.getElementById('sq-auth').classList.add('sq-shake');

@@ -34,7 +34,7 @@ async function pgSaveReminderLog(athId, list){
 
 function pgSaveAthletes(){
   DB.set('athletes', athletes);
-  window.db?.collection('config').doc('athletes').set({list:JSON.stringify(athletes)}).catch(()=>{});
+  swallow(window.db?.collection('config').doc('athletes').set({list:JSON.stringify(athletes)}), 'pagos:saveAthletes');
 }
 
 // ── STATUS CALCULATOR ─────────────────────────────────────────────────────────
@@ -545,7 +545,7 @@ async function pgMarkReminderSent(athId){
   const log = await pgGetReminderLog(athId);
   const calc = payCalc(a);
   log.unshift({ date: today, status: calc.status, amount: a.payment?.amount, ts: new Date().toISOString() });
-  pgSaveReminderLog(athId, log.slice(0, 50)).catch(()=>{});
+  swallow(pgSaveReminderLog(athId, log.slice(0, 50)), 'pagos:reminderLog');
 }
 
 // ── MODAL HELPERS ──────────────────────────────────────────────────────────────

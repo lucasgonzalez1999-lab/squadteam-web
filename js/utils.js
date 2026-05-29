@@ -2,6 +2,17 @@
 // SQUAD TEAM — Utilities
 // ═══════════════════════════════════════════
 
+// ── ERROR LOGGING ──
+// Envuelve promesas fire-and-forget para que los errores queden en consola
+// con contexto. Reemplaza el patrón `.catch(()=>{})` que silencia todo.
+// Uso: swallow(window.db.collection('x').set(y), 'savePlan')
+function swallow(promise, ctx){
+  return Promise.resolve(promise).catch(e => {
+    console.warn('[sq:'+(ctx||'?')+']', e?.code || e?.message || e);
+  });
+}
+window.swallow = swallow;
+
 // ── DATE ──
 function today(){ return new Date().toISOString().split('T')[0]; }
 function fmtDate(d){ return new Date(d+'T12:00:00').toLocaleDateString('es-UY',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase(); }

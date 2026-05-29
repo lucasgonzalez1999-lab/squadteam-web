@@ -1401,7 +1401,7 @@ function saveDietEdit(id){
   const kcal=Math.round(p*4+c*4+f*9);
   const newDiet={prot:p,carbs:c,fat:f,kcal};
   DB.set('diet_'+id,newDiet);
-  window.db?.collection('diets').doc(id).set(newDiet).catch(()=>{});
+  swallow(window.db?.collection('diets').doc(id).set(newDiet), 'coach:saveDiet');
   document.getElementById('diet-edit-ov')?.remove();
   toast(`✓ Dieta de ${a.name} actualizada — ${kcal} kcal`);
   renderNutricion();

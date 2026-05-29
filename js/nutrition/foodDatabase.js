@@ -135,4 +135,4 @@ const FoodDB = {
 };
 
 // Pre-load cache
-FoodDB.getAll().then(()=>{}).catch(()=>{});
+FoodDB.getAll().then(()=>{}).catch(e => console.warn('[sq:foodDB:initialLoad]', e?.code || e?.message || e));

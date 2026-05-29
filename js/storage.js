@@ -129,7 +129,7 @@ async function pullFromFirebase(){
           sessions[a.id]=merged.sort((x,y)=>(y.date||'').localeCompare(x.date||''));
           // Re-push to Firestore if local had unsaved sessions
           if(merged.length>remote.length){
-            fbSet('sessions',a.id,{data:JSON.stringify(sessions[a.id])}).catch(()=>{});
+            swallow(fbSet('sessions',a.id,{data:JSON.stringify(sessions[a.id])}), 'sync:sessions:'+a.id);
           }
         }
       }
@@ -153,7 +153,7 @@ async function pullFromFirebase(){
               if(!cr.some(rs=>(rs.id||(rs.date+'_'+(rs.dia||rs.name||'')))=== lk)) cm.push(ls);
             }
             sessions[cid]=cm.sort((x,y)=>(y.date||'').localeCompare(x.date||''));
-            if(cm.length>cr.length) fbSet('sessions',cid,{data:JSON.stringify(sessions[cid])}).catch(()=>{});
+            if(cm.length>cr.length) swallow(fbSet('sessions',cid,{data:JSON.stringify(sessions[cid])}), 'sync:sessions:'+cid);
           }
         }
       }

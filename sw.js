@@ -1,4 +1,4 @@
-const CACHE = 'squadteam-v5';
+const CACHE = 'squadteam-v6';
 const STATIC = [
   '/',
   '/css/main.css?v=4',

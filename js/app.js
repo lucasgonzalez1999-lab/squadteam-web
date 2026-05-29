@@ -794,7 +794,7 @@ function renderAthleteView(user) {
 // ── ATHLETE UNITS SETTING ──
 function setAthUnits(athId, units){
   DB.set('units_'+athId, units);
-  if(window.db) window.db.collection('athletes').doc(athId).set({units},{merge:true}).catch(()=>{});
+  if(window.db) swallow(window.db.collection('athletes').doc(athId).set({units},{merge:true}), 'app:saveUnits');
   if(currentUser&&currentUser.id===athId) renderAthleteView(currentUser);
 }
 

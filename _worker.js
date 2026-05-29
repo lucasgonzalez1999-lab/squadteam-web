@@ -180,14 +180,14 @@ async function handleResetPin(request, env) {
     );
     if (updateRes.error) return errJson(updateRes.error.message || 'Error al actualizar Auth', 500);
 
-    // 7. Verify new password actually works
+    // 7. Verify new password actually works (returnSecureToken:true is required for real validation)
     const verifyRes = await fetch(
       `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: `sq${pinStr}`, returnSecureToken: false }) }
+        body: JSON.stringify({ email, password: `sq${pinStr}`, returnSecureToken: true }) }
     ).then(r => r.json());
-    if (verifyRes.error) {
-      return errJson(`Auth update seemed ok but login failed: ${verifyRes.error.message}`, 500);
+    if (verifyRes.error || !verifyRes.idToken) {
+      return errJson(`PIN guardado pero verificación falló: ${verifyRes.error?.message || 'sin token'}. Intenta de nuevo.`, 500);
     }
 
     // 8. Sync Firestore pins/{athId}

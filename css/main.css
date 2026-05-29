@@ -542,6 +542,39 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
   box-shadow:0 0 0 1px rgba(217,255,0,0.35), 0 0 18px rgba(217,255,0,0.35);
 }
 .btn-train:active{transform:scale(0.97);}
+
+/* ── Training mode chips ──────────────────── */
+.tr-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 9px;border-radius:100px;
+  border:1.5px solid transparent;
+  background:#1a2233;color:#64748b;
+  font-size:11px;font-weight:700;
+  cursor:pointer;font-family:var(--F);
+  white-space:nowrap;transition:all .15s;
+  letter-spacing:.3px;
+}
+.tr-chip.active{
+  background:#e8ff0010;
+  border-color:#e8ff0055;
+  color:#e8ff00;
+}
+.tr-chip-dot{
+  width:7px;height:7px;
+  border-radius:50%;flex-shrink:0;
+}
+.tr-chip-x{
+  font-size:14px;line-height:1;
+  opacity:.4;margin-left:1px;
+  transition:opacity .1s;
+}
+.tr-chip:hover .tr-chip-x{opacity:.9;}
+#training-chips::-webkit-scrollbar{display:none;}
+#training-add-btn:hover{
+  border-color:#e8ff0044 !important;
+  color:#e8ff0077 !important;
+}
+
 .see-all-wrap{text-align:center;padding-top:10px;border-top:1px solid var(--border);margin-top:4px;}
 .btn-see-all{
   background:none;border:none;color:var(--text2);

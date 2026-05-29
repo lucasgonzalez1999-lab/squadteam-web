@@ -184,7 +184,12 @@ async function initApp(user) {
   curLive = athletes[0]?.id || '';
 
   // Route by role
-  if (user.role === 'coach') {
+  if (user.role === 'coach' || user.role === 'owner') {
+    window.isOwner = !!(user.isOwner || user.role === 'owner');
+    const fr = document.getElementById('foot-role');
+    if (fr) fr.textContent = window.isOwner ? 'Admin' : 'Entrenador';
+    const badge = document.getElementById('owner-badge');
+    if (badge) badge.style.display = window.isOwner ? 'inline-block' : 'none';
     showCoachUI();
     renderDashboard();
     const ok = await pullFromFirebase();
@@ -1097,10 +1102,13 @@ function exportAthleteCard(athId){
 // El coach asume la identidad del alumno para cargar sets desde su panel.
 // Se usa para entrenamientos presenciales: la sesión queda guardada en el
 // alumno correcto (PRs, perfil muscular, gráficos), y se taggea con
-// source: 'coach-presencial' para distinguirla.
+// ── MODO ENTRENAR — stack multi-alumno ───────────────────────
+// miRutina.js y otros módulos leen _coachOriginalProfile para
+// detectar que el coach está en modo entrenar y taggear la sesión.
 let _previewCoachProfile = null;
+let _trainingStack = []; // [{athId, name, color, profile}]
 window._prevAthMap = {};
-// Expone el stash del coach a otros módulos (miRutina lo usa para el tag).
+
 Object.defineProperty(window, '_coachOriginalProfile', {
   get(){ return _previewCoachProfile; }
 });
@@ -1117,16 +1125,18 @@ function openPreviewPicker() {
     <div style="background:var(--surf);border:1px solid var(--border2);border-radius:18px;width:100%;max-width:360px;overflow:hidden">
       <div style="padding:20px 22px 14px;border-bottom:1px solid var(--border)">
         <div style="font-size:15px;font-weight:800;color:var(--text)">Entrenar alumno</div>
-        <div style="font-size:12px;color:var(--sub);margin-top:4px">Elegí un alumno para cargar su sesión desde el panel</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:4px">Elegí un alumno para cargar su sesión</div>
       </div>
       <div style="padding:10px;max-height:60vh;overflow-y:auto">
         ${ath.map(a => {
           const color = a.color || athColor(a.id);
+          const inStack = _trainingStack.some(x => x.athId === a.id);
           return `<button onclick="enterTrainingMode('${a.id}');document.getElementById('preview-picker-ov')?.remove()"
-            style="width:100%;display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;border:none;background:none;cursor:pointer;text-align:left;font-family:inherit;-webkit-tap-highlight-color:transparent"
-            onmouseover="this.style.background='var(--surf2)'" onmouseout="this.style.background='none'">
+            style="width:100%;display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;border:none;background:${inStack?'var(--surf2)':'none'};cursor:pointer;text-align:left;font-family:inherit;-webkit-tap-highlight-color:transparent"
+            onmouseover="this.style.background='var(--surf2)'" onmouseout="this.style.background='${inStack?'var(--surf2)':'none'}'">
             <div style="width:36px;height:36px;border-radius:10px;background:${color}22;color:${color};font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${(a.name||'?')[0].toUpperCase()}</div>
-            <div style="font-size:14px;font-weight:600;color:var(--text)">${a.name}</div>
+            <div style="flex:1;font-size:14px;font-weight:600;color:var(--text)">${a.name}</div>
+            ${inStack ? `<div style="font-size:10px;color:${color};font-weight:700">abierto</div>` : ''}
           </button>`;
         }).join('')}
         ${!ath.length ? '<div style="padding:20px;text-align:center;color:var(--sub);font-size:13px">No hay atletas cargados</div>' : ''}
@@ -1137,28 +1147,71 @@ function openPreviewPicker() {
 function enterTrainingMode(athId) {
   const a = window._prevAthMap[athId] || (Array.isArray(athletes) ? athletes.find(x => x.id === athId) : null);
   if (!a) return;
-  const profile = { id: a.id, name: a.name, role: 'athlete', color: a.color || athColor(a.id) };
-  _previewCoachProfile = currentUser;
-  currentUser = profile;
-  showAthleteUI(profile);
+
+  // Guardar coach la primera vez
+  if (!_previewCoachProfile) _previewCoachProfile = currentUser;
+
+  // Agregar al stack si no está
+  if (!_trainingStack.find(x => x.athId === athId)) {
+    const profile = { id: a.id, name: a.name, role: 'athlete', color: a.color || athColor(a.id) };
+    _trainingStack.push({ athId, name: a.name, color: a.color || athColor(a.id), profile });
+  }
+  switchTrainingAth(athId);
+}
+window.enterPreviewMode = enterTrainingMode;
+
+function switchTrainingAth(athId) {
+  const item = _trainingStack.find(x => x.athId === athId);
+  if (!item) return;
+  currentUser = item.profile;
+  showAthleteUI(item.profile);
   ['foot-av','top-av'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) { el.textContent = athInitial(profile.name); el.style.background = profile.color + '20'; el.style.color = profile.color; }
+    if (el) { el.textContent = athInitial(item.name); el.style.background = item.color + '20'; el.style.color = item.color; }
   });
-  const fn = document.getElementById('foot-name'); if (fn) fn.textContent = profile.name;
+  const fn = document.getElementById('foot-name'); if (fn) fn.textContent = item.name;
   const fr = document.getElementById('foot-role'); if (fr) fr.textContent = 'Entrenando · Coach';
-  const tit = document.getElementById('tb-title'); if (tit) tit.textContent = profile.name.toUpperCase();
+  const tit = document.getElementById('tb-title'); if (tit) tit.textContent = item.name.toUpperCase();
   const sub = document.getElementById('logo-sub'); if (sub) sub.textContent = 'Modo Entrenar';
-  _showPreviewBanner('🏋️ Entrenando con ' + profile.name);
-  toast('🏋️ Entrenando con ' + profile.name);
+  _renderTrainingBanner();
+  toast('Entrenando con ' + item.name);
 }
-// Alias retrocompatible (cualquier código viejo que aún use enterPreviewMode)
-window.enterPreviewMode = enterTrainingMode;
+
+function closeTrainingAth(athId) {
+  const idx = _trainingStack.findIndex(x => x.athId === athId);
+  if (idx === -1) return;
+  const isActive = currentUser?.id === athId;
+  if (isActive && _hasUnsavedTrainingDraft(athId)) {
+    const ok = confirm('Tenés sets sin guardar de ' + _trainingStack[idx].name + '.\n\n¿Cerrar igual?');
+    if (!ok) return;
+  }
+  _trainingStack.splice(idx, 1);
+  if (_trainingStack.length === 0) { exitTrainingMode(); return; }
+  if (isActive) switchTrainingAth(_trainingStack[Math.max(0, idx - 1)].athId);
+  else _renderTrainingBanner();
+}
+
+function _renderTrainingBanner() {
+  const banner = document.getElementById('preview-banner');
+  if (!banner) return;
+  banner.style.display = 'flex';
+  const chipsEl = document.getElementById('training-chips');
+  if (!chipsEl) return;
+  const activeId = currentUser?.id;
+  chipsEl.innerHTML = _trainingStack.map(item =>
+    `<button class="tr-chip${item.athId === activeId ? ' active' : ''}" onclick="switchTrainingAth('${item.athId}')">
+      <span class="tr-chip-dot" style="background:${item.color}"></span>
+      <span>${item.name.split(' ')[0]}</span>
+      <span class="tr-chip-x" onclick="closeTrainingAth('${item.athId}');event.stopPropagation()">×</span>
+    </button>`
+  ).join('');
+}
 
 function enterSelfAthleteMode() {
   const coach = currentUser;
   const profile = { id: coach.id, name: coach.name, role: 'athlete', color: coach.color || athColor(coach.id) };
   _previewCoachProfile = coach;
+  _trainingStack = [{ athId: coach.id, name: coach.name, color: profile.color, profile }];
   currentUser = profile;
   showAthleteUI(profile);
   ['foot-av','top-av'].forEach(id => {
@@ -1169,19 +1222,10 @@ function enterSelfAthleteMode() {
   const fr = document.getElementById('foot-role'); if (fr) fr.textContent = 'Coach · Alumno';
   const tit = document.getElementById('tb-title'); if (tit) tit.textContent = profile.name.toUpperCase();
   const sub = document.getElementById('logo-sub'); if (sub) sub.textContent = 'Mi Entreno';
-  _showPreviewBanner('Mi entrenamiento');
+  _renderTrainingBanner();
   toast('Modo entrenamiento');
 }
 
-function _showPreviewBanner(label) {
-  const banner = document.getElementById('preview-banner');
-  if (!banner) return;
-  const lbl = document.getElementById('preview-banner-label');
-  if (lbl) lbl.textContent = label;
-  banner.style.display = 'flex';
-}
-
-// Detecta si el alumno actual tiene sets cargados pero no guardados.
 function _hasUnsavedTrainingDraft(athId){
   if(!athId) return false;
   const todayKey = new Date().toISOString().slice(0,10);
@@ -1192,14 +1236,10 @@ function _hasUnsavedTrainingDraft(athId){
         const raw = localStorage.getItem(key);
         if(!raw) continue;
         const draft = JSON.parse(raw);
-        // Hay algún set con kg o reps cargados?
         if(draft && typeof draft === 'object'){
           for(const exName in draft){
             const sets = draft[exName] || {};
-            for(const k in sets){
-              const v = sets[k] || {};
-              if(v.kg || v.reps) return true;
-            }
+            for(const k in sets){ const v = sets[k] || {}; if(v.kg || v.reps) return true; }
           }
         }
       } catch(_){}
@@ -1212,9 +1252,10 @@ function exitTrainingMode() {
   if (!_previewCoachProfile) return;
   const athId = currentUser?.id;
   if(_hasUnsavedTrainingDraft(athId)){
-    const ok = confirm('Tenés sets sin guardar en ' + (currentUser?.name || 'este alumno') + '.\n\n¿Cerrar igual? (los sets quedan en draft por si volvés)');
+    const ok = confirm('Tenés sets sin guardar en ' + (currentUser?.name || 'este alumno') + '.\n\n¿Salir igual?');
     if(!ok) return;
   }
+  _trainingStack = [];
   currentUser = _previewCoachProfile;
   _previewCoachProfile = null;
   const banner = document.getElementById('preview-banner');
@@ -1226,13 +1267,12 @@ function exitTrainingMode() {
     if (el) { el.textContent = athInitial(u.name); el.style.background = (u.color || athColor(u.id)) + '20'; el.style.color = u.color || athColor(u.id); }
   });
   const fn = document.getElementById('foot-name'); if (fn) fn.textContent = u.name;
-  const fr = document.getElementById('foot-role'); if (fr) fr.textContent = 'Entrenador';
+  const fr = document.getElementById('foot-role'); if (fr) fr.textContent = window.isOwner ? 'Admin' : 'Entrenador';
   const tit = document.getElementById('tb-title'); if (tit) tit.textContent = 'SQUAD TEAM';
   const sub = document.getElementById('logo-sub'); if (sub) sub.textContent = 'Coach OS';
   goSection('dashboard', null);
   toast('De vuelta al panel');
 }
-// Alias retrocompatible (HTML viejo aún llama exitPreviewMode)
 window.exitPreviewMode = exitTrainingMode;
 
 // ── INIT ──

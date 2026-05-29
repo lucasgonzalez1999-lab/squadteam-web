@@ -474,6 +474,10 @@ async function ckSaveForm(){
   ckModalBg().classList.add('hidden');
   toast('Check-in guardado');
   ckLoadAth(athId);
+  // Si lo guardó el coach, avisar al atleta por push.
+  if(typeof currentUser !== 'undefined' && currentUser?.role === 'coach' && typeof sendPushTo === 'function'){
+    sendPushTo(athId, 'Check-in actualizado', coachNote ? 'Te dejé una nota nueva' : 'El coach revisó tu check-in').catch(()=>{});
+  }
 }
 
 function ckDelete(athId, ckId_){

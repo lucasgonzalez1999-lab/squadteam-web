@@ -1142,6 +1142,20 @@ async function _eaChangePin(athId){
   }
 }
 
+// Manda un push al alumno. No bloquea — falla silenciosa si el alumno
+// no activó notificaciones o si el token expiró (el worker lo limpia).
+async function sendPushTo(athId, title, body, link){
+  try{
+    const idToken = await firebase.auth().currentUser.getIdToken();
+    await fetch('/api/push/send', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+      body:    JSON.stringify({ athId, title, body, link: link || '/' }),
+    });
+  } catch(_){}
+}
+window.sendPushTo = sendPushTo;
+
 async function _saveEditAthlete(id){
   const a = athletes.find(x=>x.id===id);
   if(!a) return;

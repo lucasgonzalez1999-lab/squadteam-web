@@ -116,6 +116,30 @@ manda `Bearer <idToken>` al endpoint.
 - Por ahora no restringe features — todos los coaches tienen acceso completo.
 - Cuando vendamos a otros coaches: el owner verá panel global de coaches.
 
+## Push notifications (FCM)
+
+Coach → atleta cuando se actualiza plan o check-in.
+
+- `js/push.js` → módulo cliente: pide permiso, obtiene token FCM,
+  lo guarda en Firestore `fcmTokens/{athId}`.
+- `firebase-messaging-sw.js` → SW dedicado para background pushes.
+- `_worker.js` → `POST /api/push/send` recibe `{athId, title, body, link}`
+  desde el coach, valida ID token, llama FCM v1 con la service account.
+- `coach.js` expone `sendPushTo(athId, title, body, link)` global —
+  no bloquea, falla silenciosa.
+- Triggers actuales:
+  - `routineBuilder.js` después de `db.collection('plans').set(...)`.
+  - `checkin.js` después de `ckSaveForm` (solo si `currentUser.role==='coach'`).
+- UI: en `athlete.js` aparece una card "Activar" en la tab Hoy si
+  `Notification.permission === 'default'`. Una vez activado, se oculta.
+
+VAPID public key en `push.js` (constante `VAPID_PUBLIC_KEY`).
+Obtenerla en Firebase Console → Project Settings → Cloud Messaging →
+Web Push certificates → Generate key pair.
+
+iOS Safari solo soporta push si el usuario instaló la app como PWA
+(agregar a pantalla de inicio). Android Chrome / desktop funciona sin instalar.
+
 ## Daily tracking
 
 - `daily/{athId}/{date}` con peso, agua, pasos, ánimo, comentarios.
@@ -153,7 +177,7 @@ manda `Bearer <idToken>` al endpoint.
 - [ ] Panel owner: listar coaches activos, ingresos por coach, métricas globales.
 - [ ] Onboarding self-service de coaches (registro + cobro + alta).
 - [ ] Restringir features de Firestore rules según `isOwner` / `coachId`.
-- [ ] Notificaciones push reales (más allá de las nativas del browser).
+- [x] ~~Notificaciones push reales~~ — implementado con FCM (coach → atleta).
 - [ ] Tests E2E del flujo coach → atleta → carga sesión.
 - [ ] Migrar `sessions/{athId}` a subcolección en lugar de blob JSON.
 

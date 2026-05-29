@@ -700,6 +700,7 @@ document.addEventListener('DOMContentLoaded',function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 <script>
 firebase.initializeApp({apiKey:"AIzaSyA9I05xscqMsotp_Ke7D9sbHw2pqHP9DQY",authDomain:"squadteam-55dea.firebaseapp.com",projectId:"squadteam-55dea",storageBucket:"squadteam-55dea.firebasestorage.app",messagingSenderId:"87384506862",appId:"1:87384506862:web:e8c02392cae58952490eff"});
 window.db   = firebase.firestore();
@@ -728,6 +729,7 @@ window.auth = firebase.auth();
 <script src="js/pagos.js?v=3"></script>
 <script src="js/sheetStats.js?v=3"></script>
 <script src="js/checkin.js?v=3"></script>
+<script src="js/push.js?v=1"></script>
 <script>
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => {

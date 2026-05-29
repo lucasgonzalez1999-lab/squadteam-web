@@ -504,6 +504,10 @@ async function pbSave(){
     if(status){status.style.color='var(--green)';status.textContent='✓ Plan guardado correctamente';}
     if(btn){btn.textContent='💾 Guardar plan';}
     setTimeout(()=>{if(status)status.textContent='';},3000);
+    if(typeof sendPushTo === 'function'){
+      const ath = (athletes||[]).find(a=>a.id===_pb.athId);
+      sendPushTo(_pb.athId, 'Plan actualizado', `${ath?.name||'Tenés'} tu plan listo para esta semana`).catch(()=>{});
+    }
   }catch(e){
     if(status){status.style.color='var(--red)';status.textContent='Error: '+e.message;}
     if(btn) btn.textContent='💾 Guardar plan';

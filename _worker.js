@@ -30,10 +30,75 @@ export default {
       return handleResetPin(request, env);
     }
 
+    if (url.pathname === '/api/push/send' && request.method === 'POST') {
+      return handlePushSend(request, env);
+    }
+
     // All non-API requests → static assets
     return env.ASSETS.fetch(request);
   },
 };
+
+/* ─── Push send (FCM v1) ─────────────────────────────────────── */
+
+async function handlePushSend(request, env) {
+  try {
+    if (!env.FIREBASE_SERVICE_ACCOUNT) return errJson('Service account no configurado', 503);
+
+    const authHeader = request.headers.get('Authorization') || '';
+    if (!authHeader.startsWith('Bearer ')) return errJson('No autorizado', 401);
+
+    const idToken   = authHeader.slice(7);
+    const callerUid = await verifyIdToken(idToken);
+    if (!callerUid) return errJson('Token inválido', 401);
+
+    const adminToken = await getAdminToken(env);
+    const callerDoc  = await firestoreGet(`users/${callerUid}`, adminToken);
+    if (callerDoc?.role !== 'coach' && callerDoc?.role !== 'owner' && !callerDoc?.isOwner) {
+      return errJson('Solo coaches pueden enviar push', 403);
+    }
+
+    const { athId, title, body, link } = await request.json();
+    if (!athId || !title) return errJson('athId + title requeridos', 400);
+
+    const tokenDoc = await firestoreGet(`fcmTokens/${athId}`, adminToken);
+    const fcmToken = tokenDoc?.token;
+    if (!fcmToken) return errJson('El alumno no activó notificaciones', 404);
+
+    const payload = {
+      message: {
+        token: fcmToken,
+        notification: { title, body: body || '' },
+        data: { link: link || '/' },
+        webpush: { fcm_options: { link: link || '/' } },
+      },
+    };
+
+    const res = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${FIREBASE_PROJECT}/messages:send`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+        body: JSON.stringify(payload),
+      }
+    );
+    const data = await res.json();
+    if (!res.ok) {
+      // Token inválido → limpiar Firestore
+      if (data.error?.status === 'NOT_FOUND' || data.error?.status === 'UNREGISTERED') {
+        await fetch(
+          `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/fcmTokens/${athId}`,
+          { method: 'DELETE', headers: { 'Authorization': `Bearer ${adminToken}` } }
+        );
+      }
+      return errJson(data.error?.message || 'FCM error', res.status);
+    }
+
+    return okJson({ ok: true });
+  } catch (e) {
+    return errJson(e.message || 'Error interno', 500);
+  }
+}
 
 /* ─── Admin PIN reset ────────────────────────────────────────── */
 

@@ -87,7 +87,31 @@ function renderAthHoy(id){
     html+=`</div>`;
   }
 
+  // ── Push notifications opt-in ──
+  if(window.SQ_PUSH && SQ_PUSH.supported() && SQ_PUSH.permission() === 'default'){
+    html+=`<div id="push-optin" style="background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-top:var(--s2);display:flex;align-items:center;gap:12px">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">Notificaciones</div>
+        <div style="font-size:11px;color:var(--sub);margin-top:2px">Avisame cuando el coach actualice mi plan</div>
+      </div>
+      <button onclick="enablePushForMe('${id}')" style="background:var(--acc);color:#000;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">Activar</button>
+    </div>`;
+  }
+
   cont.innerHTML=html;
+
+  if(window.SQ_PUSH) SQ_PUSH.attachForeground();
+}
+
+async function enablePushForMe(athId){
+  try{
+    await window.SQ_PUSH.enableFor(athId);
+    toast('Notificaciones activadas');
+    const optin = document.getElementById('push-optin');
+    if(optin) optin.remove();
+  } catch(e){
+    toast(e.message || 'No se pudo activar');
+  }
 }
 
 

@@ -154,12 +154,10 @@ function renderDashboard(){
   if(!cont)return;
 
   const now=new Date();
-  const todayStr=now.toISOString().split('T')[0];
   const weekAgo=new Date();weekAgo.setDate(weekAgo.getDate()-7);
-  const monthAgo=new Date();monthAgo.setDate(monthAgo.getDate()-30);
 
   // ── Compute stats (fix: getStreak recibe ID, no array) ──
-  let trainedToday=0,bestStreak=0,totalVolWeek=0;
+  let trainedToday=0;
   const athData=athletes.map(a=>{
     const ss=getAthSessions(a.id);
     const sorted=[...ss].sort((x,y)=>new Date(y.date)-new Date(x.date));
@@ -167,15 +165,11 @@ function renderDashboard(){
     const ds=last?Math.floor((now-new Date(last.date+'T12:00:00'))/86400000):999;
     const streak=getStreak(a.id);
     const adh=calcAdherence(ss);
-    const volWeek=ss.filter(s=>new Date(s.date+'T12:00:00')>=weekAgo).reduce((t,s)=>t+calcVol(s),0);
     const trainedTd=ds===0;
     if(trainedTd)trainedToday++;
-    if(streak>bestStreak)bestStreak=streak;
-    totalVolWeek+=volWeek;
-    return {a,ss,last,ds,streak,adh,volWeek,trainedTd};
+    return {a,ss,last,ds,streak,adh,trainedTd};
   });
 
-  const adherencePct=athletes.length?Math.round(athData.map(x=>x.adh).reduce((t,v)=>t+v,0)/athletes.length):0;
   const weekSess=athData.reduce((t,x)=>t+x.ss.filter(s=>new Date(s.date+'T12:00:00')>=weekAgo).length,0);
   const prevWeekAgo=new Date();prevWeekAgo.setDate(prevWeekAgo.getDate()-14);
   const prevWeekSess=athData.reduce((t,x)=>t+x.ss.filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=prevWeekAgo&&d<weekAgo;}).length,0);
@@ -194,6 +188,25 @@ function renderDashboard(){
   alerts.sort((a,b)=>a.days-b.days);
   const urgentAlerts=alerts.filter(al=>al.days<=1).length;
 
+  // ── Pagos vencidos (status overdue) ──
+  let overdueCount=0,overdueAmount=0,overdueCurrency='UYU';
+  if(typeof payCalc==='function'){
+    for(const a of athletes){
+      if(a.inactive||a.guest)continue;
+      try{
+        const c=payCalc(a);
+        if(c.status==='overdue'){
+          overdueCount++;
+          overdueAmount+=parseFloat(a.payment?.amount)||0;
+          if(a.payment?.currency)overdueCurrency=a.payment.currency;
+        }
+      }catch(e){}
+    }
+  }
+
+  // ── Inactivos 3+ días (excluye los que nunca entrenaron, ya cubierto por "sin sesiones") ──
+  const inactive3=athData.filter(x=>x.ds>=3&&x.ds!==999).length;
+
   // ── Actividad reciente ──
   const allActivity=[];
   for(const {a,ss} of athData) ss.slice(0,5).forEach(s=>allActivity.push({...s,athId:a.id,athName:a.name}));
@@ -205,25 +218,16 @@ function renderDashboard(){
 
   // ── SVG icons ──
   const ico={
-    users:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
     flash:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`,
-    trend:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
+    money:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+    sleep:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
     warn:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
-    play:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
   };
 
   cont.innerHTML=`
-  <!-- STATS ROW — sin ceros muertos -->
+  <!-- STATS ROW — sólo accionable -->
   <div class="stats-grid" style="margin-bottom:16px">
-    <div class="stat-card">
-      <div class="stat-top">
-        <div class="stat-label">Alumnos</div>
-        <div class="stat-icon-sq green">${ico.users}</div>
-      </div>
-      <div class="stat-val">${athletes.length}</div>
-      <div class="stat-sub-note neu">${trainedToday>0?trainedToday+' entrenaron hoy':'Nadie entrenó aún'}</div>
-    </div>
-    <div class="stat-card">
+    <div class="stat-card" onclick="goSection('alumnos',document.querySelector('[data-tab=alumnos]'))" style="cursor:pointer">
       <div class="stat-top">
         <div class="stat-label">Esta semana</div>
         <div class="stat-icon-sq blue">${ico.flash}</div>
@@ -235,19 +239,7 @@ function renderDashboard(){
            <div class="stat-sub-note">Registrá la primera del equipo</div>`
       }
     </div>
-    <div class="stat-card">
-      <div class="stat-top">
-        <div class="stat-label">Volumen semana</div>
-        <div class="stat-icon-sq acc">${ico.trend}</div>
-      </div>
-      ${totalVolWeek>0
-        ?`<div class="stat-val" style="font-size:30px">${totalVolWeek>=1000?(Math.round(totalVolWeek/100)/10)+'t':Math.round(totalVolWeek)+'kg'}</div>
-           <div class="stat-sub-note neu">total del equipo</div>`
-        :`<div class="stat-empty">Sin datos</div>
-           <div class="stat-sub-note">Aparecerá al registrar sesiones</div>`
-      }
-    </div>
-    <div class="stat-card">
+    <div class="stat-card" onclick="goSection('alumnos',document.querySelector('[data-tab=alumnos]'))" style="cursor:pointer">
       <div class="stat-top">
         <div class="stat-label">Alertas</div>
         <div class="stat-icon-sq ${alerts.length?'red':'green'}">${ico.warn}</div>
@@ -257,6 +249,30 @@ function renderDashboard(){
            <div class="stat-sub-note neg"><b>${urgentAlerts>0?urgentAlerts+' urgentes':'Revisá el equipo'}</b></div>`
         :`<div class="stat-empty" style="color:var(--green)">Sin alertas</div>
            <div class="stat-sub-note pos">Equipo al día</div>`
+      }
+    </div>
+    <div class="stat-card" onclick="goSection('pagos',document.querySelector('[data-tab=pagos]'))" style="cursor:pointer">
+      <div class="stat-top">
+        <div class="stat-label">Pagos vencidos</div>
+        <div class="stat-icon-sq ${overdueCount?'red':'green'}">${ico.money}</div>
+      </div>
+      ${overdueCount
+        ?`<div class="stat-val">${overdueCount}</div>
+           <div class="stat-sub-note neg"><b>${overdueAmount>0?'$'+overdueAmount.toLocaleString('es-UY')+' '+overdueCurrency:'Cobrar'}</b></div>`
+        :`<div class="stat-empty" style="color:var(--green)">Al día</div>
+           <div class="stat-sub-note pos">Sin atrasos</div>`
+      }
+    </div>
+    <div class="stat-card" onclick="goSection('alumnos',document.querySelector('[data-tab=alumnos]'))" style="cursor:pointer">
+      <div class="stat-top">
+        <div class="stat-label">Inactivos 3+d</div>
+        <div class="stat-icon-sq ${inactive3?'orange':'green'}">${ico.sleep}</div>
+      </div>
+      ${inactive3
+        ?`<div class="stat-val">${inactive3}</div>
+           <div class="stat-sub-note neg"><b>En riesgo</b></div>`
+        :`<div class="stat-empty" style="color:var(--green)">Todo activo</div>
+           <div class="stat-sub-note pos">Equipo enchufado</div>`
       }
     </div>
   </div>

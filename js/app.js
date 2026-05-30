@@ -297,6 +297,9 @@ function doLogout() {
   const sqLand = document.getElementById('sq-land');
   if(sqAuth){ sqAuth.classList.remove('sq-show'); }
   if(sqLand){ sqLand.style.display = ''; }
+  // Reset submit button so re-login works
+  const sqBtn = document.getElementById('sq-btn');
+  if(sqBtn){ sqBtn.textContent='ENTRAR'; sqBtn.classList.remove('sq-loading'); }
   loginPin = '';
   loginPending = null;
 }

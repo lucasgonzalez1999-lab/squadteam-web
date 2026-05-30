@@ -486,13 +486,13 @@ function sqSubmit(){
     })
     .then(function(doc){
       clearTimeout(timeoutId);
+      resetBtn(); // always clear loading so re-login works after logout
       var profile=doc.exists?doc.data():match;
       try{ localStorage.setItem('sq_lu_'+_sqRole, match.name); }catch(e){}
       try{ localStorage.setItem('st_session',JSON.stringify(profile)); }catch(e){}
       try {
         if(typeof initApp==='function') initApp(profile); else location.reload();
       } catch(e) {
-        resetBtn();
         errEl.textContent = 'Error iniciando app: ' + (e?.message || e);
         errEl.classList.add('sq-show');
         console.error('[sq:initApp]', e);

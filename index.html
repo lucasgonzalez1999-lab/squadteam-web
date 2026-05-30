@@ -501,7 +501,8 @@ function sqSubmit(){
     .catch(function(err){
       clearTimeout(timeoutId);
       resetBtn();
-      errEl.textContent = err?.code || err?.message || 'Usuario o contraseña incorrecta';
+      var authMsgs={'auth/invalid-credential':'PIN incorrecto','auth/wrong-password':'PIN incorrecto','auth/user-not-found':'Usuario no encontrado','auth/too-many-requests':'Demasiados intentos, esperá unos minutos','auth/network-request-failed':'Sin conexión'};
+      errEl.textContent = authMsgs[err?.code] || 'PIN incorrecto';
       errEl.classList.add('sq-show');
       pinInp.classList.add('sq-err-inp');
       document.getElementById('sq-auth').classList.add('sq-shake');

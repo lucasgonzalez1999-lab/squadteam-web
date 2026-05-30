@@ -200,7 +200,7 @@ function pbRenderList(cont){
     <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:4px">Planes</div>
     <div style="font-size:13px;color:var(--sub);margin-bottom:20px">Seleccioná un alumno para armar o editar su plan</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px">
-      ${athletes.map(a=>{
+      ${athletes.filter(a=>!a.inactive).map(a=>{
         const color=a.color||'#e8ff00';
         return `<button onclick="pbSelectAth('${a.id}')"
           style="padding:16px;background:var(--surf);border:1.5px solid var(--border);border-radius:12px;

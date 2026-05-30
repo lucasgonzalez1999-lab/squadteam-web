@@ -203,30 +203,6 @@ function renderDashboard(){
   // ── Rachas ranking ──
   const streakRanking=[...athData].map(({a,streak})=>({a,streak})).filter(x=>x.streak>0).sort((a,b)=>b.streak-a.streak).slice(0,5);
 
-  // ── HERO DINÁMICO ──
-  let heroBadgeClass,heroBadgeText,heroHeadline,heroSub;
-  if(urgentAlerts>0){
-    heroBadgeClass='warn';heroBadgeText='REQUIERE ATENCIÓN';
-    heroHeadline=`${urgentAlerts} ALUMNO${urgentAlerts>1?'S':''} <span>NECESITAN ACCIÓN</span>`;
-    heroSub='Revisá el bloque de alertas';
-  } else if(trainedToday===athletes.length&&athletes.length>0){
-    heroBadgeClass='ok';heroBadgeText='EQUIPO COMPLETO';
-    heroHeadline='EQUIPO <span>AL DÍA</span>';
-    heroSub='Todos los alumnos entrenaron hoy';
-  } else if(trainedToday>0){
-    heroBadgeClass='ok';heroBadgeText='SISTEMA ACTIVO';
-    heroHeadline=`${trainedToday} DE ${athletes.length} <span>ATLETAS HOY</span>`;
-    heroSub='Operaciones en curso';
-  } else if(weekSess>0){
-    heroBadgeClass='idle';heroBadgeText='LISTO PARA OPERAR';
-    heroHeadline='COACH <span>OS</span>';
-    heroSub=now.toLocaleDateString('es-UY',{weekday:'long',day:'numeric',month:'long'});
-  } else {
-    heroBadgeClass='idle';heroBadgeText='SIN ACTIVIDAD';
-    heroHeadline='COACH <span>OS</span>';
-    heroSub='Sin sesiones registradas esta semana';
-  }
-
   // ── SVG icons ──
   const ico={
     users:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
@@ -237,47 +213,6 @@ function renderDashboard(){
   };
 
   cont.innerHTML=`
-  <!-- HERO DINÁMICO -->
-  <div class="dash-hero">
-    <div>
-      <div class="hero-state-badge ${heroBadgeClass}">
-        <span class="hb-dot"></span>${heroBadgeText}
-      </div>
-      <div class="hero-greeting">${heroHeadline}</div>
-      <div style="font-size:12px;color:var(--sub);margin-top:6px;margin-bottom:14px">${heroSub}</div>
-      <div class="hero-metrics">
-        ${trainedToday>0?`
-        <div class="hero-met">
-          <div class="hero-met-val${trainedToday===athletes.length?' acc':''}">${trainedToday}</div>
-          <div class="hero-met-lbl">Entrenan hoy</div>
-        </div>
-        <div class="hero-divider"></div>`:''
-        }
-        ${weekSess>0?`
-        <div class="hero-met">
-          <div class="hero-met-val">${weekSess}</div>
-          <div class="hero-met-lbl">Esta semana</div>
-        </div>
-        <div class="hero-divider"></div>`:''
-        }
-        ${bestStreak>0?`
-        <div class="hero-met">
-          <div class="hero-met-val${bestStreak>=7?' acc':''}">${bestStreak}<span style="font-size:.5em;opacity:.6">d</span></div>
-          <div class="hero-met-lbl">Mejor racha</div>
-        </div>
-        <div class="hero-divider"></div>`:''
-        }
-        <div class="hero-met">
-          <div class="hero-met-val${adherencePct>=70?' acc':adherencePct<40?' red':''}">${adherencePct}<span style="font-size:.5em;opacity:.5">%</span></div>
-          <div class="hero-met-lbl">Adherencia</div>
-        </div>
-      </div>
-    </div>
-    <div class="hero-actions">
-      <div class="hero-time" id="hero-clock"></div>
-    </div>
-  </div>
-
   <!-- STATS ROW — sin ceros muertos -->
   <div class="stats-grid" style="margin-bottom:16px">
     <div class="stat-card">
@@ -447,9 +382,6 @@ function renderDashboard(){
   </div><!-- /dash-grid -->
   `;
 
-  // Reloj hero
-  startHeroClock();
-
   // Auto-refresh del feed cada 30s
   if(_dashFeedTimer)clearInterval(_dashFeedTimer);
   _dashFeedTimer=setInterval(()=>{
@@ -463,20 +395,6 @@ function renderDashboard(){
     if(feedList) feedList.outerHTML=dashFeedHTML(freshAct.slice(0,7),athletes,true);
   },30000);
 }
-
-// Live clock for dashboard hero
-function startHeroClock(){
-  function tick(){
-    const el=document.getElementById('hero-clock');
-    if(!el)return;
-    const t=new Date().toLocaleTimeString('es-UY',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    el.textContent=t;
-  }
-  tick();
-  setInterval(tick,1000);
-}
-// Called after dashboard renders
-setTimeout(startHeroClock,200);
 
 // ── ALUMNOS ──
 function renderAlumnos(){

@@ -188,8 +188,9 @@ function renderDashboard(){
   alerts.sort((a,b)=>a.days-b.days);
   const urgentAlerts=alerts.filter(al=>al.days<=1).length;
 
-  // ── Pagos vencidos (status overdue) ──
-  let overdueCount=0,overdueAmount=0,overdueCurrency='UYU';
+  // ── Pagos vencidos (agrupados por moneda) ──
+  let overdueCount=0;
+  const overdueByCcy={};
   if(typeof payCalc==='function'){
     for(const a of athletes){
       if(a.inactive||a.guest)continue;
@@ -197,12 +198,14 @@ function renderDashboard(){
         const c=payCalc(a);
         if(c.status==='overdue'){
           overdueCount++;
-          overdueAmount+=parseFloat(a.payment?.amount)||0;
-          if(a.payment?.currency)overdueCurrency=a.payment.currency;
+          const amt=parseFloat(a.payment?.amount)||0;
+          const ccy=a.payment?.currency||'UYU';
+          overdueByCcy[ccy]=(overdueByCcy[ccy]||0)+amt;
         }
       }catch(e){}
     }
   }
+  const overdueStr=Object.entries(overdueByCcy).filter(([,v])=>v>0).map(([c,v])=>`$${v.toLocaleString('es-UY')} ${c}`).join(' · ');
 
   // ── Inactivos 3+ días (excluye los que nunca entrenaron, ya cubierto por "sin sesiones") ──
   const inactive3=athData.filter(x=>x.ds>=3&&x.ds!==999).length;
@@ -258,7 +261,7 @@ function renderDashboard(){
       </div>
       ${overdueCount
         ?`<div class="stat-val">${overdueCount}</div>
-           <div class="stat-sub-note neg"><b>${overdueAmount>0?'$'+overdueAmount.toLocaleString('es-UY')+' '+overdueCurrency:'Cobrar'}</b></div>`
+           <div class="stat-sub-note neg"><b>${overdueStr||'Cobrar'}</b></div>`
         :`<div class="stat-empty" style="color:var(--green)">Al día</div>
            <div class="stat-sub-note pos">Sin atrasos</div>`
       }

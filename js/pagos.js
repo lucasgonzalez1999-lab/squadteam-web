@@ -129,6 +129,23 @@ function renderPagos(){
   const totalPaid = paid.reduce((t,x)=>t+(parseFloat(x.pay.amount)||0),0);
   const totalPending = calcs.filter(x=>x.calc.status!=='paid'&&x.calc.status!=='unconfigured').reduce((t,x)=>t+(parseFloat(x.pay.amount)||0),0);
 
+  // ── Totals grouped by currency (no se pueden sumar UYU + USD) ──
+  const byCcy = {};
+  function addCcy(ccy, key, amt){
+    if(!byCcy[ccy]) byCcy[ccy] = { paid:0, pending:0, expected:0 };
+    byCcy[ccy][key] += amt;
+  }
+  for(const x of calcs){
+    const amt = parseFloat(x.pay.amount)||0;
+    if(!amt) continue;
+    const ccy = x.pay.currency || 'UYU';
+    addCcy(ccy, 'expected', amt);
+    if(x.calc.status === 'paid') addCcy(ccy, 'paid', amt);
+    else if(x.calc.status !== 'unconfigured') addCcy(ccy, 'pending', amt);
+  }
+  const ccyList = Object.keys(byCcy);
+  const fmtMoney = (n,c)=>`${n.toLocaleString('es-UY')} ${c}`;
+
   const monthName = now.toLocaleDateString('es-UY',{month:'long',year:'numeric'});
 
   // ── Sort: vencidos → próximos → pendientes → pagados → sin config ──
@@ -172,21 +189,22 @@ function renderPagos(){
     <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:10px">
       <div style="height:100%;width:${collectionPct}%;background:${barColor};border-radius:3px;transition:width .4s ease"></div>
     </div>
-    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--sub)">
-      <span>Cobrado: <strong style="color:var(--text)">$${totalPaid}</strong></span>
-      <span>Pendiente: <strong style="color:${totalPending>0?'#f59e0b':'var(--sub)'}">$${totalPending}</strong></span>
-      <span>Total esperado: <strong style="color:var(--text)">$${totalExpected}</strong></span>
-    </div>
+    ${ccyList.map(c=>`
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--sub);padding-top:6px${ccyList.indexOf(c)?';border-top:1px solid var(--border);margin-top:6px':''}">
+      <span>Cobrado: <strong style="color:var(--text)">${fmtMoney(byCcy[c].paid,c)}</strong></span>
+      <span>Pendiente: <strong style="color:${byCcy[c].pending>0?'#f59e0b':'var(--sub)'}">${fmtMoney(byCcy[c].pending,c)}</strong></span>
+      <span>Total: <strong style="color:var(--text)">${fmtMoney(byCcy[c].expected,c)}</strong></span>
+    </div>`).join('')}
   </div>
 
   <!-- Summary metrics -->
   <div class="pg-metrics">
     <div class="pg-metric">
-      <div class="pg-metric-val" style="color:var(--green)">$${totalPaid}</div>
+      <div class="pg-metric-val" style="color:var(--green);font-size:${ccyList.length>1?'15px':''}">${ccyList.map(c=>fmtMoney(byCcy[c].paid,c)).join(' · ')||'—'}</div>
       <div class="pg-metric-lbl">Cobrado</div>
     </div>
     <div class="pg-metric">
-      <div class="pg-metric-val" style="color:var(--orange)">$${totalPending}</div>
+      <div class="pg-metric-val" style="color:var(--orange);font-size:${ccyList.length>1?'15px':''}">${ccyList.map(c=>fmtMoney(byCcy[c].pending,c)).join(' · ')||'—'}</div>
       <div class="pg-metric-lbl">Pendiente</div>
     </div>
     <div class="pg-metric sep">
@@ -198,7 +216,7 @@ function renderPagos(){
       <div class="pg-metric-lbl">Próx. 7d</div>
     </div>
     <div class="pg-metric">
-      <div class="pg-metric-val" style="color:var(--sub)">$${totalExpected}</div>
+      <div class="pg-metric-val" style="color:var(--sub);font-size:${ccyList.length>1?'15px':''}">${ccyList.map(c=>fmtMoney(byCcy[c].expected,c)).join(' · ')||'—'}</div>
       <div class="pg-metric-lbl">Total esperado</div>
     </div>
   </div>

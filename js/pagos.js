@@ -160,9 +160,9 @@ function renderPagos(){
   // ── Reminder messages ──
   const reminders = [
     ...overdue.map(x=>({ a:x.a, pay:x.pay, calc:x.calc,
-      msg:`Hola ${x.a.name}, tu pago de $${x.pay.amount||'?'} USD venció hace ${x.calc.daysOverdue} día${x.calc.daysOverdue!==1?'s':''}. Cuando puedas regularizalo así seguimos con el seguimiento. ¡Gracias!` })),
+      msg:`Hola ${x.a.name}, tu pago de $${x.pay.amount||'?'} ${x.pay.currency||'UYU'} venció hace ${x.calc.daysOverdue} día${x.calc.daysOverdue!==1?'s':''}. Cuando puedas regularizalo así seguimos con el seguimiento. ¡Gracias!` })),
     ...upcoming.filter(x=>x.calc.daysUntil<=3).map(x=>({ a:x.a, pay:x.pay, calc:x.calc,
-      msg:`Hola ${x.a.name}, te recordamos que tu pago de $${x.pay.amount||'?'} USD vence ${x.calc.daysUntil===0?'hoy':x.calc.daysUntil===1?'mañana':'en '+x.calc.daysUntil+' días'} (día ${x.pay.payday}). ¡Gracias!` }))
+      msg:`Hola ${x.a.name}, te recordamos que tu pago de $${x.pay.amount||'?'} ${x.pay.currency||'UYU'} vence ${x.calc.daysUntil===0?'hoy':x.calc.daysUntil===1?'mañana':'en '+x.calc.daysUntil+' días'} (día ${x.pay.payday}). ¡Gracias!` }))
   ];
 
   // ── Resumen mensual ──
@@ -277,7 +277,7 @@ function renderPagos(){
 
 function pgCard(a, pay, calc){
   const color = athColor(a.id);
-  const currency = pay.currency || 'USD';
+  const currency = pay.currency || 'UYU';
   const amount = pay.amount ? `$${pay.amount} ${currency}` : '—';
 
   // Status config
@@ -378,7 +378,7 @@ function pgOpenMarkPaid(athId){
   <div class="pg-mfield" style="flex:1">
     <label class="pg-mlabel">MONEDA</label>
     <select class="pg-minput" id="pgm-currency">
-      <option value="USD" ${(pay.currency||'USD')==='USD'?'selected':''}>USD</option>
+      <option value="USD" ${(pay.currency||'UYU')==='USD'?'selected':''}>USD</option>
       <option value="UYU" ${pay.currency==='UYU'?'selected':''}>UYU</option>
     </select>
   </div>
@@ -411,7 +411,7 @@ async function pgConfirmPaid(athId){
   if(!a) return;
   const date     = document.getElementById('pgm-date')?.value || new Date().toISOString().split('T')[0];
   const amount   = parseFloat(document.getElementById('pgm-amount')?.value)||0;
-  const currency = document.getElementById('pgm-currency')?.value||'USD';
+  const currency = document.getElementById('pgm-currency')?.value||'UYU';
   const method   = document.getElementById('pgm-method')?.value||'transfer';
   const period   = document.getElementById('pgm-period')?.value.trim()||'';
   const note     = document.getElementById('pgm-note')?.value.trim()||'';
@@ -462,7 +462,7 @@ function pgOpenEdit(athId){
   <div class="pg-mfield" style="flex:1">
     <label class="pg-mlabel">MONEDA</label>
     <select class="pg-minput" id="pge-currency">
-      <option value="USD" ${(pay.currency||'USD')==='USD'?'selected':''}>USD</option>
+      <option value="USD" ${(pay.currency||'UYU')==='USD'?'selected':''}>USD</option>
       <option value="UYU" ${pay.currency==='UYU'?'selected':''}>UYU</option>
     </select>
   </div>
@@ -483,7 +483,7 @@ function pgSaveEdit(athId){
   if(!a) return;
   if(!a.payment) a.payment = {};
   const amount   = parseFloat(document.getElementById('pge-amount')?.value)||0;
-  const currency = document.getElementById('pge-currency')?.value||'USD';
+  const currency = document.getElementById('pge-currency')?.value||'UYU';
   const payday   = parseInt(document.getElementById('pge-payday')?.value)||null;
   if(amount)   a.payment.amount   = amount;
   if(currency) a.payment.currency = currency;
@@ -514,7 +514,7 @@ ${hist.length===0 ? `<div style="text-align:center;padding:30px;color:var(--sub)
     <div class="pg-hist-item">
       <div class="pg-hist-date">${pgFmtFull(h.date)}</div>
       <div class="pg-hist-details">
-        <span class="pg-hist-amount" style="color:${color}">$${h.amount} ${h.currency||'USD'}</span>
+        <span class="pg-hist-amount" style="color:${color}">$${h.amount} ${h.currency||'UYU'}</span>
         <span class="pg-hist-method">${METHOD_LABEL[h.method]||h.method||'—'}</span>
         ${h.period?`<span class="pg-hist-period">📅 ${h.period}</span>`:''}
         ${h.note?`<span class="pg-hist-note">"${h.note}"</span>`:''}
@@ -541,9 +541,9 @@ function pgCopyReminderInline(athId){
   const calc = payCalc(a);
   let msg = '';
   if(calc.status==='overdue')
-    msg = `Hola ${a.name}, tu pago de $${pay.amount||'?'} ${pay.currency||'USD'} venció hace ${calc.daysOverdue} día${calc.daysOverdue!==1?'s':''}. Cuando puedas regularizalo así seguimos con el seguimiento. ¡Gracias!`;
+    msg = `Hola ${a.name}, tu pago de $${pay.amount||'?'} ${pay.currency||'UYU'} venció hace ${calc.daysOverdue} día${calc.daysOverdue!==1?'s':''}. Cuando puedas regularizalo así seguimos con el seguimiento. ¡Gracias!`;
   else
-    msg = `Hola ${a.name}, te recordamos que tu pago de $${pay.amount||'?'} ${pay.currency||'USD'} vence ${calc.daysUntil===0?'hoy':calc.daysUntil===1?'mañana':'en '+calc.daysUntil+' días'} (día ${pay.payday}). ¡Gracias!`;
+    msg = `Hola ${a.name}, te recordamos que tu pago de $${pay.amount||'?'} ${pay.currency||'UYU'} vence ${calc.daysUntil===0?'hoy':calc.daysUntil===1?'mañana':'en '+calc.daysUntil+' días'} (día ${pay.payday}). ¡Gracias!`;
   navigator.clipboard?.writeText(msg).then(()=>{ toast('📋 Recordatorio copiado'); })
     .catch(()=>{ prompt('Copiá este mensaje:', msg); });
 }
@@ -586,8 +586,8 @@ function pgGetUpcoming(athList, days=3){
 function pgReminderMsg(a, type){
   const pay=a.payment||{}; const calc=payCalc(a);
   if(type==='overdue'||calc.status==='overdue')
-    return `Hola ${a.name}, tu pago de $${pay.amount||'?'} ${pay.currency||'USD'} venció hace ${calc.daysOverdue} día${calc.daysOverdue!==1?'s':''}. Cuando puedas regularizalo así seguimos con el seguimiento. ¡Gracias!`;
-  return `Hola ${a.name}, te recordamos que tu pago de $${pay.amount||'?'} ${pay.currency||'USD'} vence ${calc.daysUntil===0?'hoy':calc.daysUntil===1?'mañana':'en '+calc.daysUntil+' días'} (día ${pay.payday}). ¡Gracias!`;
+    return `Hola ${a.name}, tu pago de $${pay.amount||'?'} ${pay.currency||'UYU'} venció hace ${calc.daysOverdue} día${calc.daysOverdue!==1?'s':''}. Cuando puedas regularizalo así seguimos con el seguimiento. ¡Gracias!`;
+  return `Hola ${a.name}, te recordamos que tu pago de $${pay.amount||'?'} ${pay.currency||'UYU'} vence ${calc.daysUntil===0?'hoy':calc.daysUntil===1?'mañana':'en '+calc.daysUntil+' días'} (día ${pay.payday}). ¡Gracias!`;
 }
 
 // Keep backwards compat with coach.js (called from updatePayBadge etc.)

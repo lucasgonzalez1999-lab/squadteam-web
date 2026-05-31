@@ -458,7 +458,7 @@ function renderAlumnos(){
                 ${athAvatar(a)}
                 <div>
                   <div class="ath-nm">${a.name}</div>
-                  <div class="ath-subs">${ss.length} sesiones${pay.amount?' · $'+pay.amount+' USD':''}</div>
+                  <div class="ath-subs">${ss.length} sesiones${pay.amount?' · $'+pay.amount+' '+(pay.currency||'UYU'):''}</div>
                 </div>
               </div>
             </td>

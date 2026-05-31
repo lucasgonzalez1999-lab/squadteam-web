@@ -1230,7 +1230,7 @@ function renderNutricion(){
   cont.innerHTML=`
   <div style="padding:20px 20px 0;max-width:1100px;margin:0 auto">
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px" id="nutr-tabs">
-      ${athletes.map((a,i)=>`
+      ${athletes.filter(a=>!a.inactive).map((a,i)=>`
         <button onclick="openNutrAth('${a.id}')" id="nutr-tab-${a.id}"
           style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;border:1px solid ${i===0?'transparent':'var(--border)'};background:${i===0?athColor(a.id):'white'};color:${i===0?'white':'var(--text)'};font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
           ${athAvatar(a,22)} ${a.name}
@@ -1239,7 +1239,8 @@ function renderNutricion(){
     <div id="nutr-builder-area"></div>
   </div>`;
 
-  if(athletes.length) openNutrAth(athletes[0].id);
+  const activeAths = athletes.filter(a=>!a.inactive);
+  if(activeAths.length) openNutrAth(activeAths[0].id);
 }
 
 async function openNutrAth(athId){

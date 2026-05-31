@@ -112,7 +112,7 @@ function ckCoachView(cont){
   </div>
 
   <div class="ck-ath-tabs" id="ck-ath-tabs">
-    ${athletes.map(a=>`
+    ${athletes.filter(a=>!a.inactive).map(a=>`
     <button class="ck-ath-tab${a.id===_ckSelAth?' on':''}"
       onclick="ckSelectAth('${a.id}')" id="ck-tab-${a.id}"
       style="--ac:${athColor(a.id)}">

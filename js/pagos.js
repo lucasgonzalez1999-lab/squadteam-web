@@ -115,8 +115,8 @@ function renderPagos(){
   if(!cont) return;
 
   const now = new Date();
-  const guests = athletes.filter(a => a.guest);
-  const calcs = athletes.filter(a => !a.guest).map(a=>({ a, pay:a.payment||{}, calc:payCalc(a) }));
+  const guests = athletes.filter(a => a.guest && !a.inactive);
+  const calcs = athletes.filter(a => !a.guest && !a.inactive).map(a=>({ a, pay:a.payment||{}, calc:payCalc(a) }));
 
   // ── Metrics ──
   const overdue  = calcs.filter(x=>x.calc.status==='overdue');

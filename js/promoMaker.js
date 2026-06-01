@@ -903,6 +903,132 @@ const PROMO = (() => {
     drawFooter(ctx, d.cta);
   }
 
+  // ── MOCKUP 6: PERSONAL RECORD ────────────────────────────────────────────
+  function renderMockPR(ctx, d){
+    drawBackground(ctx);
+    drawEyebrow(ctx, d.eyebrow, SAFE_TOP);
+    drawHeadline(ctx, d.headline, SAFE_TOP + 140);
+
+    const cx = 90, cy = SAFE_TOP + 320, cw = W - 180, ch = 920;
+    ctx.fillStyle = SURF;
+    roundedRect(ctx, cx, cy, cw, ch, 28); ctx.fill();
+    ctx.strokeStyle = BORDER; ctx.lineWidth = 2;
+    roundedRect(ctx, cx, cy, cw, ch, 28); ctx.stroke();
+
+    // PR badge + exercise name
+    ctx.fillStyle = ACC;
+    roundedRect(ctx, cx + 40, cy + 52, 118, 48, 24); ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.font = '800 26px "Inter", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('PR', cx + 99, cy + 85);
+
+    ctx.fillStyle = TEXT;
+    ctx.textAlign = 'left';
+    ctx.font = '900 italic 56px "Barlow Condensed", sans-serif';
+    ctx.fillText((d.exercise || 'SENTADILLA').toUpperCase(), cx + 178, cy + 89);
+
+    // Peso nuevo — gigante y lima
+    ctx.fillStyle = ACC;
+    ctx.textAlign = 'center';
+    ctx.font = '900 italic 300px "Barlow Condensed", sans-serif';
+    ctx.fillText(d.kg || '120', W/2, cy + 430);
+
+    ctx.fillStyle = TEXT;
+    ctx.font = '900 italic 100px "Barlow Condensed", sans-serif';
+    ctx.fillText('KG', W/2, cy + 530);
+
+    // Separador
+    ctx.strokeStyle = BORDER; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx + 40, cy + 610);
+    ctx.lineTo(cx + cw - 40, cy + 610);
+    ctx.stroke();
+
+    // Anterior + delta
+    ctx.fillStyle = SUB;
+    ctx.font = '700 24px "Inter", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('ANTERIOR', cx + 40, cy + 690);
+    ctx.fillStyle = TEXT;
+    ctx.font = '900 italic 72px "Barlow Condensed", sans-serif';
+    ctx.fillText(d.prev || '110 KG', cx + 40, cy + 780);
+
+    ctx.fillStyle = GREEN;
+    ctx.font = '900 italic 60px "Barlow Condensed", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('+' + (d.delta || '10') + ' KG', cx + cw - 40, cy + 780);
+
+    drawFooter(ctx, d.cta);
+  }
+
+  // ── TIPOGRÁFICA: COUNTDOWN ────────────────────────────────────────────────
+  function renderCountdown(ctx, d){
+    drawBackground(ctx);
+    drawEyebrow(ctx, d.eyebrow, SAFE_TOP);
+
+    const midY = (SAFE_TOP + SAFE_BOTTOM) / 2;
+
+    // Número gigante lima
+    ctx.fillStyle = ACC;
+    ctx.textAlign = 'center';
+    ctx.font = '900 italic 460px "Barlow Condensed", sans-serif';
+    ctx.fillText(d.days || '7', W/2, midY + 60);
+
+    // "DÍAS" debajo en blanco
+    ctx.fillStyle = TEXT;
+    ctx.font = '900 italic 120px "Barlow Condensed", sans-serif';
+    ctx.fillText('DÍAS', W/2, midY + 200);
+
+    if(d.sub){
+      ctx.fillStyle = SUB;
+      ctx.font = '500 38px "Inter", sans-serif';
+      const lines = wrapText(ctx, d.sub, W - 240);
+      let y = midY + 300;
+      for(const line of lines){ ctx.fillText(line, W/2, y); y += 52; }
+    }
+
+    drawFooter(ctx, d.cta);
+  }
+
+  // ── TIPOGRÁFICA: SOCIAL PROOF ─────────────────────────────────────────────
+  function renderSocialProof(ctx, d){
+    drawBackground(ctx);
+    drawEyebrow(ctx, d.eyebrow, SAFE_TOP);
+
+    const midY = (SAFE_TOP + SAFE_BOTTOM) / 2;
+
+    // Número grande
+    ctx.fillStyle = TEXT;
+    ctx.textAlign = 'center';
+    ctx.font = '900 italic 340px "Barlow Condensed", sans-serif';
+    ctx.fillText(d.count || '47', W/2, midY - 20);
+
+    // Línea lima
+    ctx.strokeStyle = ACC;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(W/2 - 140, midY + 80);
+    ctx.lineTo(W/2 + 140, midY + 80);
+    ctx.stroke();
+
+    // Noun lima
+    ctx.fillStyle = ACC;
+    ctx.font = '900 italic 100px "Barlow Condensed", sans-serif';
+    ctx.fillText((d.noun || 'ATLETAS').toUpperCase(), W/2, midY + 200);
+
+    // Subtítulo
+    if(d.sub){
+      ctx.fillStyle = SUB;
+      ctx.font = '500 38px "Inter", sans-serif';
+      const lines = wrapText(ctx, d.sub, W - 240);
+      let y = midY + 300;
+      for(const line of lines){ ctx.fillText(line, W/2, y); y += 52; }
+    }
+
+    drawFooter(ctx, d.cta);
+  }
+
   // ── TEMPLATES ──────────────────────────────────────────────────────────────
   // Modo 1: mockups del UI real (anuncia features)
   const TEMPLATES_MOCKUPS = [
@@ -916,6 +1042,8 @@ const PROMO = (() => {
       defaults:{ eyebrow:'CADA DOMINGO', headline:'Tu coach te explica la semana.', cta:HANDLE } },
     { id:'mock-muscle', label:'Volumen', renderer:renderMockMuscle,
       defaults:{ eyebrow:'TU CUERPO HABLA', headline:'Tu volumen, músculo por músculo.', cta:HANDLE } },
+    { id:'mock-pr', label:'Record', renderer:renderMockPR,
+      defaults:{ eyebrow:'NUEVO RECORD', headline:'Cuando el número dice todo.', exercise:'SENTADILLA', kg:'120', prev:'110 KG', delta:'10', cta:HANDLE } },
   ];
 
   // Modo 2: tipográficas puras (humo / mensajes / hype)
@@ -932,6 +1060,10 @@ const PROMO = (() => {
       defaults:{ eyebrow:'NUEVA FORMA', headline:'Coaching como debería ser.', sub:'Limpio. Sin Excel. Sin grupos de WhatsApp.', cta:HANDLE } },
     { id:'cta', label:'Call to action', renderer:renderCta,
       defaults:{ eyebrow:'SE VIENE', headline:'Sumate a la beta.', sub:'Tu coach lo va a agradecer.', cta:HANDLE } },
+    { id:'countdown', label:'Countdown', renderer:renderCountdown,
+      defaults:{ eyebrow:'SE VIENE', days:'7', sub:'Para el lanzamiento oficial.', cta:HANDLE } },
+    { id:'social-proof', label:'Social', renderer:renderSocialProof,
+      defaults:{ eyebrow:'YA ADENTRO', count:'47', noun:'ATLETAS', sub:'ya tienen su plan en la app.', cta:HANDLE } },
   ];
 
   // Selección de modo según el param

@@ -370,17 +370,25 @@ const PROMO = (() => {
     drawBackground(ctx);
     drawEyebrow(ctx, d.eyebrow, SAFE_TOP);
     const bullets = (d.bullets || '').split('\n').filter(Boolean);
-    ctx.textAlign = 'center';
+    // Pre-medir el ancho del bullet más ancho para centrar el bloque
+    ctx.font = '800 italic 78px "Barlow Condensed", sans-serif';
+    let maxTextW = 0;
+    for(const b of bullets){
+      const w = ctx.measureText(b.toUpperCase()).width;
+      if(w > maxTextW) maxTextW = w;
+    }
+    const numW = 110, numGap = 80;
+    const blockW = numW + numGap + maxTextW;
+    const blockX = W/2 - blockW/2;
     let y = (SAFE_TOP + SAFE_BOTTOM)/2 - (bullets.length * 140) / 2 + 60;
     for(let i=0;i<bullets.length;i++){
       ctx.font = '900 italic 84px "Barlow Condensed", sans-serif';
       ctx.fillStyle = ACC;
-      ctx.fillText(`0${i+1}`, W/2 - 280, y);
+      ctx.textAlign = 'left';
+      ctx.fillText(`0${i+1}`, blockX, y);
       ctx.font = '800 italic 78px "Barlow Condensed", sans-serif';
       ctx.fillStyle = TEXT;
-      ctx.textAlign = 'left';
-      ctx.fillText(bullets[i].toUpperCase(), W/2 - 200, y);
-      ctx.textAlign = 'center';
+      ctx.fillText(bullets[i].toUpperCase(), blockX + numW + numGap, y);
       y += 140;
     }
     drawFooter(ctx, d.cta);
@@ -689,7 +697,9 @@ const PROMO = (() => {
       const c = cats[i];
       const x = cx + 40 + i*colW + colW/2;
       // Número grande
-      ctx.fillStyle = c.val>=4 ? ACC : TEXT;
+      if(c.val >= 4)      ctx.fillStyle = ACC;
+      else if(c.val >= 3) ctx.fillStyle = '#ff9500';
+      else                 ctx.fillStyle = '#ff3f3f';
       ctx.textAlign = 'center';
       ctx.font = '900 italic 76px "Barlow Condensed", sans-serif';
       ctx.fillText(c.val + '', x, sy + 70);
@@ -991,7 +1001,7 @@ const PROMO = (() => {
       const file = new File([blob], `squadteam-${_selected.id}.png`, { type:'image/png' });
       if(navigator.canShare && navigator.canShare({ files:[file] })){
         try{ await navigator.share({ files:[file], title:'Squad Team' }); }
-        catch(e){ download(); }
+        catch(e){ if(e?.name !== 'AbortError') download(); }
       } else {
         download();
       }

@@ -399,6 +399,36 @@ const PROMO = (() => {
   }
 
   // ── TEMPLATES TIPOGRÁFICAS ────────────────────────────────────────────────
+  function renderIntro(ctx, d){
+    drawBackground(ctx);
+    drawEyebrow(ctx, d.eyebrow, SAFE_TOP);
+
+    // Palabra gigante centrada
+    ctx.fillStyle = TEXT;
+    ctx.textAlign = 'center';
+    ctx.font = '900 italic 380px "Barlow Condensed", sans-serif';
+    const word = (d.word || '').toUpperCase();
+    ctx.fillText(word, W/2, (SAFE_TOP + SAFE_BOTTOM)/2 + 60);
+
+    // Línea lima fina horizontal bajo la palabra
+    ctx.strokeStyle = ACC;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(W/2 - 100, (SAFE_TOP + SAFE_BOTTOM)/2 + 130);
+    ctx.lineTo(W/2 + 100, (SAFE_TOP + SAFE_BOTTOM)/2 + 130);
+    ctx.stroke();
+
+    // Subtítulo dramático
+    if(d.sub){
+      ctx.fillStyle = SUB;
+      ctx.font = '500 38px "Inter", sans-serif';
+      const lines = wrapText(ctx, d.sub, W - 240);
+      let y = (SAFE_TOP + SAFE_BOTTOM)/2 + 220;
+      for(const line of lines){ ctx.fillText(line, W/2, y); y += 50; }
+    }
+    drawFooter(ctx, d.cta);
+  }
+
   function renderHero(ctx, d){
     drawBackground(ctx);
     drawEyebrow(ctx, d.eyebrow, SAFE_TOP);
@@ -890,6 +920,8 @@ const PROMO = (() => {
 
   // Modo 2: tipográficas puras (humo / mensajes / hype)
   const TEMPLATES_TYPO = [
+    { id:'intro', label:'Intro', renderer:renderIntro,
+      defaults:{ eyebrow:'PRÓXIMAMENTE EN URUGUAY', word:'BASTA.', sub:'Basta del Excel y los PDFs.', cta:HANDLE } },
     { id:'hero', label:'Hero', renderer:renderHero,
       defaults:{ eyebrow:'PRÓXIMAMENTE', line1:'SQUAD', line2:'TEAM', footer:HANDLE } },
     { id:'question', label:'Pregunta', renderer:renderQuestion,

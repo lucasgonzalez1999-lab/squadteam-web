@@ -4,3 +4,7 @@
 // En desarrollo, editá este archivo localmente.
 window.SQUAD_BOT_URL    = 'https://squadteam-bot-production.up.railway.app';
 window.SQUAD_APP_SECRET = 'SqBot2026xK9mP3rT7wL';
+
+// Cloudinary — fotos de progreso físico (unsigned upload, safe en cliente)
+window.CLOUDINARY_CLOUD  = 'dgjau6v7e';
+window.CLOUDINARY_PRESET = 'squadteam_progress';

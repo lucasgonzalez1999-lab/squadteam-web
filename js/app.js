@@ -326,6 +326,7 @@ function goSection(id, el) {
   if (id==='mi-perfil')   renderAthleteView(currentUser);
   if (id==='mi-historial') renderAthHistorial(currentUser);
   if (id==='checkins')    renderCheckins();
+  if (id==='fisico')       renderFisico();
   if (id==='admin')     renderDB();
 }
 

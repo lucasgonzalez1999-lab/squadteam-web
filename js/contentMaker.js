@@ -1,7 +1,7 @@
 'use strict';
 // SQUAD TEAM — Generador de contenido multi-formato
 // ?gen=1 → YouTube 16:9 · IG Historia 9:16 · IG Cuadrado 1:1
-// El usuario sube una foto de fondo; el canvas pone texto encima.
+// Templates declarativos con schema de fields; el editor arma la UI sola.
 
 if (typeof CanvasRenderingContext2D !== 'undefined'
     && !CanvasRenderingContext2D.prototype.roundRect) {
@@ -25,7 +25,6 @@ const CGEN = (() => {
   const ACC   = '#e8ff00';
   const WHITE = '#ffffff';
   const BLACK = '#000000';
-  const SUB   = '#cccccc';
 
   const FORMATS = {
     youtube:  { w:1280, h:720,  label:'YouTube',  ratio:'16/9', maxH:'55vh' },
@@ -35,12 +34,13 @@ const CGEN = (() => {
 
   let _fmt      = 'youtube';
   let _photo    = null;
+  let _photoName = '';
   let _templates = [];
   let _selected  = null;
   let _state     = {};
   let _raf       = null;
 
-  // Logo Squad cacheado
+  // Logo cacheado en background; cuando carga, dispara redraw.
   let _logo = null, _logoLoading = false;
   function ensureLogo(){
     if(_logo || _logoLoading) return _logo;
@@ -55,11 +55,6 @@ const CGEN = (() => {
   function scheduleRedraw(){
     if(_raf) return;
     _raf = requestAnimationFrame(() => { _raf = null; redraw(); });
-  }
-
-  function withAlpha(hex, a){
-    const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
-    return `rgba(${r},${g},${b},${a})`;
   }
 
   function escapeHtml(s){
@@ -80,31 +75,57 @@ const CGEN = (() => {
     return lines;
   }
 
-  // Reduce font size hasta que el texto wrappeado entre en (maxW, maxH).
-  // Devuelve { size, lines, lineH }. Usado para evitar overflow.
+  // Reduce tamaño hasta que entre. Si text vacío, devuelve fallback seguro.
   function fitText(ctx, text, maxW, maxH, opts){
     const o = opts || {};
     const family = o.family || '"Barlow Condensed",sans-serif';
     const weight = o.weight || '900 italic';
-    const lineHRatio = o.lineH || 1.0;
+    const lineHRatio = o.lineH || 1.05;
+    const safeText = text || ' ';
     let size = o.start || 200;
     const min = o.min || 40;
     while(size >= min){
       ctx.font = `${weight} ${size}px ${family}`;
-      const lines = wrapText(ctx, text, maxW);
+      const lines = wrapText(ctx, safeText, maxW);
       const lineH = Math.round(size * lineHRatio);
       if(lines.length * lineH <= maxH){
-        return { size, lines, lineH };
+        return { size, lines: lines.length?lines:[' '], lineH };
       }
       size -= 4;
     }
     ctx.font = `${weight} ${size}px ${family}`;
-    const lines = wrapText(ctx, text, maxW);
-    return { size, lines, lineH: Math.round(size * lineHRatio) };
+    const lines = wrapText(ctx, safeText, maxW);
+    return { size, lines: lines.length?lines:[' '], lineH: Math.round(size * lineHRatio) };
   }
 
-  // ── PHOTO UTILS ─────────────────────────────────────────────────────────────
-  // Dibuja la foto escalada a cover + overlay oscuro encima
+  // Si el user setea fixedSize > 0, override; si no, fitText.
+  function fitOrFixed(ctx, text, maxW, maxH, opts){
+    const o = opts || {};
+    if (o.fixedSize && o.fixedSize > 0) {
+      const family = o.family || '"Barlow Condensed",sans-serif';
+      const weight = o.weight || '900 italic';
+      const lineHRatio = o.lineH || 1.05;
+      ctx.font = `${weight} ${o.fixedSize}px ${family}`;
+      const safeText = text || ' ';
+      const lines = wrapText(ctx, safeText, maxW);
+      return {
+        size: o.fixedSize,
+        lines: lines.length ? lines : [' '],
+        lineH: Math.round(o.fixedSize * lineHRatio),
+      };
+    }
+    return fitText(ctx, text, maxW, maxH, o);
+  }
+
+  // Aplica un translate vertical al bloque de texto sin mover la foto/watermark.
+  function withTextOffset(ctx, H, d, fn){
+    const dy = ((d.posY || 0) / 100) * H;
+    ctx.save();
+    ctx.translate(0, dy);
+    try { fn(); } finally { ctx.restore(); }
+  }
+
+  // ── PHOTO + COMPOSITION ─────────────────────────────────────────────────────
   function drawPhoto(ctx, W, H, darken){
     if(!_photo){
       ctx.fillStyle = '#111111';
@@ -118,11 +139,10 @@ const CGEN = (() => {
     const scale = Math.max(W/_photo.width, H/_photo.height);
     const sw = _photo.width*scale, sh = _photo.height*scale;
     ctx.drawImage(_photo, (W-sw)/2, (H-sh)/2, sw, sh);
-    ctx.fillStyle = `rgba(0,0,0,${darken||0.45})`;
+    ctx.fillStyle = `rgba(0,0,0,${darken||0.40})`;
     ctx.fillRect(0,0,W,H);
   }
 
-  // Gradiente vertical que oscurece la mitad inferior para legibilidad del texto
   function gradientBottom(ctx, W, H, fromFrac, strength){
     const g = ctx.createLinearGradient(0, H*fromFrac, 0, H);
     g.addColorStop(0,'rgba(0,0,0,0)');
@@ -131,21 +151,19 @@ const CGEN = (() => {
     ctx.fillRect(0, H*fromFrac, W, H*(1-fromFrac));
   }
 
-  // Pill de label (fondo lima, texto negro)
-  function drawPill(ctx, text, x, y, fontSize){
+  function drawPill(ctx, text, x, y, fontSize, bg, fg){
     const fs = fontSize || 28;
     ctx.font = `800 ${fs}px "Inter",sans-serif`;
     const tw = ctx.measureText(text).width;
     const ph = fs*2, pw = tw + fs*1.6;
-    ctx.fillStyle = ACC;
+    ctx.fillStyle = bg || ACC;
     ctx.beginPath(); ctx.roundRect(x, y-ph*0.75, pw, ph, ph/2); ctx.fill();
-    ctx.fillStyle = BLACK;
+    ctx.fillStyle = fg || BLACK;
     ctx.textAlign = 'left';
     ctx.fillText(text, x + fs*0.8, y + fs*0.3);
     return pw;
   }
 
-  // Watermark del logo en esquina
   function drawWatermark(ctx, W, H){
     const logo = ensureLogo();
     if(!logo) return;
@@ -155,298 +173,494 @@ const CGEN = (() => {
     ctx.globalAlpha = 1;
   }
 
-  // ── YOUTUBE TEMPLATES (1280×720) ────────────────────────────────────────────
+  function overlay(d, fallback){
+    return (d.overlay != null ? d.overlay/100 : fallback);
+  }
 
-  // Pregunta dramática — eyebrow arriba, headline grande auto-fit
+  // ── RENDERERS ───────────────────────────────────────────────────────────────
+
+  // YouTube — Pregunta (eyebrow pill + headline auto-fit con acento)
   function renderYTPregunta(ctx, W, H, d){
-    drawPhoto(ctx, W, H, 0.40);
+    drawPhoto(ctx, W, H, overlay(d, 0.40));
     gradientBottom(ctx, W, H, 0.25, 0.78);
 
-    const padX = 60;
-
-    // Eyebrow pill arriba
-    if(d.eyebrow){
-      drawPill(ctx, d.eyebrow.toUpperCase(), padX, H*0.18, Math.round(H*0.04));
-    }
-
-    // Headline auto-fit en el área central-inferior
-    const head = (d.headline||'').toUpperCase();
-    const maxW = W - padX*2;
-    const maxH = H*0.55;
-    const fit  = fitText(ctx, head, maxW, maxH, { start: Math.round(H*0.20), min: 60, lineH: 1.0 });
-
-    const totalH = fit.lines.length * fit.lineH;
-    let y = H*0.92 - totalH + fit.lineH; // baseline de primera línea
-    const ac = (d.acento||'').toUpperCase();
-    ctx.font = `900 italic ${fit.size}px "Barlow Condensed",sans-serif`;
-    ctx.textAlign = 'left';
-    for(let i=0; i<fit.lines.length; i++){
-      const line = fit.lines[i];
-      const isLast = i === fit.lines.length - 1;
-      if(isLast && ac && line.endsWith(ac)){
-        const pre = line.slice(0, line.length - ac.length);
-        ctx.fillStyle = WHITE; ctx.fillText(pre, padX, y);
-        const preW = ctx.measureText(pre).width;
-        ctx.fillStyle = ACC; ctx.fillText(ac, padX + preW, y);
-      } else {
-        ctx.fillStyle = WHITE;
-        ctx.fillText(line, padX, y);
+    withTextOffset(ctx, H, d, () => {
+      const padX = 60;
+      if(d.eyebrow){
+        drawPill(ctx, d.eyebrow.toUpperCase(), padX, H*0.18, Math.round(H*0.04));
       }
-      y += fit.lineH;
-    }
-    drawWatermark(ctx, W, H);
+      const head = (d.headline||'').toUpperCase();
+      const maxW = W - padX*2, maxH = H*0.55;
+      const fit  = fitOrFixed(ctx, head, maxW, maxH, {
+        start: Math.round(H*0.20), min: 60, lineH: 1.05, fixedSize: d.headlineSize,
+      });
+      const totalH = fit.lines.length * fit.lineH;
+      let y = H*0.92 - totalH + fit.lineH;
+      const ac = (d.acento||'').toUpperCase();
+      ctx.font = `900 italic ${fit.size}px "Barlow Condensed",sans-serif`;
+      ctx.textAlign = 'left';
+      const head1 = d.headlineColor || WHITE;
+      const head2 = d.acentoColor   || ACC;
+      for(let i=0; i<fit.lines.length; i++){
+        const line = fit.lines[i];
+        const isLast = i === fit.lines.length - 1;
+        if(isLast && ac && line.endsWith(ac)){
+          const pre = line.slice(0, line.length - ac.length);
+          ctx.fillStyle = head1; ctx.fillText(pre, padX, y);
+          const preW = ctx.measureText(pre).width;
+          ctx.fillStyle = head2; ctx.fillText(ac, padX + preW, y);
+        } else {
+          ctx.fillStyle = head1;
+          ctx.fillText(line, padX, y);
+        }
+        y += fit.lineH;
+      }
+    });
+
+    if(d.watermark !== false) drawWatermark(ctx, W, H);
   }
 
-  // Dos líneas de impacto — blanco arriba, lima abajo (auto-fit)
+  // YouTube — Dos líneas
   function renderYTDosLineas(ctx, W, H, d){
-    drawPhoto(ctx, W, H, 0.4);
+    drawPhoto(ctx, W, H, overlay(d, 0.40));
     gradientBottom(ctx, W, H, 0.25, 0.94);
 
-    const padX = 60, maxW = W - padX*2;
-    const f1 = fitText(ctx, (d.line1||'').toUpperCase(), maxW, H*0.22,
-      { start: Math.round(H*0.20), min: 50 });
-    const f2 = fitText(ctx, (d.line2||'').toUpperCase(), maxW, H*0.30,
-      { start: Math.round(H*0.27), min: 60 });
+    withTextOffset(ctx, H, d, () => {
+      const padX = 60, maxW = W - padX*2;
+      const f1 = fitOrFixed(ctx, (d.line1||'').toUpperCase(), maxW, H*0.22,
+        { start: Math.round(H*0.20), min: 50, fixedSize: d.line1Size });
+      const f2 = fitOrFixed(ctx, (d.line2||'').toUpperCase(), maxW, H*0.30,
+        { start: Math.round(H*0.27), min: 60, fixedSize: d.line2Size });
 
-    ctx.textAlign = 'left';
-    ctx.fillStyle = WHITE;
-    ctx.font = `900 italic ${f1.size}px "Barlow Condensed",sans-serif`;
-    ctx.fillText(f1.lines[0], padX, H*0.67);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = d.line1Color || WHITE;
+      ctx.font = `900 italic ${f1.size}px "Barlow Condensed",sans-serif`;
+      ctx.fillText(f1.lines[0], padX, H*0.67);
 
-    ctx.fillStyle = ACC;
-    ctx.font = `900 italic ${f2.size}px "Barlow Condensed",sans-serif`;
-    ctx.fillText(f2.lines[0], padX, H*0.95);
+      ctx.fillStyle = d.line2Color || ACC;
+      ctx.font = `900 italic ${f2.size}px "Barlow Condensed",sans-serif`;
+      ctx.fillText(f2.lines[0], padX, H*0.95);
+    });
 
-    drawWatermark(ctx, W, H);
+    if(d.watermark !== false) drawWatermark(ctx, W, H);
   }
 
-  // Número shock — número gigante lima, label blanco (auto-fit)
+  // YouTube — Número
   function renderYTNumero(ctx, W, H, d){
-    drawPhoto(ctx, W, H, 0.45);
+    drawPhoto(ctx, W, H, overlay(d, 0.45));
     gradientBottom(ctx, W, H, 0.0, 0.72);
 
-    const padX = 40, maxW = W - padX*2;
-    const fn = fitText(ctx, (d.numero||'#1'), maxW, H*0.65,
-      { start: Math.round(H*0.55), min: 80 });
-    const fl = fitText(ctx, (d.label||'').toUpperCase(), maxW, H*0.22,
-      { start: Math.round(H*0.18), min: 40 });
+    withTextOffset(ctx, H, d, () => {
+      const padX = 40, maxW = W - padX*2;
+      const fn = fitOrFixed(ctx, (d.numero||'#1'), maxW, H*0.65,
+        { start: Math.round(H*0.55), min: 80, fixedSize: d.numeroSize });
+      const fl = fitOrFixed(ctx, (d.label||'').toUpperCase(), maxW, H*0.22,
+        { start: Math.round(H*0.18), min: 40, fixedSize: d.labelSize });
 
-    ctx.textAlign = 'left';
-    ctx.fillStyle = ACC;
-    ctx.font = `900 italic ${fn.size}px "Barlow Condensed",sans-serif`;
-    ctx.fillText(fn.lines[0], padX, H*0.80);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = d.numeroColor || ACC;
+      ctx.font = `900 italic ${fn.size}px "Barlow Condensed",sans-serif`;
+      ctx.fillText(fn.lines[0], padX, H*0.80);
 
-    ctx.fillStyle = WHITE;
-    ctx.font = `900 italic ${fl.size}px "Barlow Condensed",sans-serif`;
-    ctx.fillText(fl.lines[0], padX, H*0.97);
+      ctx.fillStyle = d.labelColor || WHITE;
+      ctx.font = `900 italic ${fl.size}px "Barlow Condensed",sans-serif`;
+      ctx.fillText(fl.lines[0], padX, H*0.97);
+    });
 
-    drawWatermark(ctx, W, H);
+    if(d.watermark !== false) drawWatermark(ctx, W, H);
   }
 
-  // ── HISTORIA TEMPLATES (1080×1920) ──────────────────────────────────────────
-
-  // Número + unidad + segunda línea — "+35 AÑOS / NO QUERÉS ESTO"
+  // Historia — Shock (numero + unidad + line2)
   function renderHisShock(ctx, W, H, d){
-    drawPhoto(ctx, W, H, 0.30);
+    drawPhoto(ctx, W, H, overlay(d, 0.30));
     gradientBottom(ctx, W, H, 0.42, 0.94);
 
-    const padX = 80, maxW = W - padX*2;
+    withTextOffset(ctx, H, d, () => {
+      const padX = 80, maxW = W - padX*2;
+      const numTxt = (d.numero||'+35');
+      const uniTxt = (d.unidad||'AÑOS').toUpperCase();
+      const numSz  = d.numeroSize > 0 ? d.numeroSize : Math.round(H*0.20);
 
-    // Número + unidad en una línea — fit conjunto
-    const numTxt = (d.numero||'+35');
-    const uniTxt = (d.unidad||'AÑOS').toUpperCase();
-    const numSz  = Math.round(H*0.20);
-    ctx.textAlign = 'left';
-    ctx.fillStyle = ACC;
-    ctx.font = `900 italic ${numSz}px "Barlow Condensed",sans-serif`;
-    ctx.fillText(numTxt, padX, H*0.71);
-    const numW = ctx.measureText(numTxt).width;
-    ctx.fillStyle = WHITE;
-    ctx.font = `900 italic ${Math.round(numSz*0.42)}px "Barlow Condensed",sans-serif`;
-    ctx.fillText(uniTxt, padX+numW+14, H*0.71 - numSz*0.09);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = d.numeroColor || ACC;
+      ctx.font = `900 italic ${numSz}px "Barlow Condensed",sans-serif`;
+      ctx.fillText(numTxt, padX, H*0.71);
+      const numW = ctx.measureText(numTxt).width;
 
-    // Segunda línea auto-fit
-    const fit = fitText(ctx, (d.line2||'').toUpperCase(), maxW, H*0.18,
-      { start: Math.round(H*0.105), min: 50 });
-    ctx.fillStyle = WHITE;
-    ctx.font = `900 italic ${fit.size}px "Barlow Condensed",sans-serif`;
-    let y = H*0.94 - (fit.lines.length-1) * fit.lineH;
-    for(const l of fit.lines){ ctx.fillText(l, padX, y); y += fit.lineH; }
+      ctx.fillStyle = d.unidadColor || WHITE;
+      ctx.font = `900 italic ${Math.round(numSz*0.42)}px "Barlow Condensed",sans-serif`;
+      ctx.fillText(uniTxt, padX+numW+14, H*0.71 - numSz*0.09);
 
-    drawWatermark(ctx, W, H);
+      const fit = fitOrFixed(ctx, (d.line2||'').toUpperCase(), maxW, H*0.18,
+        { start: Math.round(H*0.105), min: 50, fixedSize: d.line2Size });
+      ctx.fillStyle = d.line2Color || WHITE;
+      ctx.font = `900 italic ${fit.size}px "Barlow Condensed",sans-serif`;
+      let y = H*0.94 - (fit.lines.length-1) * fit.lineH;
+      for(const l of fit.lines){ ctx.fillText(l, padX, y); y += fit.lineH; }
+    });
+
+    if(d.watermark !== false) drawWatermark(ctx, W, H);
   }
 
-  // Caso de éxito — label pill + titular grande (auto-fit)
+  // Historia — Caso
   function renderHisCaso(ctx, W, H, d){
-    drawPhoto(ctx, W, H, 0.35);
+    drawPhoto(ctx, W, H, overlay(d, 0.35));
     gradientBottom(ctx, W, H, 0.48, 0.95);
 
-    const pillFs = Math.round(H*0.022);
-    drawPill(ctx, (d.label||'CASO DE ÉXITO').toUpperCase(), 80, H*0.64, pillFs);
+    withTextOffset(ctx, H, d, () => {
+      const pillFs = Math.round(H*0.022);
+      drawPill(ctx, (d.label||'CASO DE ÉXITO').toUpperCase(), 80, H*0.64, pillFs,
+        d.labelBg || ACC, d.labelFg || BLACK);
 
-    const padX = 80, maxW = W - padX*2;
-    const fit = fitText(ctx, (d.headline||'').toUpperCase(), maxW, H*0.28,
-      { start: Math.round(H*0.115), min: 56 });
+      const padX = 80, maxW = W - padX*2;
+      const fit = fitOrFixed(ctx, (d.headline||'').toUpperCase(), maxW, H*0.28,
+        { start: Math.round(H*0.115), min: 56, fixedSize: d.headlineSize });
 
-    ctx.textAlign = 'left';
-    ctx.fillStyle = WHITE;
-    ctx.font = `900 italic ${fit.size}px "Barlow Condensed",sans-serif`;
-    let y = H*0.95 - (fit.lines.length-1) * fit.lineH;
-    const yStart = y;
-    for(const l of fit.lines){ ctx.fillText(l, padX, y); y += fit.lineH; }
+      ctx.textAlign = 'left';
+      ctx.fillStyle = d.headlineColor || WHITE;
+      ctx.font = `900 italic ${fit.size}px "Barlow Condensed",sans-serif`;
+      let y = H*0.95 - (fit.lines.length-1) * fit.lineH;
+      for(const l of fit.lines){ ctx.fillText(l, padX, y); y += fit.lineH; }
 
-    // Línea lima al costado izquierdo
-    ctx.fillStyle = ACC;
-    ctx.fillRect(40, H*0.62, 6, y - H*0.62 - fit.lineH*0.6);
+      // Línea lateral lima, altura derivada del área del texto
+      const top = H*0.62;
+      const bottom = Math.max(top + 40, H*0.95);
+      ctx.fillStyle = d.barColor || ACC;
+      ctx.fillRect(40, top, 6, bottom - top - fit.lineH*0.6);
+    });
 
-    drawWatermark(ctx, W, H);
+    if(d.watermark !== false) drawWatermark(ctx, W, H);
   }
 
-  // Pregunta al centro — texto grande centrado (auto-fit)
+  // Historia — Pregunta
   function renderHisPregunta(ctx, W, H, d){
-    drawPhoto(ctx, W, H, 0.5);
+    drawPhoto(ctx, W, H, overlay(d, 0.50));
     const vg = ctx.createRadialGradient(W/2, H/2, H*0.15, W/2, H/2, H*0.65);
     vg.addColorStop(0,'rgba(0,0,0,0)');
     vg.addColorStop(1,'rgba(0,0,0,0.65)');
     ctx.fillStyle = vg; ctx.fillRect(0,0,W,H);
 
-    const padX = 90, maxW = W - padX*2;
-    const fit = fitText(ctx, (d.headline||'').toUpperCase(), maxW, H*0.45,
-      { start: Math.round(H*0.10), min: 50, lineH: 1.08 });
+    withTextOffset(ctx, H, d, () => {
+      const padX = 90, maxW = W - padX*2;
+      const fit = fitOrFixed(ctx, (d.headline||'').toUpperCase(), maxW, H*0.45,
+        { start: Math.round(H*0.10), min: 50, lineH: 1.08, fixedSize: d.headlineSize });
 
-    ctx.textAlign = 'center';
-    ctx.fillStyle = WHITE;
-    ctx.font = `900 italic ${fit.size}px "Barlow Condensed",sans-serif`;
-    const totalH = fit.lines.length * fit.lineH;
-    let y = H/2 - totalH/2 + fit.lineH;
-    for(const l of fit.lines){ ctx.fillText(l, W/2, y); y += fit.lineH; }
+      ctx.textAlign = 'center';
+      ctx.fillStyle = d.headlineColor || WHITE;
+      ctx.font = `900 italic ${fit.size}px "Barlow Condensed",sans-serif`;
+      const totalH = fit.lines.length * fit.lineH;
+      let y = H/2 - totalH/2 + fit.lineH;
+      for(const l of fit.lines){ ctx.fillText(l, W/2, y); y += fit.lineH; }
 
-    ctx.fillStyle = ACC;
-    ctx.font = `900 italic ${Math.round(H*0.075)}px "Barlow Condensed",sans-serif`;
-    ctx.fillText('?', W/2, y + Math.round(H*0.04));
+      ctx.fillStyle = d.markColor || ACC;
+      ctx.font = `900 italic ${Math.round(H*0.075)}px "Barlow Condensed",sans-serif`;
+      ctx.fillText('?', W/2, y + Math.round(H*0.04));
+    });
 
-    drawWatermark(ctx, W, H);
+    if(d.watermark !== false) drawWatermark(ctx, W, H);
   }
 
-  // ── CUADRADO TEMPLATES (1080×1080) ──────────────────────────────────────────
-
-  // Post feed — label + titular en tercio inferior (auto-fit)
+  // Cuadrado — Post
   function renderSqPost(ctx, W, H, d){
-    drawPhoto(ctx, W, H, 0.35);
+    drawPhoto(ctx, W, H, overlay(d, 0.35));
     gradientBottom(ctx, W, H, 0.42, 0.94);
 
-    if(d.label){
-      drawPill(ctx, d.label.toUpperCase(), 60, H*0.62, Math.round(H*0.028));
-    }
+    withTextOffset(ctx, H, d, () => {
+      if(d.label){
+        drawPill(ctx, d.label.toUpperCase(), 60, H*0.62, Math.round(H*0.028),
+          d.labelBg || ACC, d.labelFg || BLACK);
+      }
+      const padX = 60, maxW = W - padX*2;
+      const fit = fitOrFixed(ctx, (d.headline||'').toUpperCase(), maxW, H*0.30,
+        { start: Math.round(H*0.135), min: 50, fixedSize: d.headlineSize });
 
-    const padX = 60, maxW = W - padX*2;
-    const fit = fitText(ctx, (d.headline||'').toUpperCase(), maxW, H*0.30,
-      { start: Math.round(H*0.135), min: 50 });
+      ctx.textAlign = 'left';
+      ctx.fillStyle = d.headlineColor || WHITE;
+      ctx.font = `900 italic ${fit.size}px "Barlow Condensed",sans-serif`;
+      let y = H*0.95 - (fit.lines.length-1) * fit.lineH;
+      for(const l of fit.lines){ ctx.fillText(l, padX, y); y += fit.lineH; }
+    });
 
-    ctx.textAlign = 'left';
-    ctx.fillStyle = WHITE;
-    ctx.font = `900 italic ${fit.size}px "Barlow Condensed",sans-serif`;
-    let y = H*0.95 - (fit.lines.length-1) * fit.lineH;
-    for(const l of fit.lines){ ctx.fillText(l, padX, y); y += fit.lineH; }
-
-    drawWatermark(ctx, W, H);
+    if(d.watermark !== false) drawWatermark(ctx, W, H);
   }
 
-  // Dos líneas — blanco + lima (auto-fit)
+  // Cuadrado — Dos líneas
   function renderSqDosLineas(ctx, W, H, d){
-    drawPhoto(ctx, W, H, 0.45);
+    drawPhoto(ctx, W, H, overlay(d, 0.45));
     gradientBottom(ctx, W, H, 0.35, 0.92);
 
-    const padX = 60, maxW = W - padX*2;
-    const f1 = fitText(ctx, (d.line1||'').toUpperCase(), maxW, H*0.18,
-      { start: Math.round(H*0.165), min: 50 });
-    const f2 = fitText(ctx, (d.line2||'').toUpperCase(), maxW, H*0.24,
-      { start: Math.round(H*0.215), min: 60 });
+    withTextOffset(ctx, H, d, () => {
+      const padX = 60, maxW = W - padX*2;
+      const f1 = fitOrFixed(ctx, (d.line1||'').toUpperCase(), maxW, H*0.18,
+        { start: Math.round(H*0.165), min: 50, fixedSize: d.line1Size });
+      const f2 = fitOrFixed(ctx, (d.line2||'').toUpperCase(), maxW, H*0.24,
+        { start: Math.round(H*0.215), min: 60, fixedSize: d.line2Size });
 
-    ctx.textAlign = 'left';
-    ctx.fillStyle = WHITE;
-    ctx.font = `900 italic ${f1.size}px "Barlow Condensed",sans-serif`;
-    ctx.fillText(f1.lines[0], padX, H*0.72);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = d.line1Color || WHITE;
+      ctx.font = `900 italic ${f1.size}px "Barlow Condensed",sans-serif`;
+      ctx.fillText(f1.lines[0], padX, H*0.72);
 
-    ctx.fillStyle = ACC;
-    ctx.font = `900 italic ${f2.size}px "Barlow Condensed",sans-serif`;
-    ctx.fillText(f2.lines[0], padX, H*0.935);
+      ctx.fillStyle = d.line2Color || ACC;
+      ctx.font = `900 italic ${f2.size}px "Barlow Condensed",sans-serif`;
+      ctx.fillText(f2.lines[0], padX, H*0.935);
+    });
 
-    drawWatermark(ctx, W, H);
+    if(d.watermark !== false) drawWatermark(ctx, W, H);
   }
 
-  // Número impacto cuadrado (auto-fit)
+  // Cuadrado — Número
   function renderSqNumero(ctx, W, H, d){
-    drawPhoto(ctx, W, H, 0.4);
+    drawPhoto(ctx, W, H, overlay(d, 0.40));
     gradientBottom(ctx, W, H, 0.0, 0.75);
 
-    const padX = 50, maxW = W - padX*2;
+    withTextOffset(ctx, H, d, () => {
+      const padX = 50, maxW = W - padX*2;
+      const fn = fitOrFixed(ctx, (d.numero||'+500'), maxW, H*0.45,
+        { start: Math.round(H*0.42), min: 80, fixedSize: d.numeroSize });
+      ctx.textAlign = 'left';
+      ctx.fillStyle = d.numeroColor || ACC;
+      ctx.font = `900 italic ${fn.size}px "Barlow Condensed",sans-serif`;
+      ctx.fillText(fn.lines[0], padX, H*0.70);
 
-    // Número auto-fit
-    const fn = fitText(ctx, (d.numero||'+500'), maxW, H*0.45,
-      { start: Math.round(H*0.42), min: 80 });
-    ctx.textAlign = 'left';
-    ctx.fillStyle = ACC;
-    ctx.font = `900 italic ${fn.size}px "Barlow Condensed",sans-serif`;
-    ctx.fillText(fn.lines[0], padX, H*0.70);
+      const fl = fitOrFixed(ctx, (d.label||'').toUpperCase(), maxW, H*0.22,
+        { start: Math.round(H*0.10), min: 36, fixedSize: d.labelSize });
+      ctx.fillStyle = d.labelColor || WHITE;
+      ctx.font = `900 italic ${fl.size}px "Barlow Condensed",sans-serif`;
+      let y = H*0.95 - (fl.lines.length-1) * fl.lineH;
+      for(const l of fl.lines){ ctx.fillText(l, padX, y); y += fl.lineH; }
+    });
 
-    // Label auto-fit en máximo 2 líneas, baseline final en H*0.95
-    const fl = fitText(ctx, (d.label||'').toUpperCase(), maxW, H*0.22,
-      { start: Math.round(H*0.10), min: 36 });
-    ctx.fillStyle = WHITE;
-    ctx.font = `900 italic ${fl.size}px "Barlow Condensed",sans-serif`;
-    let y = H*0.95 - (fl.lines.length-1) * fl.lineH;
-    for(const l of fl.lines){ ctx.fillText(l, padX, y); y += fl.lineH; }
-
-    drawWatermark(ctx, W, H);
+    if(d.watermark !== false) drawWatermark(ctx, W, H);
   }
 
-  // ── TABLA DE TEMPLATES ───────────────────────────────────────────────────────
+  // ── SCHEMA ──────────────────────────────────────────────────────────────────
+  const COMMON_FIELDS = {
+    overlay:   { type:'range',  label:'Overlay foto',      min:0,  max:90, step:5, default:40, unit:'%' },
+    posY:      { type:'range',  label:'Posición vertical', min:-15, max:15, step:1, default:0,  unit:'%' },
+    watermark: { type:'toggle', label:'Watermark',         default:true },
+  };
+
   const ALL_TEMPLATES = {
     youtube: [
-      { id:'yt-pregunta',  label:'Pregunta',   fn:renderYTPregunta,
-        defaults:{ eyebrow:'SIN FILTRO', headline:'¿Tu coach todavía te manda PDFs?', acento:'PDFs?' } },
-      { id:'yt-doslineas', label:'Dos líneas',  fn:renderYTDosLineas,
-        defaults:{ line1:'COACHING', line2:'SIN EXCEL' } },
-      { id:'yt-numero',    label:'Número',      fn:renderYTNumero,
-        defaults:{ numero:'+500', label:'ATLETAS EN LA APP' } },
+      {
+        id:'yt-pregunta', label:'Pregunta', fn:renderYTPregunta,
+        fields:{
+          eyebrow:       { type:'text',     label:'Eyebrow',        default:'SIN FILTRO' },
+          headline:      { type:'textarea', label:'Titular',        default:'¿Tu coach todavía te manda PDFs?' },
+          acento:        { type:'text',     label:'Palabra acento', default:'PDFs?' },
+          headlineColor: { type:'color',    label:'Color titular',  default:'#ffffff' },
+          acentoColor:   { type:'color',    label:'Color acento',   default:'#e8ff00' },
+          headlineSize:  { type:'range',    label:'Tamaño titular', min:0, max:280, step:4, default:0, unit:'px', autoLabel:'Auto' },
+        }
+      },
+      {
+        id:'yt-doslineas', label:'Dos líneas', fn:renderYTDosLineas,
+        fields:{
+          line1:      { type:'text',  label:'Línea 1', default:'COACHING' },
+          line2:      { type:'text',  label:'Línea 2', default:'SIN EXCEL' },
+          line1Color: { type:'color', label:'Color línea 1', default:'#ffffff' },
+          line2Color: { type:'color', label:'Color línea 2', default:'#e8ff00' },
+          line1Size:  { type:'range', label:'Tamaño línea 1', min:0, max:240, step:4, default:0, unit:'px', autoLabel:'Auto' },
+          line2Size:  { type:'range', label:'Tamaño línea 2', min:0, max:280, step:4, default:0, unit:'px', autoLabel:'Auto' },
+        }
+      },
+      {
+        id:'yt-numero', label:'Número', fn:renderYTNumero,
+        fields:{
+          numero:      { type:'text',  label:'Número', default:'+500' },
+          label:       { type:'text',  label:'Etiqueta', default:'ATLETAS EN LA APP' },
+          numeroColor: { type:'color', label:'Color número', default:'#e8ff00' },
+          labelColor:  { type:'color', label:'Color etiqueta', default:'#ffffff' },
+          numeroSize:  { type:'range', label:'Tamaño número', min:0, max:600, step:8, default:0, unit:'px', autoLabel:'Auto' },
+          labelSize:   { type:'range', label:'Tamaño etiqueta', min:0, max:200, step:4, default:0, unit:'px', autoLabel:'Auto' },
+        }
+      },
     ],
     historia: [
-      { id:'his-shock',    label:'Shock',       fn:renderHisShock,
-        defaults:{ numero:'+35', unidad:'AÑOS', line2:'NO QUERÉS ESTO' } },
-      { id:'his-caso',     label:'Caso',        fn:renderHisCaso,
-        defaults:{ label:'CASO DE ÉXITO', headline:'SIENDO COACH Y PADRE' } },
-      { id:'his-pregunta', label:'Pregunta',    fn:renderHisPregunta,
-        defaults:{ headline:'¿Cuándo fue la última vez que mediste tu progreso real?' } },
+      {
+        id:'his-shock', label:'Shock', fn:renderHisShock,
+        fields:{
+          numero:      { type:'text',  label:'Número',   default:'+35' },
+          unidad:      { type:'text',  label:'Unidad',   default:'AÑOS' },
+          line2:       { type:'text',  label:'Bajada',   default:'NO QUERÉS ESTO' },
+          numeroColor: { type:'color', label:'Color número',   default:'#e8ff00' },
+          unidadColor: { type:'color', label:'Color unidad',   default:'#ffffff' },
+          line2Color:  { type:'color', label:'Color bajada',   default:'#ffffff' },
+          numeroSize:  { type:'range', label:'Tamaño número',  min:0, max:600, step:8, default:0, unit:'px', autoLabel:'Auto' },
+          line2Size:   { type:'range', label:'Tamaño bajada',  min:0, max:300, step:4, default:0, unit:'px', autoLabel:'Auto' },
+        }
+      },
+      {
+        id:'his-caso', label:'Caso', fn:renderHisCaso,
+        fields:{
+          label:         { type:'text',  label:'Pill',          default:'CASO DE ÉXITO' },
+          headline:      { type:'textarea', label:'Titular',    default:'SIENDO COACH Y PADRE' },
+          labelBg:       { type:'color', label:'Fondo pill',    default:'#e8ff00' },
+          labelFg:       { type:'color', label:'Texto pill',    default:'#000000' },
+          headlineColor: { type:'color', label:'Color titular', default:'#ffffff' },
+          barColor:      { type:'color', label:'Color barra',   default:'#e8ff00' },
+          headlineSize:  { type:'range', label:'Tamaño titular', min:0, max:280, step:4, default:0, unit:'px', autoLabel:'Auto' },
+        }
+      },
+      {
+        id:'his-pregunta', label:'Pregunta', fn:renderHisPregunta,
+        fields:{
+          headline:      { type:'textarea', label:'Titular',    default:'¿Cuándo fue la última vez que mediste tu progreso real?' },
+          headlineColor: { type:'color',    label:'Color titular', default:'#ffffff' },
+          markColor:     { type:'color',    label:'Color signo "?"', default:'#e8ff00' },
+          headlineSize:  { type:'range',    label:'Tamaño titular', min:0, max:240, step:4, default:0, unit:'px', autoLabel:'Auto' },
+          overlay:       { type:'range',    label:'Overlay foto', min:0, max:90, step:5, default:50, unit:'%' },
+        }
+      },
     ],
     cuadrado: [
-      { id:'sq-post',      label:'Post',        fn:renderSqPost,
-        defaults:{ label:'SQUAD TEAM', headline:'TU PLAN EN UNA PANTALLA' } },
-      { id:'sq-doslineas', label:'Dos líneas',  fn:renderSqDosLineas,
-        defaults:{ line1:'SIN EXCEL', line2:'SIN PAPELES' } },
-      { id:'sq-numero',    label:'Número',      fn:renderSqNumero,
-        defaults:{ numero:'+500', label:'ATLETAS YA TIENEN SU PLAN' } },
+      {
+        id:'sq-post', label:'Post', fn:renderSqPost,
+        fields:{
+          label:         { type:'text',  label:'Pill',         default:'SQUAD TEAM' },
+          headline:      { type:'textarea', label:'Titular',   default:'TU PLAN EN UNA PANTALLA' },
+          labelBg:       { type:'color', label:'Fondo pill',   default:'#e8ff00' },
+          labelFg:       { type:'color', label:'Texto pill',   default:'#000000' },
+          headlineColor: { type:'color', label:'Color titular', default:'#ffffff' },
+          headlineSize:  { type:'range', label:'Tamaño titular', min:0, max:280, step:4, default:0, unit:'px', autoLabel:'Auto' },
+        }
+      },
+      {
+        id:'sq-doslineas', label:'Dos líneas', fn:renderSqDosLineas,
+        fields:{
+          line1:      { type:'text',  label:'Línea 1', default:'SIN EXCEL' },
+          line2:      { type:'text',  label:'Línea 2', default:'SIN PAPELES' },
+          line1Color: { type:'color', label:'Color línea 1', default:'#ffffff' },
+          line2Color: { type:'color', label:'Color línea 2', default:'#e8ff00' },
+          line1Size:  { type:'range', label:'Tamaño línea 1', min:0, max:240, step:4, default:0, unit:'px', autoLabel:'Auto' },
+          line2Size:  { type:'range', label:'Tamaño línea 2', min:0, max:280, step:4, default:0, unit:'px', autoLabel:'Auto' },
+        }
+      },
+      {
+        id:'sq-numero', label:'Número', fn:renderSqNumero,
+        fields:{
+          numero:      { type:'text',  label:'Número', default:'+500' },
+          label:       { type:'text',  label:'Etiqueta', default:'ATLETAS YA TIENEN SU PLAN' },
+          numeroColor: { type:'color', label:'Color número', default:'#e8ff00' },
+          labelColor:  { type:'color', label:'Color etiqueta', default:'#ffffff' },
+          numeroSize:  { type:'range', label:'Tamaño número', min:0, max:600, step:8, default:0, unit:'px', autoLabel:'Auto' },
+          labelSize:   { type:'range', label:'Tamaño etiqueta', min:0, max:200, step:4, default:0, unit:'px', autoLabel:'Auto' },
+        }
+      },
     ],
   };
 
-  // ── UI ───────────────────────────────────────────────────────────────────────
+  // Merge: template.fields gana sobre COMMON_FIELDS (permite overrides por template).
+  function mergedFields(template){
+    return { ...COMMON_FIELDS, ...template.fields };
+  }
+  function buildState(template){
+    const out = {};
+    const merged = mergedFields(template);
+    for(const [k, def] of Object.entries(merged)) out[k] = def.default;
+    return out;
+  }
+
+  // ── UI ──────────────────────────────────────────────────────────────────────
   function ensureStyles(){
     if(document.getElementById('cgen-styles')) return;
     const s = document.createElement('style');
     s.id = 'cgen-styles';
     s.textContent = `
       #cgen-ov{position:fixed;inset:0;z-index:99999;background:#0a0a0d;color:#fff;font-family:"Inter",sans-serif;overflow-y:auto;padding:24px;}
-      #cgen-ov .cg-grid{display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start;}
+      #cgen-ov .cg-grid{display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start;}
       @media(max-width:960px){#cgen-ov .cg-grid{grid-template-columns:1fr;}}
       @media(max-width:480px){#cgen-ov{padding:14px!important;}}
       #cgen-ov .cg-chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin-bottom:16px;}
       #cgen-ov .cg-chips::-webkit-scrollbar{display:none;}
       #cgen-ov .cg-chips button{flex-shrink:0;}
-      #cgen-ov .cg-upload{width:100%;padding:22px 16px;background:#1a1a1f;border:2px dashed #2a2a35;border-radius:12px;color:#9090a8;font-size:13px;font-weight:700;cursor:pointer;text-align:center;margin-bottom:14px;box-sizing:border-box;letter-spacing:.06em;text-transform:uppercase;}
+      #cgen-ov .cg-upload{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;background:#1a1a1f;border:2px dashed #2a2a35;border-radius:12px;color:#9090a8;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:14px;box-sizing:border-box;letter-spacing:.06em;text-transform:uppercase;}
       #cgen-ov .cg-upload:hover{border-color:#e8ff00;color:#e8ff00;}
       #cgen-ov .cg-upload.has-photo{border-style:solid;border-color:#2a2a35;color:#fff;}
+      #cgen-ov .cg-thumb{width:42px;height:42px;border-radius:8px;object-fit:cover;flex-shrink:0;background:#000;}
+      #cgen-ov .cg-thumb-empty{width:42px;height:42px;border-radius:8px;flex-shrink:0;background:#11141a;display:flex;align-items:center;justify-content:center;color:#3a3a44;font-size:22px;}
+      #cgen-ov .cg-field{margin-bottom:12px;}
+      #cgen-ov .cg-field label.cg-l{display:block;font-size:10px;font-weight:700;letter-spacing:.12em;color:#9090a8;text-transform:uppercase;margin-bottom:5px;}
+      #cgen-ov .cg-input,#cgen-ov textarea.cg-input{width:100%;background:#1a1a1f;border:1px solid #2a2a35;border-radius:8px;padding:9px 12px;color:#fff;font-family:inherit;font-size:14px;box-sizing:border-box;resize:vertical;}
+      #cgen-ov .cg-row{display:flex;gap:10px;align-items:center;}
+      #cgen-ov input[type=color].cg-color{appearance:none;-webkit-appearance:none;width:42px;height:36px;border:1px solid #2a2a35;border-radius:8px;background:#1a1a1f;padding:2px;cursor:pointer;}
+      #cgen-ov input[type=color].cg-color::-webkit-color-swatch{border:none;border-radius:6px;}
+      #cgen-ov input[type=color].cg-color::-moz-color-swatch{border:none;border-radius:6px;}
+      #cgen-ov .cg-hex{font-family:'Roboto Mono',monospace;font-size:11px;color:#9090a8;letter-spacing:.05em;}
+      #cgen-ov input[type=range].cg-range{flex:1;accent-color:#e8ff00;}
+      #cgen-ov .cg-val{min-width:46px;text-align:right;font-family:'Roboto Mono',monospace;font-size:11px;color:#fff;}
+      #cgen-ov .cg-val.auto{color:#9090a8;}
+      #cgen-ov .cg-toggle{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#1a1a1f;border:1px solid #2a2a35;border-radius:8px;cursor:pointer;user-select:none;}
+      #cgen-ov .cg-toggle input{display:none;}
+      #cgen-ov .cg-toggle .cg-sw{width:34px;height:20px;border-radius:10px;background:#2a2a35;position:relative;transition:background .15s;}
+      #cgen-ov .cg-toggle .cg-sw::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#9090a8;transition:left .15s,background .15s;}
+      #cgen-ov .cg-toggle input:checked + .cg-sw{background:#e8ff00;}
+      #cgen-ov .cg-toggle input:checked + .cg-sw::after{left:16px;background:#000;}
     `;
     document.head.appendChild(s);
+  }
+
+  function inputText(key, def, value){
+    return `
+      <div class="cg-field">
+        <label class="cg-l">${escapeHtml(def.label||key)}</label>
+        <input class="cg-input" data-key="${escapeHtml(key)}" data-type="text" type="text" value="${escapeHtml(value)}">
+      </div>`;
+  }
+  function inputTextarea(key, def, value){
+    return `
+      <div class="cg-field">
+        <label class="cg-l">${escapeHtml(def.label||key)}</label>
+        <textarea class="cg-input" data-key="${escapeHtml(key)}" data-type="text" rows="2">${escapeHtml(value)}</textarea>
+      </div>`;
+  }
+  function inputColor(key, def, value){
+    return `
+      <div class="cg-field">
+        <label class="cg-l">${escapeHtml(def.label||key)}</label>
+        <div class="cg-row">
+          <input class="cg-color" data-key="${escapeHtml(key)}" data-type="color" type="color" value="${escapeHtml(value)}">
+          <span class="cg-hex">${escapeHtml(value)}</span>
+        </div>
+      </div>`;
+  }
+  function inputRange(key, def, value){
+    const n = Number(value) || 0;
+    const isAuto = def.autoLabel && n === 0;
+    const display = isAuto ? def.autoLabel : `${n}${def.unit||''}`;
+    return `
+      <div class="cg-field">
+        <label class="cg-l">${escapeHtml(def.label||key)}</label>
+        <div class="cg-row">
+          <input class="cg-range" data-key="${escapeHtml(key)}" data-type="range"
+            type="range" min="${def.min}" max="${def.max}" step="${def.step||1}" value="${n}">
+          <span class="cg-val ${isAuto?'auto':''}">${escapeHtml(display)}</span>
+        </div>
+      </div>`;
+  }
+  function inputToggle(key, def, value){
+    const checked = value ? 'checked' : '';
+    return `
+      <div class="cg-field">
+        <label class="cg-toggle">
+          <span class="cg-l" style="margin:0">${escapeHtml(def.label||key)}</span>
+          <span>
+            <input data-key="${escapeHtml(key)}" data-type="toggle" type="checkbox" ${checked}>
+            <span class="cg-sw"></span>
+          </span>
+        </label>
+      </div>`;
+  }
+  function renderField(key, def, value){
+    switch(def.type){
+      case 'text':     return inputText(key, def, value);
+      case 'textarea': return inputTextarea(key, def, value);
+      case 'color':    return inputColor(key, def, value);
+      case 'range':    return inputRange(key, def, value);
+      case 'toggle':   return inputToggle(key, def, value);
+      default:         return '';
+    }
   }
 
   function open(){
@@ -458,7 +672,7 @@ const CGEN = (() => {
     document.body.appendChild(ov);
     _templates = ALL_TEMPLATES[_fmt];
     _selected  = _templates[0];
-    _state     = { ..._selected.defaults };
+    _state     = buildState(_selected);
     renderUI();
   }
 
@@ -477,13 +691,15 @@ const CGEN = (() => {
       return `<button onclick="CGEN.selectTemplate('${t.id}')" style="padding:9px 16px;background:${active?'#e8ff00':'#1a1a1f'};border:1px solid ${active?'#e8ff00':'#2a2a35'};color:${active?'#000':'#fff'};border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${t.label}</button>`;
     }).join('');
 
-    const fields = Object.entries(_state).map(([k,v]) => `
-      <div style="margin-bottom:12px">
-        <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.12em;color:#9090a8;text-transform:uppercase;margin-bottom:5px">${escapeHtml(k)}</label>
-        <input data-key="${escapeHtml(k)}" type="text" value="${escapeHtml(v)}" style="width:100%;background:#1a1a1f;border:1px solid #2a2a35;border-radius:8px;padding:9px 12px;color:#fff;font-family:inherit;font-size:14px;box-sizing:border-box">
-      </div>`).join('');
+    const merged = mergedFields(_selected);
+    const fieldsHtml = Object.entries(merged)
+      .map(([k, def]) => renderField(k, def, _state[k]))
+      .join('');
 
-    const uploadLabel = _photo ? 'Cambiar foto' : '+ Subir foto de fondo';
+    const thumb = _photo
+      ? `<img class="cg-thumb" src="${_photo.src}" alt="">`
+      : `<div class="cg-thumb-empty">+</div>`;
+    const uploadText = _photo ? (escapeHtml(_photoName||'Foto cargada')+' · Cambiar') : 'Subir foto de fondo';
     const uploadClass = _photo ? 'cg-upload has-photo' : 'cg-upload';
 
     ov.innerHTML = `
@@ -507,8 +723,10 @@ const CGEN = (() => {
         </div>
         <div>
           <input type="file" id="cgen-file" accept="image/*" style="display:none" onchange="CGEN.onPhoto(event)">
-          <div class="${uploadClass}" onclick="document.getElementById('cgen-file').click()">${uploadLabel}</div>
-          <div oninput="CGEN.updateField(event)">${fields}</div>
+          <div class="${uploadClass}" onclick="document.getElementById('cgen-file').click()">
+            ${thumb}<span>${uploadText}</span>
+          </div>
+          <div id="cgen-fields" oninput="CGEN.updateField(event)" onchange="CGEN.updateField(event)">${fieldsHtml}</div>
           <button onclick="CGEN.download()" style="width:100%;padding:14px;background:#e8ff00;border:none;border-radius:12px;color:#000;font-family:inherit;font-weight:800;font-size:14px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;margin-top:10px">Descargar PNG</button>
           <button onclick="CGEN.reset()" style="width:100%;padding:10px;background:transparent;border:1px solid #2a2a35;border-radius:10px;color:#9090a8;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer;margin-top:8px">Reset</button>
         </div>
@@ -522,7 +740,7 @@ const CGEN = (() => {
     _fmt       = f;
     _templates = ALL_TEMPLATES[_fmt];
     _selected  = _templates[0];
-    _state     = { ..._selected.defaults };
+    _state     = buildState(_selected);
     renderUI();
   }
 
@@ -530,13 +748,19 @@ const CGEN = (() => {
     const t = _templates.find(x => x.id === id);
     if(!t) return;
     _selected = t;
-    _state    = { ..._selected.defaults };
+    _state    = buildState(_selected);
     renderUI();
   }
 
   function onPhoto(e){
     const file = e.target.files[0];
     if(!file) return;
+    if(!file.type || !file.type.startsWith('image/')){
+      e.target.value = '';
+      alert('El archivo no es una imagen.'); // sustituir por toast custom si tenés uno global
+      return;
+    }
+    _photoName = file.name || '';
     const reader = new FileReader();
     reader.onload = ev => {
       const img = new Image();
@@ -546,10 +770,32 @@ const CGEN = (() => {
     reader.readAsDataURL(file);
   }
 
+  // Parser único: el dataset.type decide cómo se interpreta el value.
   function updateField(e){
-    const key = e.target.getAttribute('data-key');
-    if(!key) return;
-    _state[key] = e.target.value;
+    const el = e.target;
+    const key = el.getAttribute('data-key');
+    const type = el.getAttribute('data-type');
+    if(!key || !type) return;
+    let v;
+    if(type === 'toggle')      v = el.checked;
+    else if(type === 'range')  v = Number(el.value);
+    else                       v = el.value;
+    _state[key] = v;
+
+    // refrescar microvisuales (hex label / valor de range) sin re-render completo
+    if(type === 'color'){
+      const sib = el.parentElement && el.parentElement.querySelector('.cg-hex');
+      if(sib) sib.textContent = v;
+    } else if(type === 'range'){
+      const sib = el.parentElement && el.parentElement.querySelector('.cg-val');
+      if(sib){
+        const merged = mergedFields(_selected);
+        const def = merged[key];
+        const isAuto = def && def.autoLabel && Number(v) === 0;
+        sib.textContent = isAuto ? def.autoLabel : `${v}${def && def.unit || ''}`;
+        sib.classList.toggle('auto', !!isAuto);
+      }
+    }
     scheduleRedraw();
   }
 
@@ -576,7 +822,7 @@ const CGEN = (() => {
   }
 
   function reset(){
-    _state = { ..._selected.defaults };
+    _state = buildState(_selected);
     renderUI();
   }
 

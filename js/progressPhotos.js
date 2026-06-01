@@ -70,8 +70,16 @@ function renderFisico(){
   if(!Array.isArray(athletes)||!athletes.length) athletes = typeof DEFAULT_ATHLETES!=='undefined'?DEFAULT_ATHLETES:[];
   const cont = document.getElementById('fisico-content');
   if(!cont) return;
-  const active = athletes.filter(a=>!a.inactive);
 
+  // Atleta logueado: solo ve sus propias fotos, sin selector
+  const isAth = (typeof currentUser!=='undefined' && currentUser && currentUser.role==='athlete');
+  if(isAth){
+    cont.innerHTML = `<div style="padding:20px;max-width:900px;margin:0 auto"><div id="pp-area"></div></div>`;
+    ppSelectAth(currentUser.id);
+    return;
+  }
+
+  const active = athletes.filter(a=>!a.inactive);
   cont.innerHTML = `
   <div style="padding:20px;max-width:1100px;margin:0 auto">
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px" id="pp-tabs">
@@ -114,7 +122,10 @@ async function ppSelectAth(athId){
 function ppRenderGrid(){
   const area = document.getElementById('pp-area');
   if(!area || !_ppSelAth) return;
-  const ath = athletes.find(a=>a.id===_ppSelAth);
+  let ath = (athletes||[]).find(a=>a.id===_ppSelAth);
+  if(!ath && typeof currentUser!=='undefined' && currentUser?.id===_ppSelAth){
+    ath = { id:currentUser.id, name:currentUser.name, color:currentUser.color };
+  }
   if(!ath) return;
 
   // Agrupar por fecha

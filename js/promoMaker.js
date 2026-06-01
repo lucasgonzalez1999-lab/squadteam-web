@@ -107,6 +107,109 @@ const PROMO = (() => {
     ctx.restore();
   }
 
+  // Siluetas de pose canvas-native (size = altura aproximada)
+  function drawPoseFront(ctx, cx, cy, size, color){
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = size * 0.04;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    const s = size / 200;
+    // cabeza
+    ctx.beginPath();
+    ctx.arc(cx, cy - 70*s, 22*s, 0, Math.PI*2);
+    ctx.stroke();
+    // cuello + tronco
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 48*s); ctx.lineTo(cx, cy - 36*s);
+    ctx.moveTo(cx - 50*s, cy - 36*s); ctx.lineTo(cx + 50*s, cy - 36*s);
+    ctx.lineTo(cx + 38*s, cy + 50*s); ctx.lineTo(cx - 38*s, cy + 50*s);
+    ctx.closePath(); ctx.stroke();
+    // brazos
+    ctx.beginPath();
+    ctx.moveTo(cx - 50*s, cy - 30*s); ctx.lineTo(cx - 64*s, cy + 50*s);
+    ctx.moveTo(cx + 50*s, cy - 30*s); ctx.lineTo(cx + 64*s, cy + 50*s);
+    ctx.stroke();
+    // piernas
+    ctx.beginPath();
+    ctx.moveTo(cx - 22*s, cy + 50*s); ctx.lineTo(cx - 22*s, cy + 130*s);
+    ctx.moveTo(cx + 22*s, cy + 50*s); ctx.lineTo(cx + 22*s, cy + 130*s);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPoseProfile(ctx, cx, cy, size, color, mirror){
+    ctx.save();
+    if(mirror){ ctx.translate(2*cx, 0); ctx.scale(-1, 1); }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = size * 0.04;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    const s = size / 200;
+    // cabeza
+    ctx.beginPath();
+    ctx.arc(cx, cy - 70*s, 22*s, 0, Math.PI*2);
+    ctx.stroke();
+    // tronco perfil (más angosto)
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 48*s); ctx.lineTo(cx, cy - 36*s);
+    ctx.moveTo(cx - 22*s, cy - 36*s); ctx.lineTo(cx + 22*s, cy - 36*s);
+    ctx.lineTo(cx + 24*s, cy + 50*s); ctx.lineTo(cx - 18*s, cy + 50*s);
+    ctx.closePath(); ctx.stroke();
+    // brazo anterior visible (curva al frente)
+    ctx.beginPath();
+    ctx.moveTo(cx + 18*s, cy - 30*s);
+    ctx.quadraticCurveTo(cx + 38*s, cy, cx + 30*s, cy + 40*s);
+    ctx.stroke();
+    // piernas perfil
+    ctx.beginPath();
+    ctx.moveTo(cx - 8*s, cy + 50*s); ctx.lineTo(cx - 10*s, cy + 130*s);
+    ctx.moveTo(cx + 14*s, cy + 50*s); ctx.lineTo(cx + 12*s, cy + 130*s);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPoseBack(ctx, cx, cy, size, color){
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = size * 0.04;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    const s = size / 200;
+    // cabeza
+    ctx.beginPath();
+    ctx.arc(cx, cy - 70*s, 22*s, 0, Math.PI*2);
+    ctx.stroke();
+    // tronco
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 48*s); ctx.lineTo(cx, cy - 36*s);
+    ctx.moveTo(cx - 50*s, cy - 36*s); ctx.lineTo(cx + 50*s, cy - 36*s);
+    ctx.lineTo(cx + 38*s, cy + 50*s); ctx.lineTo(cx - 38*s, cy + 50*s);
+    ctx.closePath(); ctx.stroke();
+    // línea central (espina)
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 36*s); ctx.lineTo(cx, cy + 50*s);
+    ctx.stroke();
+    // trapecio sutil (V invertida arriba)
+    ctx.beginPath();
+    ctx.moveTo(cx - 30*s, cy - 30*s);
+    ctx.lineTo(cx, cy - 10*s);
+    ctx.lineTo(cx + 30*s, cy - 30*s);
+    ctx.stroke();
+    // brazos
+    ctx.beginPath();
+    ctx.moveTo(cx - 50*s, cy - 30*s); ctx.lineTo(cx - 64*s, cy + 50*s);
+    ctx.moveTo(cx + 50*s, cy - 30*s); ctx.lineTo(cx + 64*s, cy + 50*s);
+    ctx.stroke();
+    // piernas
+    ctx.beginPath();
+    ctx.moveTo(cx - 22*s, cy + 50*s); ctx.lineTo(cx - 22*s, cy + 130*s);
+    ctx.moveTo(cx + 22*s, cy + 50*s); ctx.lineTo(cx + 22*s, cy + 130*s);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   // ── TEMPLATES TIPOGRÁFICAS ────────────────────────────────────────────────
   function renderHero(ctx, d){
     drawBackground(ctx);
@@ -386,11 +489,11 @@ const PROMO = (() => {
     const gridX = cx + 50, gridY = cy + 180, gap = 24;
     const slotW = (cw - 100 - gap) / 2;
     const slotH = (ch - 280) / 2 - gap/2;
-    const poses = [
-      { label:'Frente',     icon:'🧍' },
-      { label:'Perfil izq.',icon:'🚶' },
-      { label:'Perfil der.',icon:'🚶' },
-      { label:'Espalda',    icon:'🔙' },
+    const poseDrawers = [
+      { label:'Frente',     fn:(c,x,y,s)=>drawPoseFront(c,x,y,s,'#3a3a44') },
+      { label:'Perfil izq.',fn:(c,x,y,s)=>drawPoseProfile(c,x,y,s,'#3a3a44',false) },
+      { label:'Perfil der.',fn:(c,x,y,s)=>drawPoseProfile(c,x,y,s,'#3a3a44',true) },
+      { label:'Espalda',    fn:(c,x,y,s)=>drawPoseBack(c,x,y,s,'#3a3a44') },
     ];
     for(let i=0; i<4; i++){
       const col = i % 2, row = Math.floor(i / 2);
@@ -405,15 +508,13 @@ const PROMO = (() => {
       // Border
       ctx.strokeStyle = '#26262e'; ctx.lineWidth = 2;
       roundedRect(ctx, sx, sy, slotW, slotH, 16); ctx.stroke();
-      // Icon centered
-      ctx.fillStyle = '#3a3a44';
-      ctx.font = '500 90px "Inter", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(poses[i].icon, sx + slotW/2, sy + slotH/2 - 10);
+      // Pose silhouette canvas-native
+      poseDrawers[i].fn(ctx, sx + slotW/2, sy + slotH/2 - 10, 200);
       // Label bottom
       ctx.fillStyle = TEXT;
       ctx.font = '700 26px "Inter", sans-serif';
-      ctx.fillText(poses[i].label, sx + slotW/2, sy + slotH - 24);
+      ctx.textAlign = 'center';
+      ctx.fillText(poseDrawers[i].label, sx + slotW/2, sy + slotH - 24);
     }
 
     drawFooter(ctx, d.cta);

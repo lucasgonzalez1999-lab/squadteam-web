@@ -93,6 +93,20 @@ const PROMO = (() => {
     else { ctx.rect(x, y, w, h); }
   }
 
+  function drawCheck(ctx, cx, cy, size, color){
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = size * 0.16;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx - size*0.34, cy + size*0.04);
+    ctx.lineTo(cx - size*0.06, cy + size*0.30);
+    ctx.lineTo(cx + size*0.38, cy - size*0.26);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   // ── TEMPLATES TIPOGRÁFICAS ────────────────────────────────────────────────
   function renderHero(ctx, d){
     drawBackground(ctx);
@@ -259,11 +273,8 @@ const PROMO = (() => {
         ctx.font = '800 26px "Inter", sans-serif';
         ctx.fillText('PR', bx + bw/2, by + 35);
       } else {
-        // Check verde
-        ctx.fillStyle = '#22c55e';
-        ctx.textAlign = 'center';
-        ctx.font = '700 60px "Inter", sans-serif';
-        ctx.fillText('✓', cx + cw - 120, sy + 18);
+        // Check verde dibujado en canvas (consistente cross-platform)
+        drawCheck(ctx, cx + cw - 120, sy + 18, 32, '#00d084');
       }
       sy += 170;
     }
@@ -342,11 +353,8 @@ const PROMO = (() => {
       ctx.font = '700 30px "Inter", sans-serif';
       ctx.textAlign = 'right';
       ctx.fillText(p.amt, cx + cw - 100, py);
-      // check
-      ctx.fillStyle = '#22c55e';
-      ctx.textAlign = 'center';
-      ctx.font = '700 36px "Inter", sans-serif';
-      ctx.fillText('✓', cx + cw - 60, py);
+      // check dibujado en canvas
+      drawCheck(ctx, cx + cw - 60, py - 8, 22, '#00d084');
       py += 80;
     }
 
@@ -490,10 +498,7 @@ const PROMO = (() => {
       roundedRect(ctx, cx + 40, oy2 - 24, 34, 34, 8);
       ctx.fill(); ctx.stroke();
       if(o.done){
-        ctx.fillStyle = '#000';
-        ctx.font = '900 28px "Inter", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('✓', cx + 57, oy2 + 4);
+        drawCheck(ctx, cx + 57, oy2 - 7, 20, '#000');
       }
       // texto
       ctx.fillStyle = TEXT;

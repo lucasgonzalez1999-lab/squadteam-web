@@ -119,6 +119,73 @@ const PROMO = (() => {
     drawFooter(ctx, d.cta);
   }
 
+  function renderFeatures(ctx, d){
+    drawBackground(ctx);
+    drawEyebrow(ctx, d.eyebrow, 280);
+    const bullets = (d.bullets || '').split('\n').filter(Boolean);
+    ctx.textAlign = 'center';
+    let y = H/2 - (bullets.length * 140) / 2 + 60;
+    for(let i=0;i<bullets.length;i++){
+      ctx.font = '900 italic 84px "Barlow Condensed", sans-serif';
+      ctx.fillStyle = ACC;
+      ctx.fillText(`0${i+1}`, W/2 - 280, y);
+      ctx.font = '800 italic 78px "Barlow Condensed", sans-serif';
+      ctx.fillStyle = TEXT;
+      ctx.textAlign = 'left';
+      ctx.fillText(bullets[i].toUpperCase(), W/2 - 200, y);
+      ctx.textAlign = 'center';
+      y += 140;
+    }
+    drawFooter(ctx, d.cta);
+  }
+
+  function renderManifesto(ctx, d){
+    drawBackground(ctx);
+    drawEyebrow(ctx, d.eyebrow, 280);
+    ctx.fillStyle = TEXT;
+    ctx.textAlign = 'center';
+    ctx.font = '900 italic 96px "Barlow Condensed", sans-serif';
+    const lines = wrapText(ctx, d.headline, W - 200);
+    let y = H/2 - 80;
+    for(const line of lines){ ctx.fillText(line, W/2, y); y += 110; }
+    if(d.sub){
+      ctx.fillStyle = SUB;
+      ctx.font = '500 36px "Inter", sans-serif';
+      const subLines = wrapText(ctx, d.sub, W - 240);
+      y += 30;
+      for(const sl of subLines){ ctx.fillText(sl, W/2, y); y += 50; }
+    }
+    drawFooter(ctx, d.cta);
+  }
+
+  function renderCta(ctx, d){
+    drawBackground(ctx);
+    drawEyebrow(ctx, d.eyebrow, 280);
+    ctx.fillStyle = TEXT;
+    ctx.textAlign = 'center';
+    ctx.font = '900 italic 120px "Barlow Condensed", sans-serif';
+    const lines = wrapText(ctx, d.headline, W - 200);
+    let y = H/2 - 80;
+    for(const line of lines){ ctx.fillText(line, W/2, y); y += 130; }
+    if(d.sub){
+      ctx.fillStyle = SUB;
+      ctx.font = '500 38px "Inter", sans-serif';
+      ctx.fillText(d.sub, W/2, y + 30);
+    }
+    const btnW = 480, btnH = 110, btnY = H - 320;
+    ctx.fillStyle = ACC;
+    if(ctx.roundRect){
+      ctx.beginPath();
+      ctx.roundRect(W/2 - btnW/2, btnY, btnW, btnH, 18);
+      ctx.fill();
+    } else {
+      ctx.fillRect(W/2 - btnW/2, btnY, btnW, btnH);
+    }
+    ctx.fillStyle = '#000';
+    ctx.font = '800 36px "Inter", sans-serif';
+    ctx.fillText(d.cta.toUpperCase(), W/2, btnY + 70);
+  }
+
   // ── MOCKUP 1: RUTINA DEL DÍA ──────────────────────────────────────────────
   function renderMockRutina(ctx, d){
     drawBackground(ctx);
@@ -519,7 +586,8 @@ const PROMO = (() => {
   }
 
   // ── TEMPLATES ──────────────────────────────────────────────────────────────
-  const TEMPLATES = [
+  // Modo 1: mockups del UI real (anuncia features)
+  const TEMPLATES_MOCKUPS = [
     { id:'mock-rutina', label:'Rutina', renderer:renderMockRutina,
       defaults:{ eyebrow:'CARGÁ TU SESIÓN', headline:'Tu plan del mes. En una pantalla.', cta:HANDLE } },
     { id:'mock-pagos', label:'Pagos', renderer:renderMockPagos,
@@ -530,14 +598,35 @@ const PROMO = (() => {
       defaults:{ eyebrow:'CADA DOMINGO', headline:'Tu coach te explica la semana.', cta:HANDLE } },
     { id:'mock-muscle', label:'Volumen', renderer:renderMockMuscle,
       defaults:{ eyebrow:'TU CUERPO HABLA', headline:'Tu volumen, músculo por músculo.', cta:HANDLE } },
+  ];
+
+  // Modo 2: tipográficas puras (humo / mensajes / hype)
+  const TEMPLATES_TYPO = [
     { id:'hero', label:'Hero', renderer:renderHero,
       defaults:{ eyebrow:'PRÓXIMAMENTE', line1:'SQUAD', line2:'TEAM', footer:HANDLE } },
     { id:'question', label:'Pregunta', renderer:renderQuestion,
       defaults:{ eyebrow:'PENSALO', headline:'¿Tu coach todavía te manda PDFs?', cta:HANDLE } },
+    { id:'features', label:'Features', renderer:renderFeatures,
+      defaults:{ eyebrow:'TODO EN UNA APP', bullets:'Tu plan\nTus pagos\nTus check-ins', cta:HANDLE } },
+    { id:'manifesto', label:'Manifiesto', renderer:renderManifesto,
+      defaults:{ eyebrow:'NUEVA FORMA', headline:'Coaching como debería ser.', sub:'Limpio. Sin Excel. Sin grupos de WhatsApp.', cta:HANDLE } },
+    { id:'cta', label:'Call to action', renderer:renderCta,
+      defaults:{ eyebrow:'SE VIENE', headline:'Sumate a la beta.', sub:'Tu coach lo va a agradecer.', cta:HANDLE } },
   ];
 
+  // Selección de modo según el param
+  function getMode(){
+    const m = new URLSearchParams(location.search).get('promo');
+    return m === '2' ? 'typo' : 'mockups';
+  }
+  function getTemplates(){
+    return getMode() === 'typo' ? TEMPLATES_TYPO : TEMPLATES_MOCKUPS;
+  }
+  const TEMPLATES = getTemplates();
+
   // ── OVERLAY UI ─────────────────────────────────────────────────────────────
-  let _selected = TEMPLATES[0];
+  let _templates = getTemplates();
+  let _selected = _templates[0];
   let _state = { ..._selected.defaults };
 
   function open(){
@@ -560,18 +649,25 @@ const PROMO = (() => {
           ? `<textarea data-key="${k}" rows="${String(v).split('\n').length+1}" style="width:100%;background:#1a1a1f;border:1px solid #2a2a35;border-radius:8px;padding:10px 12px;color:#fff;font-family:inherit;font-size:14px;resize:vertical">${v}</textarea>`
           : `<input data-key="${k}" type="text" value="${String(v).replace(/"/g,'&quot;')}" style="width:100%;background:#1a1a1f;border:1px solid #2a2a35;border-radius:8px;padding:10px 12px;color:#fff;font-family:inherit;font-size:14px">`}
       </div>`).join('');
+    const mode = getMode();
+    const modeLabel = mode === 'typo' ? 'Tipográficas puras — texto + identidad' : 'Mockups del app — recreación de cada sección';
+    const otherMode = mode === 'typo' ? '1' : '2';
+    const otherLabel = mode === 'typo' ? 'Ver mockups' : 'Ver tipográficas';
     ov.innerHTML = `
     <div style="max-width:1200px;margin:0 auto">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
         <div>
           <div style="font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:900;font-size:40px;line-height:.9">PROMO</div>
-          <div style="font-size:12px;color:#9090a8;margin-top:4px">Stories 1080×1920 — recreación de cada sección del app</div>
+          <div style="font-size:12px;color:#9090a8;margin-top:4px">${modeLabel} · 1080×1920</div>
         </div>
-        <button onclick="document.getElementById('promo-ov').remove()" style="background:#1a1a1f;border:1px solid #2a2a35;border-radius:10px;width:42px;height:42px;color:#fff;font-size:20px;cursor:pointer">×</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <a href="?promo=${otherMode}" style="padding:10px 14px;background:#1a1a1f;border:1px solid #2a2a35;border-radius:10px;color:#e8ff00;font-family:inherit;font-weight:700;font-size:12px;text-decoration:none">${otherLabel} →</a>
+          <button onclick="document.getElementById('promo-ov').remove()" style="background:#1a1a1f;border:1px solid #2a2a35;border-radius:10px;width:42px;height:42px;color:#fff;font-size:20px;cursor:pointer">×</button>
+        </div>
       </div>
 
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
-        ${TEMPLATES.map(t => `
+        ${_templates.map(t => `
           <button onclick="PROMO.select('${t.id}')"
             style="padding:10px 16px;background:${t.id===_selected.id?'#e8ff00':'#1a1a1f'};border:1px solid ${t.id===_selected.id?'#e8ff00':'#2a2a35'};color:${t.id===_selected.id?'#000':'#fff'};border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${t.label}</button>
         `).join('')}
@@ -592,7 +688,7 @@ const PROMO = (() => {
   }
 
   function select(id){
-    const t = TEMPLATES.find(x => x.id === id);
+    const t = _templates.find(x => x.id === id);
     if(!t) return;
     _selected = t;
     _state = { ...t.defaults };
@@ -644,7 +740,8 @@ const PROMO = (() => {
   return { open, select, updateField, download, share };
 })();
 
-if(location.search.includes('promo=1')){
+const _promoParam = new URLSearchParams(location.search).get('promo');
+if(_promoParam === '1' || _promoParam === '2'){
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => PROMO.open(), 300);
   });

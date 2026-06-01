@@ -386,9 +386,8 @@ function pgOpenMarkPaid(athId){
 <div class="pg-mfield">
   <label class="pg-mlabel">MÉTODO</label>
   <select class="pg-minput" id="pgm-method">
-    <option value="transfer">Transferencia</option>
     <option value="cash">Efectivo</option>
-    <option value="mp">Mercado Pago</option>
+    <option value="transfer">Transferencia</option>
     <option value="other">Otro</option>
   </select>
 </div>
@@ -502,7 +501,7 @@ async function pgOpenHistory(athId){
 
   const hist = await pgGetHistory(athId);
 
-  const METHOD_LABEL = { transfer:'Transferencia', cash:'Efectivo', mp:'Mercado Pago', other:'Otro' };
+  const METHOD_LABEL = { cash:'Efectivo', transfer:'Transferencia', other:'Otro', mp:'Mercado Pago (legacy)', stripe:'Stripe (legacy)' };
 
   const box = document.getElementById('pg-modal');
   if(!box) return;

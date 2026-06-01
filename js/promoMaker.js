@@ -119,6 +119,15 @@ const PROMO = (() => {
     ctx.roundRect(x, y, w, h, r);
   }
 
+  function escapeHtml(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   let _redrawHandle = null;
   function scheduleRedraw(){
     if(_redrawHandle) return;
@@ -876,10 +885,10 @@ const PROMO = (() => {
     if(!ov) return;
     const fields = Object.entries(_state).map(([k,v]) => `
       <div style="margin-bottom:14px">
-        <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.12em;color:#9090a8;text-transform:uppercase;margin-bottom:6px">${k}</label>
+        <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.12em;color:#9090a8;text-transform:uppercase;margin-bottom:6px">${escapeHtml(k)}</label>
         ${String(v).includes('\n')
-          ? `<textarea data-key="${k}" rows="${String(v).split('\n').length+1}" style="width:100%;background:#1a1a1f;border:1px solid #2a2a35;border-radius:8px;padding:10px 12px;color:#fff;font-family:inherit;font-size:14px;resize:vertical">${v}</textarea>`
-          : `<input data-key="${k}" type="text" value="${String(v).replace(/"/g,'&quot;')}" style="width:100%;background:#1a1a1f;border:1px solid #2a2a35;border-radius:8px;padding:10px 12px;color:#fff;font-family:inherit;font-size:14px">`}
+          ? `<textarea data-key="${escapeHtml(k)}" rows="${String(v).split('\n').length+1}" style="width:100%;background:#1a1a1f;border:1px solid #2a2a35;border-radius:8px;padding:10px 12px;color:#fff;font-family:inherit;font-size:14px;resize:vertical">${escapeHtml(v)}</textarea>`
+          : `<input data-key="${escapeHtml(k)}" type="text" value="${escapeHtml(v)}" style="width:100%;background:#1a1a1f;border:1px solid #2a2a35;border-radius:8px;padding:10px 12px;color:#fff;font-family:inherit;font-size:14px">`}
       </div>`).join('');
     const mode = getMode();
     const modeLabel = mode === 'typo' ? 'Tipográficas puras — texto + identidad' : 'Mockups del app — recreación de cada sección';

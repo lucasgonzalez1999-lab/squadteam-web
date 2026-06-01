@@ -280,7 +280,22 @@ function confirmLogout() {
   document.body.appendChild(ov);
 }
 
+function _stopAllTimersAndSubs(){
+  if(typeof stopLiveSessionPoller==='function') try{ stopLiveSessionPoller(); }catch(e){}
+  if(typeof stopGlobalPoller==='function') try{ stopGlobalPoller(); }catch(e){}
+  // Limpiar timers internos del dashboard del coach y de planilla
+  try{ if(typeof _dashFeedTimer!=='undefined' && _dashFeedTimer){ clearInterval(_dashFeedTimer); _dashFeedTimer=null; } }catch(e){}
+  try{ if(typeof _plPoller!=='undefined' && _plPoller){ clearInterval(_plPoller); _plPoller=null; } }catch(e){}
+  // Unsubscribe registry — usar por features que abran onSnapshot
+  if(window._subscriptions){
+    Object.values(window._subscriptions).forEach(unsub => { try{ unsub && unsub(); }catch(e){} });
+    window._subscriptions = {};
+  }
+}
+window._subscriptions = window._subscriptions || {};
+
 function doLogout() {
+  _stopAllTimersAndSubs();
   if(typeof destroyDopamine==='function') destroyDopamine();
   DB.set('session', null);
   currentUser = null;
@@ -397,6 +412,10 @@ function startGlobalPoller() {
       }
     } catch(e) {}
   }, 30000);
+}
+
+function stopGlobalPoller() {
+  if (globalPoller) { clearInterval(globalPoller); globalPoller = null; }
 }
 
 // Sync liviano via Firebase SDK — incluye auth token automáticamente
@@ -801,7 +820,6 @@ function renderAthleteView(user) {
 
     parts.push('</div>');
     cont.innerHTML='<style>@keyframes sq-spin{to{transform:rotate(360deg)}}</style>'+parts.join('');
-    // startLiveSessionPoller(user.id); // deshabilitado — usa REST sin auth, no necesario para atletas
   } catch(err){
     console.error('[renderAthleteView]',err);
     const c2=document.getElementById('mi-perfil-content');

@@ -9,7 +9,10 @@ async function stGetStats(athId){
     if(!snap.exists) return null;
     const raw = snap.data()?.data;
     return raw ? JSON.parse(raw) : null;
-  }catch(e){ return null; }
+  }catch(e){
+    console.error('[sheetStats:getStats]', athId, e?.code || e?.message);
+    return null;
+  }
 }
 
 async function stSaveStats(athId, data){
@@ -25,7 +28,9 @@ async function stGetGeminiKey(){
       const k = snap.data()?.geminiKey;
       if(k){ localStorage.setItem('st_gemini_key', k); return k; }
     }
-  }catch(e){}
+  }catch(e){
+    console.error('[sheetStats:getGeminiKey]', e?.code || e?.message);
+  }
   return null;
 }
 
@@ -62,9 +67,12 @@ async function stFetchAllTabs(sheetId){
       try{
         const csv = await stFetchSheet(sheetId, `DIA ${d}`);
         if(csv && csv.length > 50) tabs.push({ name: `DIA ${d}`, csv });
-      }catch(e){ break; }
+      }catch(e){ break; } // expected: tab no existe
     }
-  }catch(e){}
+  }catch(e){
+    console.error('[sheetStats:fetchAllTabs]', e?.message);
+    if(typeof toast === 'function') toast('No pudimos leer la planilla. Verificá que sea pública.');
+  }
   return tabs;
 }
 

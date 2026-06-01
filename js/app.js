@@ -300,6 +300,7 @@ function doLogout() {
   DB.set('session', null);
   currentUser = null;
   document.body.classList.remove('is-athlete');
+  if(typeof SQ_AUTH.markManualLogout === 'function') SQ_AUTH.markManualLogout();
   SQ_AUTH.signOut().catch(()=>{});
   const coachApp = document.getElementById('coach-app');
   const mobileNav = document.getElementById('mobile-nav');

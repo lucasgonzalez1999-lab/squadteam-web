@@ -102,6 +102,93 @@ function swallow(promise, ctx){
 }
 window.swallow = swallow;
 
+// ── ERROR HANDLING UNIFICADO ──
+function humanizeError(e){
+  if(!navigator.onLine) return 'Sin conexión.';
+  const code = e?.code || '';
+  const msg = e?.message || '';
+  if(code === 'permission-denied') return 'No tenés permiso para esta acción.';
+  if(code === 'unavailable') return 'Servicio no disponible. Reintentá.';
+  if(code === 'auth/network-request-failed') return 'Falla de red. Reintentá.';
+  if(code === 'auth/user-not-found') return 'Usuario no encontrado.';
+  if(code === 'auth/wrong-password' || code === 'auth/invalid-credential') return 'PIN incorrecto.';
+  if(code === 'auth/too-many-requests') return 'Demasiados intentos. Esperá unos minutos.';
+  if(/network|fetch|failed to fetch/i.test(msg)) return 'Sin conexión.';
+  return 'Algo salió mal. Reintentá en unos segundos.';
+}
+
+async function safeAsync(fn, opts = {}){
+  const { silent=false, fallback=null, context='app' } = opts;
+  try{
+    return await fn();
+  }catch(e){
+    console.error(`[${context}]`, e?.code || e?.message || e, e);
+    if(!silent && typeof toast === 'function'){
+      toast(humanizeError(e));
+    }
+    return fallback;
+  }
+}
+
+// Retry exponencial para reads críticos (login, primer dashboard)
+async function getWithRetry(query, tries = 3, delay = 600){
+  let lastErr = null;
+  for(let i = 0; i < tries; i++){
+    try{ return await query.get(); }
+    catch(e){
+      lastErr = e;
+      if(i === tries - 1) throw e;
+      // No reintentar si es permission-denied (no va a mejorar)
+      if(e?.code === 'permission-denied') throw e;
+      await new Promise(r => setTimeout(r, delay * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
+window.humanizeError = humanizeError;
+window.safeAsync = safeAsync;
+window.getWithRetry = getWithRetry;
+
+// ── OFFLINE BANNER ──
+let _offlineBannerEl = null;
+function showOfflineBanner(){
+  if(!_offlineBannerEl){
+    _offlineBannerEl = document.createElement('div');
+    _offlineBannerEl.className = 'offline-banner';
+    _offlineBannerEl.textContent = 'Sin conexión — los cambios se sincronizan al volver';
+    document.body.appendChild(_offlineBannerEl);
+  }
+  requestAnimationFrame(() => _offlineBannerEl.classList.add('show'));
+}
+function hideOfflineBanner(){
+  if(_offlineBannerEl) _offlineBannerEl.classList.remove('show');
+}
+if(typeof window !== 'undefined'){
+  window.addEventListener('offline', showOfflineBanner);
+  window.addEventListener('online', hideOfflineBanner);
+  // Si el browser ya arranca offline
+  if(!navigator.onLine) setTimeout(showOfflineBanner, 300);
+}
+
+// ── SESIÓN EXPIRADA ──
+let _expiredModalShown = false;
+function showSessionExpired(){
+  if(_expiredModalShown) return;
+  _expiredModalShown = true;
+  let ov = document.createElement('div');
+  ov.id = 'sq-expired-ov';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:24px';
+  ov.innerHTML = `
+    <div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:28px;max-width:320px;width:100%;text-align:center">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:900;font-size:36px;color:var(--text);line-height:.95;margin-bottom:10px">SESIÓN EXPIRADA</div>
+      <div style="font-size:13px;color:var(--sub);margin-bottom:22px;line-height:1.5">Ingresá de nuevo para seguir.</div>
+      <button onclick="location.reload()" style="width:100%;padding:13px 0;background:var(--acc);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:1px">INGRESAR</button>
+    </div>`;
+  document.body.appendChild(ov);
+}
+window.showSessionExpired = showSessionExpired;
+
 // ── DATE ──
 function today(){ return new Date().toISOString().split('T')[0]; }
 function fmtDate(d){ return new Date(d+'T12:00:00').toLocaleDateString('es-UY',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase(); }

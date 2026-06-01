@@ -16,6 +16,7 @@ async function loadAllSchedules(force=false){
   _clLoading = true;
   _clSchedules = {};
   const list = Array.isArray(athletes) ? athletes : [];
+  let failCount = 0;
   await Promise.all(list.map(async a => {
     try{
       const snap = await window.db.collection('schedules').doc(a.id).get();
@@ -24,8 +25,15 @@ async function loadAllSchedules(force=false){
       const sched = {};
       for(const k of DAYS_KEYS) sched[k] = d[k] || null;
       _clSchedules[a.id] = sched;
-    }catch(e){}
+    }catch(e){
+      failCount++;
+      console.error('[clases:loadSchedule]', a.id, e?.code || e?.message);
+    }
   }));
+  // Si fallaron todos los reads, avisar
+  if(list.length > 0 && failCount === list.length){
+    if(typeof toast === 'function') toast(humanizeError({ code:'unavailable' }));
+  }
   _clLoaded = true;
   _clLoading = false;
 }

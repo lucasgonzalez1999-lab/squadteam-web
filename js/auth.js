@@ -26,9 +26,22 @@ const SQ_AUTH = (() => {
   }
 
   // Llama cb(profile) si hay sesión activa, cb(null) si no hay
+  let _wasLoggedIn = false;
+  let _manualLogout = false;
   function onReady(cb){
     window.auth.onAuthStateChanged(async user => {
-      if(!user){ cb(null); return; }
+      if(!user){
+        // Si estaba logueado y NO fue logout manual → token expiró
+        if(_wasLoggedIn && !_manualLogout && typeof window.showSessionExpired === 'function'){
+          window.showSessionExpired();
+          return;
+        }
+        _wasLoggedIn = false;
+        cb(null);
+        return;
+      }
+      _wasLoggedIn = true;
+      _manualLogout = false;
       try{
         const doc = await window.db.collection('users').doc(user.uid).get();
         if(doc.exists){ cb(doc.data()); return; }
@@ -41,5 +54,8 @@ const SQ_AUTH = (() => {
     });
   }
 
-  return { signIn, signOut, onReady };
+  // Marca el próximo signOut como manual (para no disparar sesión expirada)
+  function markManualLogout(){ _manualLogout = true; }
+
+  return { signIn, signOut, onReady, markManualLogout };
 })();

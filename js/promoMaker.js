@@ -1374,7 +1374,7 @@ const PROMO = (() => {
 })();
 
 const _promoParam = new URLSearchParams(location.search).get('promo');
-if(_promoParam === '1' || _promoParam === '2'){
+if(_promoParam === '1' || _promoParam === '2' || _promoParam === '3'){
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => PROMO.open(), 300);
   });

@@ -137,6 +137,12 @@ const PROMO = (() => {
     return `rgba(${r},${g},${b},${a})`;
   }
 
+  // $4.000 (es-UY agramatical sin separador de miles)
+  function fmtMoney(n, currency){
+    const sep = Number(n).toLocaleString('es-UY');
+    return '$' + sep + (currency ? ' ' + currency : '');
+  }
+
   let _redrawHandle = null;
   function scheduleRedraw(){
     if(_redrawHandle) return;
@@ -532,7 +538,7 @@ const PROMO = (() => {
 
     // 3 columnas: MONTO / MÉTODO / PERÍODO
     const labels = ['MONTO','MÉTODO','PERÍODO'];
-    const vals = ['$4000','Transfer','Mensual'];
+    const vals = [fmtMoney(4000),'Transfer','Mensual'];
     const subVals = ['UYU','',''];
     const colW = (cw - 80) / 3;
     let cy2 = cy + 230;
@@ -566,9 +572,9 @@ const PROMO = (() => {
     ctx.fillText('ÚLTIMOS PAGOS', cx + 40, sy + 60);
 
     const pays = [
-      { date:'15 may', amt:'$4000 UYU' },
-      { date:'15 abr', amt:'$4000 UYU' },
-      { date:'15 mar', amt:'$4000 UYU' },
+      { date:'15 may', amt:fmtMoney(4000,'UYU') },
+      { date:'15 abr', amt:fmtMoney(4000,'UYU') },
+      { date:'15 mar', amt:fmtMoney(4000,'UYU') },
     ];
     let py = sy + 130;
     for(const p of pays){

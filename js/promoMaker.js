@@ -230,7 +230,65 @@ const PROMO = (() => {
     ctx.restore();
   }
 
-  // Silueta brutalist con overlays por grupo muscular (front body)
+  // Carga la silueta real del Mapa Muscular del app desde FRONT_PATHS
+  // (declarado en muscleMap.js, accesible globalmente en classic scripts).
+  // Rasteriza una vez como Image y la cachea.
+  let _bodyFrontImg = null;
+  let _bodyFrontLoading = false;
+  function ensureBodyFrontImg(){
+    if(_bodyFrontImg || _bodyFrontLoading) return _bodyFrontImg;
+    if(typeof FRONT_PATHS === 'undefined') return null;
+    _bodyFrontLoading = true;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 150 620 1210"><g fill="#2a2a32" stroke="#1a1a22" stroke-width="1.5">${FRONT_PATHS}</g></svg>`;
+    const blob = new Blob([svg], { type:'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      _bodyFrontImg = img;
+      _bodyFrontLoading = false;
+      URL.revokeObjectURL(url);
+      scheduleRedraw();
+    };
+    img.onerror = () => { _bodyFrontLoading = false; URL.revokeObjectURL(url); };
+    img.src = url;
+    return null;
+  }
+
+  // Dibuja la silueta del app + tint global con destaque por grupo via overlay
+  // de zonas semi-transparentes en lima. Más simple que portar 30 paths.
+  function drawAppBodyFront(ctx, ox, oy, w, h, highlightedZones){
+    const img = ensureBodyFrontImg();
+    if(!img){
+      // Mientras carga, placeholder oscuro
+      ctx.fillStyle = '#1a1a22';
+      ctx.fillRect(ox, oy, w, h);
+      return;
+    }
+    ctx.drawImage(img, ox, oy, w, h);
+
+    // Zonas para tintar — coordenadas en viewBox 40-660 x 150-1360 = 620w × 1210h
+    // Las escalamos a w×h
+    const zones = {
+      pecho:     { x:0.30, y:0.16, w:0.40, h:0.10 },  // pecho frontal
+      hombros_l: { x:0.13, y:0.13, w:0.18, h:0.08 },
+      hombros_r: { x:0.69, y:0.13, w:0.18, h:0.08 },
+      cuadriceps:{ x:0.27, y:0.55, w:0.46, h:0.16 },
+      abs:       { x:0.40, y:0.27, w:0.20, h:0.13 },
+      biceps_l:  { x:0.07, y:0.25, w:0.13, h:0.13 },
+      biceps_r:  { x:0.80, y:0.25, w:0.13, h:0.13 },
+    };
+
+    const list = (highlightedZones && highlightedZones.zones) || [];
+    const tier = (highlightedZones && highlightedZones.tier) || {};
+    for(const zoneKey of list){
+      const z = zones[zoneKey];
+      if(!z) continue;
+      ctx.fillStyle = tier[zoneKey] || withAlpha(ACC, 0.55);
+      ctx.fillRect(ox + z.x*w, oy + z.y*h, z.w*w, z.h*h);
+    }
+  }
+
+  // Silueta brutalist con overlays por grupo muscular (front body) — fallback
   function drawBodyFront(ctx, ox, oy, scale, tierColors){
     const tc = tierColors || {};
     const muted = '#1a1a22';
@@ -773,23 +831,20 @@ const PROMO = (() => {
     ctx.font = '500 24px "Inter", sans-serif';
     ctx.fillText('Últimas 4 semanas', cx + 40, cy + 120);
 
-    // Silueta brutalist con overlays por grupo muscular
-    const tierColors = {
-      chestLeft:     ACC,
-      chestRight:    ACC,
-      shoulderLeft:  withAlpha(ACC, 0.4),
-      shoulderRight: withAlpha(ACC, 0.4),
-      bicepsLeft:    '#666666',
-      bicepsRight:   '#666666',
-      abs:           '#333333',
-      quadsLeft:     withAlpha(ACC, 0.4),
-      quadsRight:    withAlpha(ACC, 0.4),
-    };
-    const scale = 1.6;
-    const figW = 200 * scale;
+    // Silueta del Mapa Muscular real del app (FRONT_PATHS de muscleMap.js)
+    const figH = ch - 360;
+    const figW = figH * 0.51; // ratio del viewBox 620/1210
     const oxFig = cx + cw/2 - figW/2;
     const oyFig = cy + 170;
-    drawBodyFront(ctx, oxFig, oyFig, scale, tierColors);
+    drawAppBodyFront(ctx, oxFig, oyFig, figW, figH, {
+      zones: ['pecho','cuadriceps','hombros_l','hombros_r'],
+      tier: {
+        pecho:      withAlpha(ACC, 0.6),
+        cuadriceps: withAlpha(ACC, 0.45),
+        hombros_l:  withAlpha(ACC, 0.3),
+        hombros_r:  withAlpha(ACC, 0.3),
+      }
+    });
 
     // Top músculos (orden descendente por volumen)
     const top = [

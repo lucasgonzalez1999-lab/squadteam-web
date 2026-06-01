@@ -670,13 +670,13 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="sec" id="sec-mi-historial"><div id="mi-historial-content"></div></div>
       <div class="sec" id="sec-admin">
         <div class="sub-tabs">
-          <button class="sub-tab on" id="adm-db" onclick="showAdm('db',this)">Firebase</button>
-          <button class="sub-tab" id="adm-sheets" onclick="showAdm('sheets',this)">Planilla</button>
-          <button class="sub-tab" id="adm-diag" onclick="showAdm('diag',this);renderDiag()">Diagnóstico</button>
+          <button class="sub-tab debug-only" id="adm-db" onclick="showAdm('db',this)">Firebase</button>
+          <button class="sub-tab on" id="adm-sheets" onclick="showAdm('sheets',this)">Importar/Exportar</button>
+          <button class="sub-tab debug-only" id="adm-diag" onclick="showAdm('diag',this);renderDiag()">Diagnóstico</button>
         </div>
-        <div class="adm-pnl on" id="adm-pnl-db"></div>
-        <div class="adm-pnl" id="adm-pnl-sheets"></div>
-        <div class="adm-pnl" id="adm-pnl-diag"></div>
+        <div class="adm-pnl debug-only" id="adm-pnl-db"></div>
+        <div class="adm-pnl on" id="adm-pnl-sheets"></div>
+        <div class="adm-pnl debug-only" id="adm-pnl-diag"></div>
       </div>
     </div>
   </div>

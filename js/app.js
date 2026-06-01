@@ -327,17 +327,31 @@ function goSection(id, el) {
   if (id==='mi-historial') renderAthHistorial(currentUser);
   if (id==='checkins')    renderCheckins();
   if (id==='fisico')       renderFisico();
-  if (id==='admin')     renderDB();
+  if (id==='admin')     renderAdminDefault();
+}
+
+function isDebugMode(){ return location.search.includes('debug=1'); }
+
+function renderAdminDefault(){
+  // Mostrar/ocultar paneles debug según query param
+  document.querySelectorAll('.debug-only').forEach(el => el.style.display = isDebugMode() ? '' : 'none');
+  // Render del panel activo
+  renderSheetsPanel();
 }
 
 function mobActive(btn) { document.querySelectorAll('.mob-btn').forEach(b => b.classList.remove('on')); btn.classList.add('on'); }
 function showAdm(id, btn) {
+  // Si intenta navegar a debug sin flag, fallback a sheets
+  if((id==='db' || id==='diag') && !isDebugMode()){
+    id = 'sheets';
+    btn = document.getElementById('adm-sheets');
+  }
   document.querySelectorAll('.adm-pnl').forEach(p => p.classList.remove('on'));
   document.querySelectorAll('.sub-tab').forEach(b => b.classList.remove('on'));
   document.getElementById('adm-pnl-'+id)?.classList.add('on');
   btn?.classList.add('on');
-  if(id==='db') renderDB();
-  if(id==='sheets') renderSheetsPanel();
+  if(id==='db' && typeof renderDB==='function') renderDB();
+  if(id==='sheets' && typeof renderSheetsPanel==='function') renderSheetsPanel();
 }
 
 function renderAll() {

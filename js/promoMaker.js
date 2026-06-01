@@ -119,6 +119,15 @@ const PROMO = (() => {
     ctx.roundRect(x, y, w, h, r);
   }
 
+  let _redrawHandle = null;
+  function scheduleRedraw(){
+    if(_redrawHandle) return;
+    _redrawHandle = requestAnimationFrame(() => {
+      _redrawHandle = null;
+      redraw();
+    });
+  }
+
   function drawCheck(ctx, cx, cy, size, color){
     ctx.save();
     ctx.strokeStyle = color;
@@ -907,7 +916,7 @@ const PROMO = (() => {
         </div>
       </div>
     </div>`;
-    redraw();
+    scheduleRedraw();
   }
 
   function select(id){
@@ -923,7 +932,7 @@ const PROMO = (() => {
     const key = el.getAttribute('data-key');
     if(!key) return;
     _state[key] = el.value;
-    redraw();
+    scheduleRedraw();
   }
 
   function redraw(){

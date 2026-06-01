@@ -735,7 +735,41 @@ const PROMO = (() => {
   let _selected = _templates[0];
   let _state = { ..._selected.defaults };
 
+  function ensurePromoStyles(){
+    if(document.getElementById('promo-styles')) return;
+    const s = document.createElement('style');
+    s.id = 'promo-styles';
+    s.textContent = `
+      #promo-ov .promo-grid {
+        display: grid;
+        grid-template-columns: 1fr 360px;
+        gap: 24px;
+        align-items: start;
+      }
+      @media (max-width: 960px) {
+        #promo-ov .promo-grid { grid-template-columns: 1fr; }
+        #promo-ov .promo-canvas-wrap { max-height: 60vh; }
+      }
+      @media (max-width: 480px) {
+        #promo-ov { padding: 14px !important; }
+      }
+      #promo-ov .promo-chips {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding-bottom: 4px;
+      }
+      #promo-ov .promo-chips::-webkit-scrollbar { display: none; }
+      #promo-ov .promo-chips button { flex-shrink: 0; }
+    `;
+    document.head.appendChild(s);
+  }
+
   function open(){
+    ensurePromoStyles();
     let ov = document.getElementById('promo-ov');
     if(ov) ov.remove();
     ov = document.createElement('div');
@@ -772,15 +806,15 @@ const PROMO = (() => {
         </div>
       </div>
 
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+      <div class="promo-chips">
         ${_templates.map(t => `
           <button onclick="PROMO.select('${t.id}')"
             style="padding:10px 16px;background:${t.id===_selected.id?'#e8ff00':'#1a1a1f'};border:1px solid ${t.id===_selected.id?'#e8ff00':'#2a2a35'};color:${t.id===_selected.id?'#000':'#fff'};border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${t.label}</button>
         `).join('')}
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start">
-        <div style="background:#000;border-radius:12px;overflow:hidden;aspect-ratio:9/16;max-height:80vh;display:flex;align-items:center;justify-content:center">
+      <div class="promo-grid">
+        <div class="promo-canvas-wrap" style="background:#000;border-radius:12px;overflow:hidden;aspect-ratio:9/16;max-height:80vh;display:flex;align-items:center;justify-content:center">
           <canvas id="promo-canvas" width="${W}" height="${H}" style="max-width:100%;max-height:100%;display:block"></canvas>
         </div>
         <div>

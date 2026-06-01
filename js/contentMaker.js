@@ -80,6 +80,29 @@ const CGEN = (() => {
     return lines;
   }
 
+  // Reduce font size hasta que el texto wrappeado entre en (maxW, maxH).
+  // Devuelve { size, lines, lineH }. Usado para evitar overflow.
+  function fitText(ctx, text, maxW, maxH, opts){
+    const o = opts || {};
+    const family = o.family || '"Barlow Condensed",sans-serif';
+    const weight = o.weight || '900 italic';
+    const lineHRatio = o.lineH || 1.0;
+    let size = o.start || 200;
+    const min = o.min || 40;
+    while(size >= min){
+      ctx.font = `${weight} ${size}px ${family}`;
+      const lines = wrapText(ctx, text, maxW);
+      const lineH = Math.round(size * lineHRatio);
+      if(lines.length * lineH <= maxH){
+        return { size, lines, lineH };
+      }
+      size -= 4;
+    }
+    ctx.font = `${weight} ${size}px ${family}`;
+    const lines = wrapText(ctx, text, maxW);
+    return { size, lines, lineH: Math.round(size * lineHRatio) };
+  }
+
   // ── PHOTO UTILS ─────────────────────────────────────────────────────────────
   // Dibuja la foto escalada a cover + overlay oscuro encima
   function drawPhoto(ctx, W, H, darken){
@@ -134,69 +157,88 @@ const CGEN = (() => {
 
   // ── YOUTUBE TEMPLATES (1280×720) ────────────────────────────────────────────
 
-  // Pregunta dramática — texto abajo izquierda, pregunta grande
+  // Pregunta dramática — eyebrow arriba, headline grande auto-fit
   function renderYTPregunta(ctx, W, H, d){
-    drawPhoto(ctx, W, H, 0.35);
-    gradientBottom(ctx, W, H, 0.3, 0.92);
+    drawPhoto(ctx, W, H, 0.40);
+    gradientBottom(ctx, W, H, 0.25, 0.78);
 
-    // Eyebrow pill
+    const padX = 60;
+
+    // Eyebrow pill arriba
     if(d.eyebrow){
-      drawPill(ctx, d.eyebrow.toUpperCase(), 60, H*0.63, Math.round(H*0.038));
+      drawPill(ctx, d.eyebrow.toUpperCase(), padX, H*0.18, Math.round(H*0.04));
     }
 
-    // Pregunta grande
+    // Headline auto-fit en el área central-inferior
+    const head = (d.headline||'').toUpperCase();
+    const maxW = W - padX*2;
+    const maxH = H*0.55;
+    const fit  = fitText(ctx, head, maxW, maxH, { start: Math.round(H*0.20), min: 60, lineH: 1.0 });
+
+    const totalH = fit.lines.length * fit.lineH;
+    let y = H*0.92 - totalH + fit.lineH; // baseline de primera línea
+    const ac = (d.acento||'').toUpperCase();
+    ctx.font = `900 italic ${fit.size}px "Barlow Condensed",sans-serif`;
     ctx.textAlign = 'left';
-    ctx.font = `900 italic ${Math.round(H*0.21)}px "Barlow Condensed",sans-serif`;
-    const lines = wrapText(ctx, (d.headline||'').toUpperCase(), W*0.75);
-    let y = H - 32;
-    for(let i=lines.length-1; i>=0; i--){
-      // Última palabra en lima, resto en blanco
-      if(i === lines.length-1 && d.acento){
-        const hl = lines[i].toUpperCase();
-        const ac = d.acento.toUpperCase();
-        const pre = hl.slice(0, hl.lastIndexOf(ac));
-        ctx.fillStyle = WHITE; ctx.fillText(pre, 60, y);
+    for(let i=0; i<fit.lines.length; i++){
+      const line = fit.lines[i];
+      const isLast = i === fit.lines.length - 1;
+      if(isLast && ac && line.endsWith(ac)){
+        const pre = line.slice(0, line.length - ac.length);
+        ctx.fillStyle = WHITE; ctx.fillText(pre, padX, y);
         const preW = ctx.measureText(pre).width;
-        ctx.fillStyle = ACC; ctx.fillText(ac, 60+preW, y);
+        ctx.fillStyle = ACC; ctx.fillText(ac, padX + preW, y);
       } else {
         ctx.fillStyle = WHITE;
-        ctx.fillText(lines[i], 60, y);
+        ctx.fillText(line, padX, y);
       }
-      y -= Math.round(H*0.215);
+      y += fit.lineH;
     }
     drawWatermark(ctx, W, H);
   }
 
-  // Dos líneas de impacto — blanco arriba, lima abajo
+  // Dos líneas de impacto — blanco arriba, lima abajo (auto-fit)
   function renderYTDosLineas(ctx, W, H, d){
     drawPhoto(ctx, W, H, 0.4);
     gradientBottom(ctx, W, H, 0.25, 0.94);
 
+    const padX = 60, maxW = W - padX*2;
+    const f1 = fitText(ctx, (d.line1||'').toUpperCase(), maxW, H*0.22,
+      { start: Math.round(H*0.20), min: 50 });
+    const f2 = fitText(ctx, (d.line2||'').toUpperCase(), maxW, H*0.30,
+      { start: Math.round(H*0.27), min: 60 });
+
     ctx.textAlign = 'left';
     ctx.fillStyle = WHITE;
-    ctx.font = `900 italic ${Math.round(H*0.20)}px "Barlow Condensed",sans-serif`;
-    ctx.fillText((d.line1||'').toUpperCase(), 60, H*0.67);
+    ctx.font = `900 italic ${f1.size}px "Barlow Condensed",sans-serif`;
+    ctx.fillText(f1.lines[0], padX, H*0.67);
 
     ctx.fillStyle = ACC;
-    ctx.font = `900 italic ${Math.round(H*0.27)}px "Barlow Condensed",sans-serif`;
-    ctx.fillText((d.line2||'').toUpperCase(), 60, H*0.95);
+    ctx.font = `900 italic ${f2.size}px "Barlow Condensed",sans-serif`;
+    ctx.fillText(f2.lines[0], padX, H*0.95);
 
     drawWatermark(ctx, W, H);
   }
 
-  // Número shock — número gigante lima, label blanco
+  // Número shock — número gigante lima, label blanco (auto-fit)
   function renderYTNumero(ctx, W, H, d){
     drawPhoto(ctx, W, H, 0.45);
     gradientBottom(ctx, W, H, 0.0, 0.72);
 
+    const padX = 40, maxW = W - padX*2;
+    const fn = fitText(ctx, (d.numero||'#1'), maxW, H*0.65,
+      { start: Math.round(H*0.55), min: 80 });
+    const fl = fitText(ctx, (d.label||'').toUpperCase(), maxW, H*0.22,
+      { start: Math.round(H*0.18), min: 40 });
+
     ctx.textAlign = 'left';
     ctx.fillStyle = ACC;
-    ctx.font = `900 italic ${Math.round(H*0.58)}px "Barlow Condensed",sans-serif`;
-    ctx.fillText((d.numero||'#1'), 40, H*0.82);
+    ctx.font = `900 italic ${fn.size}px "Barlow Condensed",sans-serif`;
+    ctx.fillText(fn.lines[0], padX, H*0.80);
 
     ctx.fillStyle = WHITE;
-    ctx.font = `900 italic ${Math.round(H*0.21)}px "Barlow Condensed",sans-serif`;
-    ctx.fillText((d.label||'').toUpperCase(), 40, H*0.97);
+    ctx.font = `900 italic ${fl.size}px "Barlow Condensed",sans-serif`;
+    ctx.fillText(fl.lines[0], padX, H*0.97);
 
     drawWatermark(ctx, W, H);
   }
@@ -208,30 +250,33 @@ const CGEN = (() => {
     drawPhoto(ctx, W, H, 0.30);
     gradientBottom(ctx, W, H, 0.42, 0.94);
 
-    const numSz = Math.round(H*0.20);
+    const padX = 80, maxW = W - padX*2;
+
+    // Número + unidad en una línea — fit conjunto
+    const numTxt = (d.numero||'+35');
+    const uniTxt = (d.unidad||'AÑOS').toUpperCase();
+    const numSz  = Math.round(H*0.20);
     ctx.textAlign = 'left';
     ctx.fillStyle = ACC;
     ctx.font = `900 italic ${numSz}px "Barlow Condensed",sans-serif`;
-    const numTxt = (d.numero||'+35');
-    ctx.fillText(numTxt, 80, H*0.715);
+    ctx.fillText(numTxt, padX, H*0.71);
     const numW = ctx.measureText(numTxt).width;
-
-    // Unidad al lado, más chica
     ctx.fillStyle = WHITE;
     ctx.font = `900 italic ${Math.round(numSz*0.42)}px "Barlow Condensed",sans-serif`;
-    ctx.fillText((d.unidad||'AÑOS').toUpperCase(), 80+numW+14, H*0.715 - numSz*0.09);
+    ctx.fillText(uniTxt, padX+numW+14, H*0.71 - numSz*0.09);
 
-    // Segunda línea — mayor contraste
+    // Segunda línea auto-fit
+    const fit = fitText(ctx, (d.line2||'').toUpperCase(), maxW, H*0.18,
+      { start: Math.round(H*0.105), min: 50 });
     ctx.fillStyle = WHITE;
-    ctx.font = `900 italic ${Math.round(H*0.11)}px "Barlow Condensed",sans-serif`;
-    const l2 = wrapText(ctx, (d.line2||'').toUpperCase(), W-160);
-    let y2 = H*0.82;
-    for(const l of l2){ ctx.fillText(l, 80, y2); y2 += Math.round(H*0.115); }
+    ctx.font = `900 italic ${fit.size}px "Barlow Condensed",sans-serif`;
+    let y = H*0.94 - (fit.lines.length-1) * fit.lineH;
+    for(const l of fit.lines){ ctx.fillText(l, padX, y); y += fit.lineH; }
 
     drawWatermark(ctx, W, H);
   }
 
-  // Caso de éxito — label pill + titular grande
+  // Caso de éxito — label pill + titular grande (auto-fit)
   function renderHisCaso(ctx, W, H, d){
     drawPhoto(ctx, W, H, 0.35);
     gradientBottom(ctx, W, H, 0.48, 0.95);
@@ -239,40 +284,45 @@ const CGEN = (() => {
     const pillFs = Math.round(H*0.022);
     drawPill(ctx, (d.label||'CASO DE ÉXITO').toUpperCase(), 80, H*0.64, pillFs);
 
+    const padX = 80, maxW = W - padX*2;
+    const fit = fitText(ctx, (d.headline||'').toUpperCase(), maxW, H*0.28,
+      { start: Math.round(H*0.115), min: 56 });
+
     ctx.textAlign = 'left';
     ctx.fillStyle = WHITE;
-    ctx.font = `900 italic ${Math.round(H*0.12)}px "Barlow Condensed",sans-serif`;
-    const lines = wrapText(ctx, (d.headline||'').toUpperCase(), W-160);
-    let y = H*0.76;
-    for(const l of lines){ ctx.fillText(l, 80, y); y += Math.round(H*0.125); }
+    ctx.font = `900 italic ${fit.size}px "Barlow Condensed",sans-serif`;
+    let y = H*0.95 - (fit.lines.length-1) * fit.lineH;
+    const yStart = y;
+    for(const l of fit.lines){ ctx.fillText(l, padX, y); y += fit.lineH; }
 
-    // Línea de color al costado izquierdo
+    // Línea lima al costado izquierdo
     ctx.fillStyle = ACC;
-    ctx.fillRect(40, H*0.62, 6, y - H*0.62 + Math.round(H*0.04));
+    ctx.fillRect(40, H*0.62, 6, y - H*0.62 - fit.lineH*0.6);
 
     drawWatermark(ctx, W, H);
   }
 
-  // Pregunta al centro — texto grande centrado, badge ?
+  // Pregunta al centro — texto grande centrado (auto-fit)
   function renderHisPregunta(ctx, W, H, d){
     drawPhoto(ctx, W, H, 0.5);
-    // Vignette radial (más oscuro en bordes)
     const vg = ctx.createRadialGradient(W/2, H/2, H*0.15, W/2, H/2, H*0.65);
     vg.addColorStop(0,'rgba(0,0,0,0)');
     vg.addColorStop(1,'rgba(0,0,0,0.65)');
     ctx.fillStyle = vg; ctx.fillRect(0,0,W,H);
 
+    const padX = 90, maxW = W - padX*2;
+    const fit = fitText(ctx, (d.headline||'').toUpperCase(), maxW, H*0.45,
+      { start: Math.round(H*0.10), min: 50, lineH: 1.08 });
+
     ctx.textAlign = 'center';
     ctx.fillStyle = WHITE;
-    ctx.font = `900 italic ${Math.round(H*0.105)}px "Barlow Condensed",sans-serif`;
-    const lines = wrapText(ctx, (d.headline||'').toUpperCase(), W-180);
-    const totalH = lines.length * Math.round(H*0.112);
-    let y = H/2 - totalH/2 + Math.round(H*0.08);
-    for(const l of lines){ ctx.fillText(l, W/2, y); y += Math.round(H*0.112); }
+    ctx.font = `900 italic ${fit.size}px "Barlow Condensed",sans-serif`;
+    const totalH = fit.lines.length * fit.lineH;
+    let y = H/2 - totalH/2 + fit.lineH;
+    for(const l of fit.lines){ ctx.fillText(l, W/2, y); y += fit.lineH; }
 
-    // "?" en lima grande debajo
     ctx.fillStyle = ACC;
-    ctx.font = `900 italic ${Math.round(H*0.065)}px "Barlow Condensed",sans-serif`;
+    ctx.font = `900 italic ${Math.round(H*0.075)}px "Barlow Condensed",sans-serif`;
     ctx.fillText('?', W/2, y + Math.round(H*0.04));
 
     drawWatermark(ctx, W, H);
@@ -280,7 +330,7 @@ const CGEN = (() => {
 
   // ── CUADRADO TEMPLATES (1080×1080) ──────────────────────────────────────────
 
-  // Post feed — label + titular en tercio inferior
+  // Post feed — label + titular en tercio inferior (auto-fit)
   function renderSqPost(ctx, W, H, d){
     drawPhoto(ctx, W, H, 0.35);
     gradientBottom(ctx, W, H, 0.42, 0.94);
@@ -289,48 +339,64 @@ const CGEN = (() => {
       drawPill(ctx, d.label.toUpperCase(), 60, H*0.62, Math.round(H*0.028));
     }
 
+    const padX = 60, maxW = W - padX*2;
+    const fit = fitText(ctx, (d.headline||'').toUpperCase(), maxW, H*0.30,
+      { start: Math.round(H*0.135), min: 50 });
+
     ctx.textAlign = 'left';
     ctx.fillStyle = WHITE;
-    ctx.font = `900 italic ${Math.round(H*0.145)}px "Barlow Condensed",sans-serif`;
-    const lines = wrapText(ctx, (d.headline||'').toUpperCase(), W-120);
-    let y = H*0.76;
-    for(const l of lines){ ctx.fillText(l, 60, y); y += Math.round(H*0.15); }
+    ctx.font = `900 italic ${fit.size}px "Barlow Condensed",sans-serif`;
+    let y = H*0.95 - (fit.lines.length-1) * fit.lineH;
+    for(const l of fit.lines){ ctx.fillText(l, padX, y); y += fit.lineH; }
 
     drawWatermark(ctx, W, H);
   }
 
-  // Dos líneas — blanco + lima, fondo fuerte
+  // Dos líneas — blanco + lima (auto-fit)
   function renderSqDosLineas(ctx, W, H, d){
     drawPhoto(ctx, W, H, 0.45);
     gradientBottom(ctx, W, H, 0.35, 0.92);
 
+    const padX = 60, maxW = W - padX*2;
+    const f1 = fitText(ctx, (d.line1||'').toUpperCase(), maxW, H*0.18,
+      { start: Math.round(H*0.165), min: 50 });
+    const f2 = fitText(ctx, (d.line2||'').toUpperCase(), maxW, H*0.24,
+      { start: Math.round(H*0.215), min: 60 });
+
     ctx.textAlign = 'left';
     ctx.fillStyle = WHITE;
-    ctx.font = `900 italic ${Math.round(H*0.165)}px "Barlow Condensed",sans-serif`;
-    ctx.fillText((d.line1||'').toUpperCase(), 60, H*0.72);
+    ctx.font = `900 italic ${f1.size}px "Barlow Condensed",sans-serif`;
+    ctx.fillText(f1.lines[0], padX, H*0.72);
 
     ctx.fillStyle = ACC;
-    ctx.font = `900 italic ${Math.round(H*0.215)}px "Barlow Condensed",sans-serif`;
-    ctx.fillText((d.line2||'').toUpperCase(), 60, H*0.935);
+    ctx.font = `900 italic ${f2.size}px "Barlow Condensed",sans-serif`;
+    ctx.fillText(f2.lines[0], padX, H*0.935);
 
     drawWatermark(ctx, W, H);
   }
 
-  // Número impacto cuadrado
+  // Número impacto cuadrado (auto-fit)
   function renderSqNumero(ctx, W, H, d){
     drawPhoto(ctx, W, H, 0.4);
     gradientBottom(ctx, W, H, 0.0, 0.75);
 
+    const padX = 50, maxW = W - padX*2;
+
+    // Número auto-fit
+    const fn = fitText(ctx, (d.numero||'+500'), maxW, H*0.45,
+      { start: Math.round(H*0.42), min: 80 });
     ctx.textAlign = 'left';
     ctx.fillStyle = ACC;
-    ctx.font = `900 italic ${Math.round(H*0.50)}px "Barlow Condensed",sans-serif`;
-    ctx.fillText((d.numero||'+500'), 50, H*0.78);
+    ctx.font = `900 italic ${fn.size}px "Barlow Condensed",sans-serif`;
+    ctx.fillText(fn.lines[0], padX, H*0.70);
 
+    // Label auto-fit en máximo 2 líneas, baseline final en H*0.95
+    const fl = fitText(ctx, (d.label||'').toUpperCase(), maxW, H*0.22,
+      { start: Math.round(H*0.10), min: 36 });
     ctx.fillStyle = WHITE;
-    ctx.font = `900 italic ${Math.round(H*0.155)}px "Barlow Condensed",sans-serif`;
-    const lines = wrapText(ctx, (d.label||'').toUpperCase(), W-100);
-    let y = H*0.92;
-    for(const l of lines){ ctx.fillText(l, 50, y); y += Math.round(H*0.16); }
+    ctx.font = `900 italic ${fl.size}px "Barlow Condensed",sans-serif`;
+    let y = H*0.95 - (fl.lines.length-1) * fl.lineH;
+    for(const l of fl.lines){ ctx.fillText(l, padX, y); y += fl.lineH; }
 
     drawWatermark(ctx, W, H);
   }

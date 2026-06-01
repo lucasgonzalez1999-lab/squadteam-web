@@ -2,6 +2,27 @@
 // SQUAD TEAM — Utilities
 // ═══════════════════════════════════════════
 
+// ── CANVAS roundRect POLYFILL ──
+// ctx.roundRect existe en Chrome 99+, Safari 16+, Firefox 113+. Para
+// soportar iOS Safari < 15.4 y similares lo polyfilleamos.
+if (typeof CanvasRenderingContext2D !== 'undefined' &&
+    !CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r){
+    const radii = Array.isArray(r) ? r : [r, r, r, r];
+    const [tl, tr, br, bl] = radii;
+    this.moveTo(x + tl, y);
+    this.lineTo(x + w - tr, y);
+    this.quadraticCurveTo(x + w, y, x + w, y + tr);
+    this.lineTo(x + w, y + h - br);
+    this.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+    this.lineTo(x + bl, y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - bl);
+    this.lineTo(x, y + tl);
+    this.quadraticCurveTo(x, y, x + tl, y);
+    return this;
+  };
+}
+
 // ── ERROR LOGGING ──
 // Envuelve promesas fire-and-forget para que los errores queden en consola
 // con contexto. Reemplaza el patrón `.catch(()=>{})` que silencia todo.

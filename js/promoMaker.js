@@ -254,6 +254,19 @@ const PROMO = (() => {
     return null;
   }
 
+  // Logo Squad Team cargado desde icons/logo-transparent.png (PNG con alpha)
+  let _logoImg = null;
+  let _logoLoading = false;
+  function ensureLogoImg(){
+    if(_logoImg || _logoLoading) return _logoImg;
+    _logoLoading = true;
+    const img = new Image();
+    img.onload = () => { _logoImg = img; _logoLoading = false; scheduleRedraw(); };
+    img.onerror = () => { _logoLoading = false; };
+    img.src = 'icons/logo-transparent.png';
+    return null;
+  }
+
   // Dibuja la silueta del app + tint global con destaque por grupo via overlay
   // de zonas semi-transparentes en lima. Más simple que portar 30 paths.
   function drawAppBodyFront(ctx, ox, oy, w, h, highlightedZones){
@@ -1029,6 +1042,72 @@ const PROMO = (() => {
     drawFooter(ctx, d.cta);
   }
 
+  // ── MARCOS (PNG con transparencia — overlay sobre fotos) ─────────────────
+  // Ninguno de estos llama a drawBackground(), el canvas queda transparente.
+
+  function renderFrameSello(ctx, d){
+    const logo = ensureLogoImg();
+    const lSize = 520;
+    if(logo) ctx.drawImage(logo, W/2 - lSize/2, H/2 - lSize/2 - 120, lSize, lSize);
+    // fade oscuro en el tercio inferior para que el handle legible
+    const g = ctx.createLinearGradient(0, H * 0.58, 0, H);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.80)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, H * 0.58, W, H * 0.42);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '800 40px "Inter", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(d.handle || HANDLE, W/2, H - 96);
+  }
+
+  function renderFrameEsquina(ctx, d){
+    const logo = ensureLogoImg();
+    const lSize = 210;
+    const pad  = 56;
+    if(logo) ctx.drawImage(logo, W - lSize - pad, H - lSize - pad, lSize, lSize);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '700 26px "Inter", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(d.handle || HANDLE, W - pad, H - lSize - pad - 18);
+  }
+
+  function renderFrameTapa(ctx, d){
+    const logo  = ensureLogoImg();
+    const topY  = SAFE_TOP - 40, topH = 190;
+    const botY  = SAFE_BOTTOM;
+    // bandas oscuras arriba y abajo (dentro de las safe areas)
+    ctx.fillStyle = 'rgba(4,4,4,0.88)';
+    ctx.fillRect(0, topY, W, topH);
+    ctx.fillRect(0, botY, W, H - botY);
+    // logo en banda superior
+    const lTop = 124;
+    if(logo) ctx.drawImage(logo, W/2 - lTop/2, topY + 24, lTop, lTop);
+    // handle en banda inferior
+    ctx.fillStyle = ACC;
+    ctx.font = '700 36px "Inter", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(d.handle || HANDLE, W/2, botY + 64);
+  }
+
+  function renderFrameBorde(ctx, d){
+    const color = (d.color || '').toLowerCase() === 'blanco' ? '#ffffff' : ACC;
+    const pad   = 28;
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 5;
+    ctx.beginPath();
+    ctx.roundRect(pad, pad, W - pad*2, H - pad*2, 40);
+    ctx.stroke();
+    // logo en la mitad inferior
+    const logo  = ensureLogoImg();
+    const lSize = 260;
+    if(logo) ctx.drawImage(logo, W/2 - lSize/2, H - lSize - 136, lSize, lSize);
+    ctx.fillStyle  = color;
+    ctx.font       = '700 36px "Inter", sans-serif';
+    ctx.textAlign  = 'center';
+    ctx.fillText(d.handle || HANDLE, W/2, H - 68);
+  }
+
   // ── TEMPLATES ──────────────────────────────────────────────────────────────
   // Modo 1: mockups del UI real (anuncia features)
   const TEMPLATES_MOCKUPS = [
@@ -1066,13 +1145,30 @@ const PROMO = (() => {
       defaults:{ eyebrow:'YA ADENTRO', count:'47', noun:'ATLETAS', sub:'ya tienen su plan en la app.', cta:HANDLE } },
   ];
 
+  // Modo 3: marcos PNG transparentes para overlay en historias
+  const TEMPLATES_FRAMES = [
+    { id:'frame-sello',   label:'Sello',   renderer:renderFrameSello,
+      defaults:{ handle:HANDLE } },
+    { id:'frame-esquina', label:'Esquina', renderer:renderFrameEsquina,
+      defaults:{ handle:HANDLE } },
+    { id:'frame-tapa',    label:'Tapa',    renderer:renderFrameTapa,
+      defaults:{ handle:HANDLE } },
+    { id:'frame-borde',   label:'Borde',   renderer:renderFrameBorde,
+      defaults:{ handle:HANDLE, color:'lima' } },
+  ];
+
   // Selección de modo según el param
   function getMode(){
     const m = new URLSearchParams(location.search).get('promo');
-    return m === '2' ? 'typo' : 'mockups';
+    if(m === '2') return 'typo';
+    if(m === '3') return 'frames';
+    return 'mockups';
   }
   function getTemplates(){
-    return getMode() === 'typo' ? TEMPLATES_TYPO : TEMPLATES_MOCKUPS;
+    const m = getMode();
+    if(m === 'typo')   return TEMPLATES_TYPO;
+    if(m === 'frames') return TEMPLATES_FRAMES;
+    return TEMPLATES_MOCKUPS;
   }
   const TEMPLATES = getTemplates();
 
@@ -1136,9 +1232,24 @@ const PROMO = (() => {
           : `<input data-key="${escapeHtml(k)}" type="text" value="${escapeHtml(v)}" style="width:100%;background:#1a1a1f;border:1px solid #2a2a35;border-radius:8px;padding:10px 12px;color:#fff;font-family:inherit;font-size:14px">`}
       </div>`).join('');
     const mode = getMode();
-    const modeLabel = mode === 'typo' ? 'Tipográficas puras — texto + identidad' : 'Mockups del app — recreación de cada sección';
-    const otherMode = mode === 'typo' ? '1' : '2';
-    const otherLabel = mode === 'typo' ? 'Ver mockups' : 'Ver tipográficas';
+    const modeLabelMap = {
+      mockups: 'Mockups del app — recreación de cada sección',
+      typo:    'Tipográficas puras — texto + identidad',
+      frames:  'Marcos PNG transparentes — overlay sobre fotos',
+    };
+    const modeLabel = modeLabelMap[mode];
+    const modeNav = [
+      { p:'1', label:'Mockups', m:'mockups' },
+      { p:'2', label:'Tipográficas', m:'typo' },
+      { p:'3', label:'Marcos', m:'frames' },
+    ].map(({p,label,m}) => {
+      const active = m === mode;
+      return `<a href="?promo=${p}" style="padding:8px 14px;background:${active?ACC:'#1a1a1f'};border:1px solid ${active?ACC:'#2a2a35'};border-radius:8px;color:${active?'#000':'#9090a8'};font-family:inherit;font-weight:700;font-size:11px;text-decoration:none;white-space:nowrap">${label}</a>`;
+    }).join('');
+    const canvasBg = mode === 'frames' ? '#555' : '#000';
+    const extraHint = mode === 'frames'
+      ? `<div style="font-size:11px;color:#9090a8;text-align:center;margin-top:10px;line-height:1.5">PNG con fondo transparente · pegalo como sticker en Instagram</div>`
+      : '';
     ov.innerHTML = `
     <div style="max-width:1200px;margin:0 auto">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
@@ -1146,9 +1257,9 @@ const PROMO = (() => {
           <div style="font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:900;font-size:40px;line-height:.9">PROMO</div>
           <div style="font-size:12px;color:#9090a8;margin-top:4px">${modeLabel} · 1080×1920</div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <a href="?promo=${otherMode}" style="padding:10px 14px;background:#1a1a1f;border:1px solid #2a2a35;border-radius:10px;color:${ACC};font-family:inherit;font-weight:700;font-size:12px;text-decoration:none">${otherLabel} →</a>
-          <button onclick="document.getElementById('promo-ov').remove()" style="background:#1a1a1f;border:1px solid #2a2a35;border-radius:10px;width:42px;height:42px;color:#fff;font-size:20px;cursor:pointer">×</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          ${modeNav}
+          <button onclick="document.getElementById('promo-ov').remove()" style="background:#1a1a1f;border:1px solid #2a2a35;border-radius:10px;width:42px;height:42px;color:#fff;font-size:20px;cursor:pointer;margin-left:4px">×</button>
         </div>
       </div>
 
@@ -1160,12 +1271,13 @@ const PROMO = (() => {
       </div>
 
       <div class="promo-grid">
-        <div class="promo-canvas-wrap" style="background:#000;border-radius:12px;overflow:hidden;aspect-ratio:9/16;max-height:80vh;display:flex;align-items:center;justify-content:center">
+        <div class="promo-canvas-wrap" style="background:${canvasBg};border-radius:12px;overflow:hidden;aspect-ratio:9/16;max-height:80vh;display:flex;align-items:center;justify-content:center">
           <canvas id="promo-canvas" width="${W}" height="${H}" style="max-width:100%;max-height:100%;display:block"></canvas>
         </div>
         <div>
           <div id="promo-fields" oninput="PROMO.updateField(event)">${fields}</div>
           <button onclick="PROMO.download()" style="width:100%;padding:14px;background:${ACC};border:none;border-radius:12px;color:#000;font-family:inherit;font-weight:800;font-size:14px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;margin-top:8px">Descargar PNG</button>
+          ${extraHint}
           <button onclick="PROMO.share()" style="width:100%;padding:12px;background:transparent;border:1px solid #2a2a35;border-radius:10px;color:#9090a8;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer;margin-top:8px">Compartir nativo</button>
           <div style="display:flex;gap:8px;margin-top:8px">
             <button onclick="PROMO.reset()" style="flex:1;padding:10px;background:transparent;border:1px solid #2a2a35;border-radius:10px;color:#9090a8;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">Reset a defaults</button>
@@ -1197,6 +1309,7 @@ const PROMO = (() => {
     const cv = document.getElementById('promo-canvas');
     if(!cv) return;
     const ctx = cv.getContext('2d');
+    ctx.clearRect(0, 0, W, H);
     if(_selected?.renderer) _selected.renderer(ctx, _state);
   }
 

@@ -897,6 +897,11 @@ async function _naConfirm(){
     DB.set('athletes',athletes);
     await window.db.collection('config').doc('athletes').set({list:JSON.stringify(athletes)});
 
+    // Create default physique settings (every 4 weeks)
+    if(typeof window.ppSaveSettingsExt==='function'){
+      try{ await window.ppSaveSettingsExt(data.id, { interval:4, lastPhotoCheckinId:null, updatedBy:'system' }); }catch(e){}
+    }
+
     // Update login display
     if(window._USERS) window._USERS.push({id:data.id,name:data.name,role:'athlete',color});
 
@@ -1031,6 +1036,15 @@ function openEditAthleteModal(id){
           <input type="checkbox" id="ea-dopamine-cb" ${a.features?.dopamine?'checked':''} style="display:none">
         </div>
       </div>
+      <div>
+        <div style="${lbl}">Frecuencia de fotos físicas</div>
+        <select id="ea-physique-interval" style="${inp};appearance:auto">
+          <option value="1">Semanal</option>
+          <option value="2">Cada 2 semanas</option>
+          <option value="4" selected>Cada 4 semanas (default)</option>
+        </select>
+        <div style="font-size:10px;color:var(--sub);margin-top:4px">El alumno sube fotos cada N check-ins dominicales.</div>
+      </div>
       <div style="border-top:1px solid var(--border);padding-top:14px">
         <div style="${lbl}">Cambiar PIN</div>
         <div style="display:flex;gap:8px;margin-top:6px">
@@ -1054,6 +1068,14 @@ function openEditAthleteModal(id){
       <button onclick="_saveEditAthlete('${a.id}')" style="flex:1;padding:10px 0;background:var(--acc);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Guardar</button>
     </div>
   </div>`;
+
+  // Async load physique frequency setting and prefill the select
+  if(typeof window.ppGetSettingsExt==='function'){
+    window.ppGetSettingsExt(a.id).then(function(s){
+      const sel=document.getElementById('ea-physique-interval');
+      if(sel && s) sel.value = String(s.interval||4);
+    });
+  }
 }
 
 async function _eaChangePin(athId){
@@ -1122,6 +1144,16 @@ async function _saveEditAthlete(id){
     await window.db.collection('config').doc('athletes').set({ list: JSON.stringify(athletes) });
     toast(`${a.name} actualizado`);
   }catch(e){ toast(`${a.name} guardado localmente`); }
+
+  // Persist physique frequency
+  const interval = parseInt(document.getElementById('ea-physique-interval')?.value)||4;
+  if(typeof window.ppSaveSettingsExt==='function'){
+    try{
+      const cur = typeof window.ppGetSettingsExt==='function' ? await window.ppGetSettingsExt(a.id) : null;
+      await window.ppSaveSettingsExt(a.id, { ...(cur||{}), interval, updatedBy:'coach' });
+    }catch(e){}
+  }
+
   document.getElementById('edit-ath-ov')?.remove();
   renderAlumnos();
 }

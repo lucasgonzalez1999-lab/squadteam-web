@@ -224,6 +224,8 @@ async function ckLoadAth(athId){
       <div class="ck-question-text">${current.athleteQuestion}</div>
     </div>` : ''}
 
+    <div id="ck-coach-photos-${current.id}"></div>
+
     ${current.coachNote ? `
     <div class="ck-section">
       <div class="ck-section-label">NOTA PRIVADA</div>
@@ -249,7 +251,95 @@ async function ckLoadAth(athId){
   </div>` : ''}
 
 </div>`;
+
+  // ── Coach-side photo display for current check-in ──
+  await ckCoachRenderPhotos(athId, current);
 }
+
+async function ckCoachRenderPhotos(athId, current){
+  if(typeof window.ppLoadSessions!=='function') return;
+  const ph = document.getElementById('ck-coach-photos-'+current.id);
+  if(!ph) return;
+  let sessions = [];
+  try{ sessions = await window.ppLoadSessions(athId); }catch(e){}
+  const session = sessions.find(s=>s.sessionId===current.id);
+  let settings = null;
+  if(typeof window.ppGetSettingsExt==='function'){
+    try{ settings = await window.ppGetSettingsExt(athId); }catch(e){}
+  }
+  const required = settings ? window.checkinRequiresPhotos(current.id, settings) : false;
+
+  if(!session || !Object.keys(session.photos||{}).length){
+    if(required){
+      ph.innerHTML = `<div class="ck-section"><div class="ck-section-label">FOTOS DEL MES</div>
+        <div style="font-size:13px;color:#ff9500;font-weight:500;padding:8px 0">El alumno no subió fotos este check-in.</div></div>`;
+    }
+    return;
+  }
+
+  const POSES = (typeof PP_POSES!=='undefined') ? PP_POSES :
+    [{id:'frente_relax',label:'Frente'},{id:'perfil_izq',label:'P. izq'},{id:'perfil_der',label:'P. der'},
+     {id:'espalda_relax',label:'Espalda'},{id:'pecho_pose',label:'Pecho'},{id:'espalda_pose',label:'Esp pose'}];
+  const n = Object.keys(session.photos||{}).length;
+  ph.innerHTML = `<div class="ck-section">
+    <div class="ck-section-label" style="display:flex;justify-content:space-between;align-items:center">
+      <span>FOTOS DEL MES · ${n}/6</span>
+      ${sessions.length>=2?`<button onclick="ckCoachOpenEvolution('${athId}','${current.id}')" style="background:transparent;border:1px solid var(--border);color:var(--sub);font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit">Ver evolución</button>`:''}
+    </div>
+    <div class="pp-grid">
+      ${POSES.map(pose=>{
+        const p = session.photos?.[pose.id];
+        if(!p) return `<div class="pp-slot pp-slot-empty"><div class="pp-slot-icon">·</div><div class="pp-slot-label">${pose.label}</div></div>`;
+        return `<div class="pp-slot pp-slot-filled" onclick="ppLightbox('${p.url}','${pose.label}')">
+          <img src="${p.url.replace('/upload/','/upload/c_fill,w_300,h_400,q_auto,f_auto/')}" loading="lazy">
+          <div class="pp-slot-label">${pose.label}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+window.ckCoachOpenEvolution = function(athId, currentCkId){
+  if(typeof window.ppLoadSessions!=='function') return;
+  window.ppLoadSessions(athId).then(sessions=>{
+    const sorted = sessions.filter(s=>s.source==='checkin' && Object.keys(s.photos||{}).length>0)
+      .sort((a,b)=>b.sessionId.localeCompare(a.sessionId));
+    const cur = sorted.find(s=>s.sessionId===currentCkId);
+    const prev = sorted.find(s=>s.sessionId<currentCkId);
+    if(!cur || !prev){ if(typeof toast==='function') toast('No hay check-in fotográfico anterior'); return; }
+
+    const POSES = (typeof PP_POSES!=='undefined') ? PP_POSES :
+      [{id:'frente_relax',label:'Frente'},{id:'perfil_izq',label:'P. izq'},{id:'perfil_der',label:'P. der'},
+       {id:'espalda_relax',label:'Espalda'},{id:'pecho_pose',label:'Pecho'},{id:'espalda_pose',label:'Esp pose'}];
+
+    let ov = document.getElementById('ck-evo-ov');
+    if(!ov){ ov=document.createElement('div'); ov.id='ck-evo-ov'; document.body.appendChild(ov); }
+    ov.className='pp-sheet-ov';
+    ov.onclick = e=>{ if(e.target===ov) ov.remove(); };
+    ov.innerHTML = `
+    <div class="pp-sheet pp-sheet-wide">
+      <div class="pp-sheet-head">
+        <div>
+          <div class="pp-sheet-title">Evolución</div>
+          <div class="pp-sheet-sub">Antes: ${prev.date} · Después: ${cur.date}</div>
+        </div>
+        <button class="pp-x-btn" onclick="document.getElementById('ck-evo-ov').remove()">×</button>
+      </div>
+      <div class="pp-cmp-grid">
+        ${POSES.map(pose=>{
+          const pa = prev.photos?.[pose.id], pb = cur.photos?.[pose.id];
+          return `<div class="pp-cmp-col">
+            <div class="pp-cmp-lbl">${pose.label}</div>
+            <div class="pp-cmp-pair">
+              ${pa ? `<img src="${pa.url.replace('/upload/','/upload/c_fill,w_300,h_400,q_auto,f_auto/')}">` : `<div class="pp-cmp-empty">sin foto</div>`}
+              ${pb ? `<img src="${pb.url.replace('/upload/','/upload/c_fill,w_300,h_400,q_auto,f_auto/')}">` : `<div class="pp-cmp-empty">sin foto</div>`}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+};
 
 async function ckOpenHistDetail(athId, ckId_){
   const list = await ckGet(athId);
@@ -593,12 +683,16 @@ async function ckAthleteView(cont, user){
     </div>
   </div>` : ''}
 
+  <!-- Photo block (injected if required) -->
+  <div id="ck-photo-block-${current.id}"></div>
+
   <!-- Confirm / Question -->
   ${!current.athleteConfirmed && !current.athleteQuestion ? `
   <div class="ck-ath-cta">
     <div class="ck-ath-cta-label">¿Quedó claro?</div>
+    <div id="ck-photo-msg-${current.id}"></div>
     <div class="ck-ath-cta-btns">
-      <button class="ck-cta-ok" onclick="ckAthConfirm('${athId}','${current.id}','ok')" style="--ac:${color}">
+      <button class="ck-cta-ok" id="ck-confirm-btn-${current.id}" onclick="ckAthConfirm('${athId}','${current.id}','ok')" style="--ac:${color}">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         ENTENDIDO
       </button>
@@ -647,6 +741,85 @@ async function ckAthleteView(cont, user){
 <div class="ck-modal-bg hidden" id="ck-doubt-bg" onclick="ckDoubtClose(event)">
   <div class="ck-modal" id="ck-doubt-modal"></div>
 </div>`;
+
+  // ── Mount physique photo block if this check-in requires it ──
+  await ckMaybeMountPhotoBlock(athId, current);
+}
+
+// State for the photo block of the active check-in
+window._ckPhotoState = { athId:null, checkinId:null, count:0, required:false };
+
+async function ckMaybeMountPhotoBlock(athId, current){
+  if(typeof window.ppShouldShowInCheckin!=='function') return;
+  const placeholder = document.getElementById('ck-photo-block-'+current.id);
+  if(!placeholder) return;
+  const required = await window.ppShouldShowInCheckin(athId, current.id);
+  window._ckPhotoState = { athId, checkinId: current.id, count:0, required };
+
+  // Si el alumno ya confirmó, no mostramos el grid editable
+  if(current.athleteConfirmed || current.athleteQuestion){
+    // Si ya hizo el ciclo, mostrar resumen
+    const sessions = await ppLoadSessions(athId);
+    const s = sessions.find(x=>x.sessionId===current.id);
+    if(s){
+      const n = Object.keys(s.photos||{}).length;
+      placeholder.innerHTML = `<div class="pp-ck-block-summary">${n}/6 FOTOS LISTAS</div>`;
+    }
+    return;
+  }
+
+  if(!required){
+    placeholder.innerHTML = '';
+    ckUpdateConfirmState();
+    return;
+  }
+
+  await window.ppRenderCheckinBlock({
+    container: placeholder,
+    athId,
+    checkinId: current.id,
+    dateLabel: current.dateRange || current.weekLabel,
+    onPhotosCountChange: (n)=>{
+      window._ckPhotoState.count = n;
+      ckUpdateConfirmState();
+    }
+  });
+  // Initial state
+  ckUpdateConfirmState();
+}
+
+function ckUpdateConfirmState(){
+  const st = window._ckPhotoState;
+  if(!st || !st.checkinId) return;
+  const btn = document.getElementById('ck-confirm-btn-'+st.checkinId);
+  const msg = document.getElementById('ck-photo-msg-'+st.checkinId);
+  if(!btn) return;
+  const required = st.required;
+  const n = st.count;
+  if(required && n === 0){
+    btn.disabled = true;
+    btn.style.opacity = '.4';
+    btn.style.cursor = 'not-allowed';
+    if(msg) msg.innerHTML = `<div class="pp-ck-warn">Falta al menos 1 foto para cerrar el check-in.</div>`;
+  } else if(required && n < 6){
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = '';
+    if(msg) msg.innerHTML = `<div class="pp-ck-info">Subiste ${n}/6 fotos. Podés completar después.</div>`;
+  } else if(required && n >= 6){
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = '';
+    if(msg) msg.innerHTML = '';
+    // Colapsar bloque a summary
+    const block = document.getElementById('ck-photo-block-'+st.checkinId);
+    if(block) block.innerHTML = `<div class="pp-ck-block-summary">6 FOTOS LISTAS</div>`;
+  } else {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = '';
+    if(msg) msg.innerHTML = '';
+  }
 }
 
 async function ckAthToggleGoal(athId, ckId_, goalIdx){
@@ -670,14 +843,51 @@ async function ckAthToggleGoal(athId, ckId_, goalIdx){
 }
 
 async function ckAthConfirm(athId, ckId_, action){
+  const st = window._ckPhotoState;
+  if(st && st.checkinId===ckId_ && st.required && st.count===0){
+    toast('Falta al menos 1 foto');
+    return;
+  }
   const list = await ckGet(athId);
   const ck = list.find(x=>x.id===ckId_);
   if(!ck) return;
   ck.athleteConfirmed = true;
   ck.status = 'reviewed';
   await ckSave(athId, list);
-  toast('Confirmado');
-  ckAthleteView(document.getElementById('checkins-content'), currentUser);
+
+  // Si el ciclo de fotos tocaba y el alumno subió al menos una → marcar el check-in como hecho
+  let firstEver = false;
+  if(st && st.required && st.count>0 && typeof window.ppMarkCheckinDone==='function'){
+    try{
+      const prevSettings = typeof window.ppGetSettingsExt==='function' ? await window.ppGetSettingsExt(athId) : null;
+      firstEver = !prevSettings?.lastPhotoCheckinId;
+      await window.ppMarkCheckinDone(athId, ckId_);
+    }catch(e){}
+  }
+
+  if(st && st.required && st.count>0 && firstEver){
+    ckShowPhotoSuccess();
+    if(typeof navigator!=='undefined' && navigator.vibrate) try{ navigator.vibrate([10,50,10]); }catch(e){}
+    setTimeout(()=>{
+      ckAthleteView(document.getElementById('checkins-content'), currentUser);
+    }, 2000);
+  } else if(st && st.required && st.count>0){
+    toast(`${st.count} fotos guardadas con el check-in.`);
+    ckAthleteView(document.getElementById('checkins-content'), currentUser);
+  } else {
+    toast('Confirmado');
+    ckAthleteView(document.getElementById('checkins-content'), currentUser);
+  }
+}
+
+function ckShowPhotoSuccess(){
+  let ov = document.getElementById('pp-done-ov');
+  if(!ov){ ov=document.createElement('div'); ov.id='pp-done-ov'; document.body.appendChild(ov); }
+  ov.className='pp-done-ov';
+  ov.innerHTML = `
+    <div class="pp-done-title">FOTOS<br>GUARDADAS.</div>
+    <div class="pp-done-sub">TU COACH LAS VE EN ESTE CHECK-IN.</div>`;
+  setTimeout(()=>ov.remove(), 2000);
 }
 
 function ckAthAskDoubt(athId, ckId_){

@@ -198,68 +198,136 @@ function ppRenderGrid(){
   </div>`;
 }
 
+let _ppQueue = []; // [{file, angle, preview}]
+const _ppDefaultOrder = ['frente','perfil_izq','perfil_der','espalda'];
+
 function ppOpenUpload(prefillDate, prefillAngle){
   const today = new Date().toISOString().split('T')[0];
+  _ppQueue = [];
+  if(prefillAngle) _ppPrefillAngle = prefillAngle; else _ppPrefillAngle = null;
   let ov = document.getElementById('pp-up-ov');
   if(!ov){ ov=document.createElement('div'); ov.id='pp-up-ov'; document.body.appendChild(ov); }
-  ov.style.cssText='position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px';
-  ov.onclick = e=>{ if(e.target===ov) ov.remove(); };
+  ov.style.cssText='position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
+  ov.onclick = e=>{ if(e.target===ov && !document.getElementById('pp-up-btn')?.disabled) ov.remove(); };
 
   const inp = 'width:100%;background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:10px 13px;font-size:14px;color:var(--text);font-family:inherit;outline:none;box-sizing:border-box';
   const lbl = 'font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--sub);text-transform:uppercase;margin-bottom:6px;display:block';
 
   ov.innerHTML = `
-  <div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:420px;padding:22px;display:flex;flex-direction:column;gap:14px">
+  <div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;padding:22px;display:flex;flex-direction:column;gap:14px">
     <div style="display:flex;align-items:center;justify-content:space-between">
-      <div style="font-size:15px;font-weight:800;color:var(--text)">Subir foto</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text)">Subir fotos</div>
       <button onclick="document.getElementById('pp-up-ov').remove()" style="background:none;border:1px solid var(--border);border-radius:8px;width:30px;height:30px;cursor:pointer;color:var(--sub);font-size:18px;display:flex;align-items:center;justify-content:center">×</button>
     </div>
     <div>
       <label style="${lbl}">Fecha</label>
       <input id="pp-date" type="date" value="${prefillDate||today}" max="${today}" style="${inp}">
     </div>
-    <div>
-      <label style="${lbl}">Ángulo</label>
-      <select id="pp-angle" style="${inp};appearance:auto">
-        ${PP_ANGLES.map(a=>`<option value="${a.id}" ${a.id===prefillAngle?'selected':''}>${a.label}</option>`).join('')}
-      </select>
+
+    <div id="pp-drop" ondragover="event.preventDefault();this.style.borderColor='var(--acc)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="event.preventDefault();this.style.borderColor='var(--border)';ppAddFiles(event.dataTransfer.files)"
+      onclick="document.getElementById('pp-files').click()"
+      style="border:2px dashed var(--border);border-radius:12px;padding:24px;text-align:center;cursor:pointer;background:var(--surf2);transition:border-color .15s">
+      <div style="font-size:34px;margin-bottom:8px">📸</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Arrastrá o tocá para elegir</div>
+      <div style="font-size:11px;color:var(--sub)">Hasta 4 fotos · se asignan a los 4 ángulos en orden</div>
+      <input id="pp-files" type="file" accept="image/*" multiple style="display:none" onchange="ppAddFiles(this.files)">
     </div>
-    <div>
-      <label style="${lbl}">Foto</label>
-      <input id="pp-file" type="file" accept="image/*" capture="environment" style="${inp};padding:8px 13px">
-    </div>
+
+    <div id="pp-queue" style="display:flex;flex-direction:column;gap:8px"></div>
+
     <div id="pp-up-msg" style="font-size:12px;color:var(--sub);min-height:16px"></div>
     <div style="display:flex;gap:8px">
       <button onclick="document.getElementById('pp-up-ov').remove()" style="flex:1;padding:11px 0;background:none;border:1px solid var(--border);border-radius:10px;color:var(--sub);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
-      <button id="pp-up-btn" onclick="ppDoUpload()" style="flex:1;padding:11px 0;background:var(--acc);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Subir</button>
+      <button id="pp-up-btn" onclick="ppDoUpload()" disabled style="flex:1;padding:11px 0;background:var(--acc);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;opacity:.4">Subir</button>
     </div>
   </div>`;
 }
 
+function ppAddFiles(fileList){
+  const arr = Array.from(fileList||[]).filter(f=>f.type.startsWith('image/'));
+  for(const f of arr){
+    if(_ppQueue.length>=8) break; // límite razonable
+    const url = URL.createObjectURL(f);
+    // Asignar siguiente ángulo libre (si hay prefill, usalo solo para la primera)
+    let angle;
+    if(_ppPrefillAngle && _ppQueue.length===0){ angle = _ppPrefillAngle; _ppPrefillAngle = null; }
+    else angle = _ppDefaultOrder[_ppQueue.length % _ppDefaultOrder.length];
+    _ppQueue.push({ file:f, angle, preview:url });
+  }
+  ppRenderQueue();
+}
+
+function ppRemoveFromQueue(idx){
+  _ppQueue.splice(idx,1);
+  ppRenderQueue();
+}
+
+function ppSetQueueAngle(idx, angle){
+  if(_ppQueue[idx]) _ppQueue[idx].angle = angle;
+}
+
+function ppRenderQueue(){
+  const q = document.getElementById('pp-queue');
+  const btn = document.getElementById('pp-up-btn');
+  if(!q) return;
+  if(!_ppQueue.length){
+    q.innerHTML='';
+    if(btn){ btn.disabled=true; btn.style.opacity='.4'; btn.textContent='Subir'; }
+    return;
+  }
+  q.innerHTML = _ppQueue.map((it,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--surf2);border:1px solid var(--border);border-radius:10px">
+      <img src="${it.preview}" style="width:56px;height:72px;object-fit:cover;border-radius:6px;background:#000;flex-shrink:0">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;color:var(--sub);margin-bottom:4px">${(it.file.size/1024).toFixed(0)} KB · ${it.file.name.length>22?it.file.name.slice(0,22)+'…':it.file.name}</div>
+        <select onchange="ppSetQueueAngle(${i},this.value)" style="width:100%;background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--text);font-family:inherit;appearance:auto">
+          ${PP_ANGLES.map(a=>`<option value="${a.id}" ${a.id===it.angle?'selected':''}>${a.label}</option>`).join('')}
+        </select>
+      </div>
+      <button onclick="ppRemoveFromQueue(${i})" style="background:none;border:1px solid var(--border);border-radius:8px;width:28px;height:28px;cursor:pointer;color:var(--sub);font-size:16px;flex-shrink:0">×</button>
+    </div>
+  `).join('');
+  if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.textContent=`Subir ${_ppQueue.length} foto${_ppQueue.length!==1?'s':''}`; }
+}
+
 async function ppDoUpload(){
-  const date  = document.getElementById('pp-date').value;
-  const angle = document.getElementById('pp-angle').value;
-  const file  = document.getElementById('pp-file').files?.[0];
-  const msg   = document.getElementById('pp-up-msg');
-  const btn   = document.getElementById('pp-up-btn');
-  if(!date || !angle || !file){ msg.textContent='Faltan datos'; msg.style.color='#ef4444'; return; }
+  const date = document.getElementById('pp-date').value;
+  const msg  = document.getElementById('pp-up-msg');
+  const btn  = document.getElementById('pp-up-btn');
+  if(!date || !_ppQueue.length){ msg.textContent='Faltan datos'; msg.style.color='#ef4444'; return; }
   if(!_ppSelAth){ msg.textContent='Sin alumno'; msg.style.color='#ef4444'; return; }
 
-  btn.disabled = true; btn.textContent = 'Subiendo...'; msg.style.color='var(--sub)'; msg.textContent='Comprimiendo y subiendo...';
-  try{
-    const up = await ppUpload(file, _ppSelAth, date, angle);
-    // Reemplazar si ya existe esa fecha+ángulo
-    _ppPhotos = _ppPhotos.filter(p=>!(p.date===date && p.angle===angle));
-    _ppPhotos.push({ date, angle, url:up.url, publicId:up.publicId, w:up.w, h:up.h, uploadedAt:new Date().toISOString() });
-    await ppSave(_ppSelAth, _ppPhotos);
-    document.getElementById('pp-up-ov')?.remove();
-    toast('Foto subida');
-    ppRenderGrid();
-  } catch(e){
-    msg.textContent = e.message || 'Error al subir';
-    msg.style.color = '#ef4444';
-    btn.disabled = false; btn.textContent = 'Subir';
+  btn.disabled = true; btn.style.opacity='.6'; msg.style.color='var(--sub)';
+  let done=0, failed=0;
+  const total = _ppQueue.length;
+  msg.textContent = `Subiendo 0/${total}...`;
+
+  // Subir en paralelo (máx 3 a la vez)
+  const queue = [..._ppQueue];
+  const results = [];
+  async function worker(){
+    while(queue.length){
+      const it = queue.shift();
+      try{
+        const up = await ppUpload(it.file, _ppSelAth, date, it.angle);
+        results.push({ date, angle:it.angle, url:up.url, publicId:up.publicId, w:up.w, h:up.h, uploadedAt:new Date().toISOString() });
+        done++;
+      }catch(e){ failed++; }
+      msg.textContent = `Subiendo ${done}/${total}${failed?' · '+failed+' falló':''}...`;
+    }
   }
+  await Promise.all([worker(),worker(),worker()]);
+
+  // Reemplazar duplicados (misma fecha+ángulo)
+  for(const r of results){
+    _ppPhotos = _ppPhotos.filter(p=>!(p.date===r.date && p.angle===r.angle));
+    _ppPhotos.push(r);
+  }
+  try{ await ppSave(_ppSelAth, _ppPhotos); }catch(e){}
+
+  document.getElementById('pp-up-ov')?.remove();
+  toast(failed ? `${done} subidas, ${failed} fallaron` : `${done} foto${done!==1?'s':''} subida${done!==1?'s':''}`);
+  ppRenderGrid();
 }
 
 async function ppDelete(publicId, date, angle){

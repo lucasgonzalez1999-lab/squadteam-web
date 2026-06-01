@@ -15,6 +15,34 @@ async function pgGetHistory(athId){
   }catch(e){ return []; }
 }
 
+// Helper centralizado para vista del atleta (MI PLAN)
+async function getPaymentStatus(athId){
+  if(!Array.isArray(athletes) || !athletes.length) return null;
+  const a = athletes.find(x=>x.id===athId);
+  if(!a || a.guest) return null;
+  const pay = a.payment || {};
+  const calc = (typeof payCalc==='function') ? payCalc(a) : null;
+  let history = [];
+  if(typeof pgGetHistory === 'function'){
+    history = await pgGetHistory(athId);
+  }
+  history.sort((x,y) => String(y.date||'').localeCompare(String(x.date||'')));
+  return {
+    status: calc?.status || 'unconfigured',
+    amount: parseFloat(pay.amount)||0,
+    currency: pay.currency || 'UYU',
+    method: history[0]?.method || 'transfer',
+    period: 'Mensual',
+    payday: pay.payday,
+    nextDueStr: calc?.nextDueStr || '',
+    daysUntil: calc?.daysUntil || 0,
+    daysOverdue: calc?.daysOverdue || 0,
+    lastPayments: history.slice(0, 6),
+    lastPaidAt: pay.lastPaid || null,
+  };
+}
+window.getPaymentStatus = getPaymentStatus;
+
 async function pgSaveHistory(athId, list){
   await window.db.collection('paymentHistory').doc(athId).set({ data: JSON.stringify(list) });
 }

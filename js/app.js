@@ -507,6 +507,96 @@ async function quickSyncFromFirebase() {
   } catch(e) {}
 }
 
+// ── MI PLAN — vista del atleta de su estado de pago ──
+const _METHOD_LABEL_ATH = { cash:'Efectivo', transfer:'Transferencia', other:'Otro', mp:'Mercado Pago', stripe:'Stripe' };
+
+function renderMiPlanCard(st, user){
+  const slot = document.getElementById('ath-mi-plan-card');
+  if(!slot) return;
+  if(!st || st.status === 'unconfigured'){
+    slot.innerHTML = '';
+    return;
+  }
+
+  const color = st.status==='paid' ? '#22c55e'
+              : st.status==='overdue' ? '#ff3f3f'
+              : (st.daysUntil>=0 && st.daysUntil<=7) ? '#ff9500'
+              : 'var(--sub)';
+
+  let subtitle = '';
+  if(st.status === 'paid'){
+    subtitle = `Al día · próximo cobro ${st.nextDueStr || 'día '+st.payday}`;
+  } else if(st.status === 'overdue'){
+    subtitle = `Vencido hace ${st.daysOverdue} día${st.daysOverdue!==1?'s':''}`;
+  } else if(st.daysUntil >= 0 && st.daysUntil <= 7){
+    subtitle = `Vence ${st.daysUntil===0?'hoy':st.daysUntil===1?'mañana':'en '+st.daysUntil+' días'} · día ${st.payday}`;
+  } else if(st.payday){
+    subtitle = `Día ${st.payday} de cada mes`;
+  }
+
+  // WhatsApp del coach (toma del primer coach disponible)
+  const coachPhone = (window.COACH_USERS && window.COACH_USERS[0]?.phone) || '';
+  const waLink = coachPhone
+    ? `https://wa.me/${coachPhone.replace(/\D/g,'')}?text=${encodeURIComponent(`Hola, te aviso sobre el pago de SQUAD TEAM.`)}`
+    : null;
+
+  const fmtMoney = n => Number(n).toLocaleString('es-UY');
+  const histFmt = d => {
+    if(!d) return '—';
+    const dt = new Date(d+'T12:00:00');
+    return dt.toLocaleDateString('es-UY',{day:'2-digit',month:'short'}).replace('.','');
+  };
+
+  slot.innerHTML = `
+  <div style="background:#0e0e12;border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:20px">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:14px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:800;font-size:20px;color:var(--text);letter-spacing:-.5px">MI PLAN</div>
+    </div>
+    <div style="font-size:12px;font-weight:${st.status==='paid'?'500':'700'};color:${color};margin-bottom:18px">${subtitle}</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#9090a8;letter-spacing:.08em;margin-bottom:4px">MONTO</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:800;font-size:28px;color:var(--text);line-height:1">$${fmtMoney(st.amount)}</div>
+        <div style="font-size:10px;color:#9090a8;margin-top:2px">${st.currency}</div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#9090a8;letter-spacing:.08em;margin-bottom:4px">MÉTODO</div>
+        <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.3">${_METHOD_LABEL_ATH[st.method]||st.method||'—'}</div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#9090a8;letter-spacing:.08em;margin-bottom:4px">PERÍODO</div>
+        <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.3">${st.period||'Mensual'}</div>
+      </div>
+    </div>
+
+    ${st.lastPayments && st.lastPayments.length ? `
+      <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:14px;margin-bottom:${st.status==='overdue'?'14px':'0'}">
+        <div style="font-size:10px;font-weight:700;color:#9090a8;letter-spacing:.08em;margin-bottom:10px">ÚLTIMOS PAGOS</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${st.lastPayments.map(h=>`
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px">
+              <div style="color:var(--text)">${histFmt(h.date)}</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="color:var(--text);font-weight:700">$${fmtMoney(h.amount)} ${h.currency||'UYU'}</span>
+                <span style="color:#22c55e;font-size:14px">✓</span>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>` : ''}
+
+    ${st.status==='overdue' && waLink ? `
+      <a href="${waLink}" target="_blank" rel="noopener"
+         style="display:block;text-align:center;padding:11px;border:1px solid #ff9500;border-radius:10px;color:#ff9500;font-family:'Inter',sans-serif;font-weight:800;font-size:12px;letter-spacing:1px;text-decoration:none;margin-top:14px">
+        AVISAR A MI COACH
+      </a>` : st.status==='overdue' ? `
+      <div style="font-size:12px;color:#ff9500;font-weight:600;text-align:center;margin-top:14px">Hablá con tu coach para regularizar.</div>
+    ` : `
+      <div style="font-size:11px;color:#9090a8;font-weight:500;margin-top:14px">Cualquier consulta, hablá con tu coach.</div>
+    `}
+  </div>`;
+}
+
 // ── ATHLETE VIEW ──
 function renderAthleteView(user) {
   if (!user) return;
@@ -804,6 +894,7 @@ function renderAthleteView(user) {
     // ── CONFIGURACIÓN ──
     const curUnit = DB.get('units_'+user.id) || 'kg';
     parts.push(`
+    <div id="ath-mi-plan-card"></div>
     <div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:20px">
       <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">⚙️ Configuración</div>
       <div style="display:flex;align-items:center;justify-content:space-between">
@@ -821,6 +912,10 @@ function renderAthleteView(user) {
 
     parts.push('</div>');
     cont.innerHTML='<style>@keyframes sq-spin{to{transform:rotate(360deg)}}</style>'+parts.join('');
+    // Async: cargar y renderizar MI PLAN
+    if(typeof getPaymentStatus === 'function'){
+      getPaymentStatus(user.id).then(st => renderMiPlanCard(st, user));
+    }
   } catch(err){
     console.error('[renderAthleteView]',err);
     const c2=document.getElementById('mi-perfil-content');

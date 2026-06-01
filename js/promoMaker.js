@@ -4,6 +4,29 @@
 // Templates tipográficas (hero/question/etc) + mockups que recrean
 // el UI real del app para anunciar features con copy de hype.
 
+// Polyfill local: Canvas roundRect en navegadores viejos. utils.js ya
+// tiene uno global, pero este archivo es autocontenido y puede cargarse
+// antes que utils en algún escenario de testing.
+if (typeof CanvasRenderingContext2D !== 'undefined'
+    && !CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r){
+    const rr = typeof r === 'number' ? [r,r,r,r] : (Array.isArray(r) ? r : [r,r,r,r]);
+    const [tl,tr,br,bl] = rr;
+    this.beginPath();
+    this.moveTo(x+tl, y);
+    this.lineTo(x+w-tr, y);
+    this.quadraticCurveTo(x+w, y, x+w, y+tr);
+    this.lineTo(x+w, y+h-br);
+    this.quadraticCurveTo(x+w, y+h, x+w-br, y+h);
+    this.lineTo(x+bl, y+h);
+    this.quadraticCurveTo(x, y+h, x, y+h-bl);
+    this.lineTo(x, y+tl);
+    this.quadraticCurveTo(x, y, x+tl, y);
+    this.closePath();
+    return this;
+  };
+}
+
 const PROMO = (() => {
   const W = 1080, H = 1920;
   const HANDLE = '@sqteam.uy';
@@ -93,8 +116,7 @@ const PROMO = (() => {
 
   function roundedRect(ctx, x, y, w, h, r){
     ctx.beginPath();
-    if(ctx.roundRect){ ctx.roundRect(x, y, w, h, r); }
-    else { ctx.rect(x, y, w, h); }
+    ctx.roundRect(x, y, w, h, r);
   }
 
   function drawCheck(ctx, cx, cy, size, color){

@@ -331,38 +331,58 @@ function nbRemoveItem(mealIdx, itemIdx){
   nbRefresh();
 }
 
-function nbDeleteMeal(idx){
-  if(!_nbPlan||!confirm('¿Eliminar esta comida?')) return;
+async function nbDeleteMeal(idx){
+  if(!_nbPlan) return;
+  const ok = await confirmDialog({
+    title:'ELIMINAR COMIDA',
+    body:'Vas a borrar esta comida del plan. No se puede deshacer.',
+    confirmLabel:'ELIMINAR', danger:true,
+  });
+  if(!ok) return;
   _nbPlan.meals.splice(idx, 1);
   nbSavePlan();
   nbRefresh();
 }
 
-function nbAddMeal(){
+async function nbAddMeal(){
   if(!_nbPlan) return;
-  const name = prompt('Nombre de la comida (ej: "Pre-entreno"):') || `Comida ${_nbPlan.meals.length+1}`;
-  _nbPlan.meals.push({ name, items:[] });
+  const name = await sqPrompt({
+    title:'NUEVA COMIDA',
+    placeholder:'ej: Pre-entreno',
+    confirmLabel:'AGREGAR',
+  });
+  if(name===null) return;
+  _nbPlan.meals.push({ name: name || `Comida ${_nbPlan.meals.length+1}`, items:[] });
   nbSavePlan();
   nbRefresh();
 }
 
-function nbEditTarget(){
+async function nbEditTarget(){
   if(!_nbPlan) return;
   const t = _nbPlan.target;
-  const kcal = prompt('Kcal objetivo:', t.kcal);
-  if(!kcal) return;
-  const prot = prompt('Proteína (g):', t.proteina);
-  const carbs = prompt('Carbos (g):', t.carbos);
-  const fat = prompt('Grasas (g):', t.grasas);
+  const kcal = await sqPrompt({ title:'KCAL OBJETIVO', defaultValue:String(t.kcal), type:'number', confirmLabel:'Siguiente' });
+  if(kcal===null) return;
+  const prot = await sqPrompt({ title:'PROTEÍNA (g)', defaultValue:String(t.proteina), type:'number', confirmLabel:'Siguiente' });
+  if(prot===null) return;
+  const carbs = await sqPrompt({ title:'CARBOS (g)', defaultValue:String(t.carbos), type:'number', confirmLabel:'Siguiente' });
+  if(carbs===null) return;
+  const fat = await sqPrompt({ title:'GRASAS (g)', defaultValue:String(t.grasas), type:'number', confirmLabel:'Guardar' });
+  if(fat===null) return;
   _nbPlan.target = { kcal:parseFloat(kcal)||t.kcal, proteina:parseFloat(prot)||t.proteina, carbos:parseFloat(carbs)||t.carbos, grasas:parseFloat(fat)||t.grasas };
   nbSavePlan();
   nbRefresh();
 }
 
-function nbAutoCuadrar(){
+async function nbAutoCuadrar(){
   if(!_nbPlan) return;
-  const n = prompt('¿Cuántas comidas?', _nbPlan.meals.length);
-  if(!n) return;
+  const n = await sqPrompt({
+    title:'AUTO-CUADRAR',
+    body:'¿Cuántas comidas querés generar?',
+    defaultValue:String(_nbPlan.meals.length||4),
+    type:'number',
+    confirmLabel:'GENERAR',
+  });
+  if(n===null) return;
   const newMeals = MacroCalc.autoCuadrar(_nbPlan.target, parseInt(n)||4);
   _nbPlan.meals = newMeals;
   nbSavePlan();

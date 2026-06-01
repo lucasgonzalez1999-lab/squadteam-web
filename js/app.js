@@ -1195,12 +1195,17 @@ function switchTrainingAth(athId) {
   toast('Entrenando con ' + item.name);
 }
 
-function closeTrainingAth(athId) {
+async function closeTrainingAth(athId) {
   const idx = _trainingStack.findIndex(x => x.athId === athId);
   if (idx === -1) return;
   const isActive = currentUser?.id === athId;
   if (isActive && _hasUnsavedTrainingDraft(athId)) {
-    const ok = confirm('Tenés sets sin guardar de ' + _trainingStack[idx].name + '.\n\n¿Cerrar igual?');
+    const ok = await confirmDialog({
+      title: 'CERRAR ALUMNO',
+      body: 'Tenés sets sin guardar de ' + _trainingStack[idx].name + '. Si cerrás, se pierden.',
+      confirmLabel: 'CERRAR IGUAL',
+      danger: true,
+    });
     if (!ok) return;
   }
   _trainingStack.splice(idx, 1);
@@ -1266,11 +1271,16 @@ function _hasUnsavedTrainingDraft(athId){
   return false;
 }
 
-function exitTrainingMode() {
+async function exitTrainingMode() {
   if (!_previewCoachProfile) return;
   const athId = currentUser?.id;
   if(_hasUnsavedTrainingDraft(athId)){
-    const ok = confirm('Tenés sets sin guardar en ' + (currentUser?.name || 'este alumno') + '.\n\n¿Salir igual?');
+    const ok = await confirmDialog({
+      title: 'SALIR DE ENTRENAMIENTO',
+      body: 'Tenés sets sin guardar en ' + (currentUser?.name || 'este alumno') + '. Si salís, se pierden.',
+      confirmLabel: 'SALIR IGUAL',
+      danger: true,
+    });
     if(!ok) return;
   }
   _trainingStack = [];

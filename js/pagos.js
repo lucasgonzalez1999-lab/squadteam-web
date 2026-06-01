@@ -530,7 +530,7 @@ ${hist.length===0 ? `<div style="text-align:center;padding:30px;color:var(--sub)
 function pgCopyReminder(athId, encodedMsg){
   const msg = decodeURIComponent(encodedMsg);
   navigator.clipboard?.writeText(msg).then(()=>{ toast('📋 Mensaje copiado'); })
-    .catch(()=>{ prompt('Copiá este mensaje:', msg); });
+    .catch(()=>{ sqPrompt({ title:'COPIÁ EL MENSAJE', defaultValue:msg, confirmLabel:'OK' }); });
 }
 
 function pgCopyReminderInline(athId){
@@ -544,7 +544,7 @@ function pgCopyReminderInline(athId){
   else
     msg = `Hola ${a.name}, te recordamos que tu pago de $${pay.amount||'?'} ${pay.currency||'UYU'} vence ${calc.daysUntil===0?'hoy':calc.daysUntil===1?'mañana':'en '+calc.daysUntil+' días'} (día ${pay.payday}). ¡Gracias!`;
   navigator.clipboard?.writeText(msg).then(()=>{ toast('📋 Recordatorio copiado'); })
-    .catch(()=>{ prompt('Copiá este mensaje:', msg); });
+    .catch(()=>{ sqPrompt({ title:'COPIÁ EL MENSAJE', defaultValue:msg, confirmLabel:'OK' }); });
 }
 
 async function pgMarkReminderSent(athId){

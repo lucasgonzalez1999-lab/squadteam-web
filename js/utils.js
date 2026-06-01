@@ -23,6 +23,74 @@ if (typeof CanvasRenderingContext2D !== 'undefined' &&
   };
 }
 
+// ── PROMISE-BASED CONFIRM / PROMPT ──
+// Reemplazos no-bloqueantes de window.confirm / window.prompt.
+// confirmDialog usa sqConfirm (definido en app.js).
+function confirmDialog({ title, body='', confirmLabel='Confirmar', danger=false }){
+  return new Promise(resolve => {
+    if(typeof sqConfirm !== 'function'){
+      // Fallback ultra-defensivo, debería estar siempre disponible
+      console.warn('[sq] sqConfirm no disponible, usando window.confirm');
+      resolve(window.confirm((title||'')+'\n\n'+(body||'')));
+      return;
+    }
+    let resolved = false;
+    const wrap = () => { if(!resolved){ resolved = true; resolve(false); } };
+    // sqConfirm cierra con backdrop click sin llamar callback → resolve(false)
+    const ov = document.getElementById('sq-confirm-ov');
+    if(ov) ov.remove();
+    sqConfirm({
+      title, body, confirmLabel, danger,
+      onConfirm: () => { resolved = true; resolve(true); },
+    });
+    // Detectar cierre por cancel/backdrop
+    setTimeout(() => {
+      const newOv = document.getElementById('sq-confirm-ov');
+      if(!newOv) return;
+      const obs = new MutationObserver(() => {
+        if(!document.body.contains(newOv)) { obs.disconnect(); wrap(); }
+      });
+      obs.observe(document.body, { childList:true });
+    }, 50);
+  });
+}
+
+// sqPrompt — modal con input para reemplazar window.prompt
+function sqPrompt({ title, body='', placeholder='', defaultValue='', type='text', confirmLabel='Aceptar' }){
+  return new Promise(resolve => {
+    let ov = document.getElementById('sq-prompt-ov');
+    if(ov) ov.remove();
+    ov = document.createElement('div');
+    ov.id = 'sq-prompt-ov';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px';
+    ov.innerHTML = `
+      <div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:24px;max-width:340px;width:100%">
+        <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:${body?'8px':'14px'}">${title||''}</div>
+        ${body?`<div style="font-size:13px;color:var(--sub);margin-bottom:14px;line-height:1.5">${body}</div>`:''}
+        <input id="sq-prompt-inp" type="${type}" value="${defaultValue||''}" placeholder="${placeholder||''}"
+          style="width:100%;background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;font-size:14px;color:var(--text);font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:14px">
+        <div style="display:flex;gap:10px">
+          <button id="sq-prompt-cancel" style="flex:1;padding:11px 0;background:none;border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
+          <button id="sq-prompt-ok" style="flex:1;padding:11px 0;background:var(--acc);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${confirmLabel}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    const inp = document.getElementById('sq-prompt-inp');
+    const done = (val) => { ov.remove(); document.removeEventListener('keydown', onKey); resolve(val); };
+    const onKey = e => {
+      if(e.key === 'Escape') done(null);
+      if(e.key === 'Enter' && document.activeElement === inp) done(inp.value);
+    };
+    document.addEventListener('keydown', onKey);
+    ov.onclick = e => { if(e.target === ov) done(null); };
+    document.getElementById('sq-prompt-cancel').onclick = () => done(null);
+    document.getElementById('sq-prompt-ok').onclick = () => done(inp.value);
+    setTimeout(() => inp?.focus(), 50);
+  });
+}
+window.confirmDialog = confirmDialog;
+window.sqPrompt = sqPrompt;
+
 // ── ERROR LOGGING ──
 // Envuelve promesas fire-and-forget para que los errores queden en consola
 // con contexto. Reemplaza el patrón `.catch(()=>{})` que silencia todo.

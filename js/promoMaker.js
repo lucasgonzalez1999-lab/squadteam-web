@@ -15,6 +15,10 @@ const PROMO = (() => {
   const SURF2 = '#16181c';
   const BORDER = '#1f1f24';
 
+  // Safe areas de Instagram stories (avatar arriba, send message abajo)
+  const SAFE_TOP    = 320;
+  const SAFE_BOTTOM = 1640;
+
   // ── DRAWING HELPERS ────────────────────────────────────────────────────────
   function drawBackground(ctx){
     ctx.fillStyle = BG;
@@ -55,12 +59,12 @@ const PROMO = (() => {
     ctx.font = '700 32px "Inter", sans-serif';
     ctx.fillStyle = ACC;
     ctx.textAlign = 'center';
-    ctx.fillText(text, W/2, H - 100);
+    ctx.fillText(text, W/2, SAFE_BOTTOM + 60);
     ctx.strokeStyle = 'rgba(232,255,0,.3)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(W/2 - 60, H - 160);
-    ctx.lineTo(W/2 + 60, H - 160);
+    ctx.moveTo(W/2 - 60, SAFE_BOTTOM);
+    ctx.lineTo(W/2 + 60, SAFE_BOTTOM);
     ctx.stroke();
   }
 
@@ -213,35 +217,35 @@ const PROMO = (() => {
   // ── TEMPLATES TIPOGRÁFICAS ────────────────────────────────────────────────
   function renderHero(ctx, d){
     drawBackground(ctx);
-    drawEyebrow(ctx, d.eyebrow, 280);
+    drawEyebrow(ctx, d.eyebrow, SAFE_TOP);
     ctx.font = '900 italic 240px "Barlow Condensed", sans-serif';
     ctx.fillStyle = TEXT;
     ctx.textAlign = 'center';
-    ctx.fillText(d.line1, W/2, H/2 - 80);
+    ctx.fillText(d.line1, W/2, SAFE_TOP + 460);
     ctx.fillStyle = ACC;
     ctx.font = '900 italic 320px "Barlow Condensed", sans-serif';
-    ctx.fillText(d.line2, W/2, H/2 + 180);
+    ctx.fillText(d.line2, W/2, SAFE_TOP + 720);
     drawFooter(ctx, d.footer);
   }
 
   function renderQuestion(ctx, d){
     drawBackground(ctx);
-    drawEyebrow(ctx, d.eyebrow, 280);
+    drawEyebrow(ctx, d.eyebrow, SAFE_TOP);
     ctx.fillStyle = TEXT;
     ctx.textAlign = 'center';
     ctx.font = '900 italic 96px "Barlow Condensed", sans-serif';
     const lines = wrapText(ctx, d.headline, W - 200);
-    let y = H/2 - (lines.length * 110) / 2 + 60;
+    let y = (SAFE_TOP + SAFE_BOTTOM)/2 - (lines.length * 110) / 2 + 60;
     for(const line of lines){ ctx.fillText(line, W/2, y); y += 110; }
     drawFooter(ctx, d.cta);
   }
 
   function renderFeatures(ctx, d){
     drawBackground(ctx);
-    drawEyebrow(ctx, d.eyebrow, 280);
+    drawEyebrow(ctx, d.eyebrow, SAFE_TOP);
     const bullets = (d.bullets || '').split('\n').filter(Boolean);
     ctx.textAlign = 'center';
-    let y = H/2 - (bullets.length * 140) / 2 + 60;
+    let y = (SAFE_TOP + SAFE_BOTTOM)/2 - (bullets.length * 140) / 2 + 60;
     for(let i=0;i<bullets.length;i++){
       ctx.font = '900 italic 84px "Barlow Condensed", sans-serif';
       ctx.fillStyle = ACC;
@@ -258,12 +262,12 @@ const PROMO = (() => {
 
   function renderManifesto(ctx, d){
     drawBackground(ctx);
-    drawEyebrow(ctx, d.eyebrow, 280);
+    drawEyebrow(ctx, d.eyebrow, SAFE_TOP);
     ctx.fillStyle = TEXT;
     ctx.textAlign = 'center';
     ctx.font = '900 italic 96px "Barlow Condensed", sans-serif';
     const lines = wrapText(ctx, d.headline, W - 200);
-    let y = H/2 - 80;
+    let y = (SAFE_TOP + SAFE_BOTTOM)/2 - 80;
     for(const line of lines){ ctx.fillText(line, W/2, y); y += 110; }
     if(d.sub){
       ctx.fillStyle = SUB;
@@ -277,12 +281,12 @@ const PROMO = (() => {
 
   function renderCta(ctx, d){
     drawBackground(ctx);
-    drawEyebrow(ctx, d.eyebrow, 280);
+    drawEyebrow(ctx, d.eyebrow, SAFE_TOP);
     ctx.fillStyle = TEXT;
     ctx.textAlign = 'center';
     ctx.font = '900 italic 120px "Barlow Condensed", sans-serif';
     const lines = wrapText(ctx, d.headline, W - 200);
-    let y = H/2 - 80;
+    let y = (SAFE_TOP + SAFE_BOTTOM)/2 - 80;
     for(const line of lines){ ctx.fillText(line, W/2, y); y += 130; }
     if(d.sub){
       ctx.fillStyle = SUB;
@@ -306,11 +310,11 @@ const PROMO = (() => {
   // ── MOCKUP 1: RUTINA DEL DÍA ──────────────────────────────────────────────
   function renderMockRutina(ctx, d){
     drawBackground(ctx);
-    drawEyebrow(ctx, d.eyebrow, 200);
-    drawHeadline(ctx, d.headline, 340);
+    drawEyebrow(ctx, d.eyebrow, SAFE_TOP);
+    drawHeadline(ctx, d.headline, SAFE_TOP + 140);
 
     // Card mockup centrado
-    const cx = 90, cy = 620, cw = W - 180, ch = 920;
+    const cx = 90, cy = SAFE_TOP + 320, cw = W - 180, ch = 920;
     ctx.fillStyle = SURF;
     roundedRect(ctx, cx, cy, cw, ch, 28); ctx.fill();
     ctx.strokeStyle = BORDER; ctx.lineWidth = 2;
@@ -388,10 +392,10 @@ const PROMO = (() => {
   // ── MOCKUP 2: MI PLAN (pagos) ─────────────────────────────────────────────
   function renderMockPagos(ctx, d){
     drawBackground(ctx);
-    drawEyebrow(ctx, d.eyebrow, 200);
-    drawHeadline(ctx, d.headline, 340);
+    drawEyebrow(ctx, d.eyebrow, SAFE_TOP);
+    drawHeadline(ctx, d.headline, SAFE_TOP + 140);
 
-    const cx = 90, cy = 620, cw = W - 180, ch = 920;
+    const cx = 90, cy = SAFE_TOP + 320, cw = W - 180, ch = 920;
     ctx.fillStyle = SURF;
     roundedRect(ctx, cx, cy, cw, ch, 28); ctx.fill();
     ctx.strokeStyle = BORDER; ctx.lineWidth = 2;
@@ -467,10 +471,10 @@ const PROMO = (() => {
   // ── MOCKUP 3: FÍSICO (grid 2×2) ───────────────────────────────────────────
   function renderMockFisico(ctx, d){
     drawBackground(ctx);
-    drawEyebrow(ctx, d.eyebrow, 200);
-    drawHeadline(ctx, d.headline, 340);
+    drawEyebrow(ctx, d.eyebrow, SAFE_TOP);
+    drawHeadline(ctx, d.headline, SAFE_TOP + 140);
 
-    const cx = 90, cy = 620, cw = W - 180, ch = 920;
+    const cx = 90, cy = SAFE_TOP + 320, cw = W - 180, ch = 920;
     ctx.fillStyle = SURF;
     roundedRect(ctx, cx, cy, cw, ch, 28); ctx.fill();
     ctx.strokeStyle = BORDER; ctx.lineWidth = 2;
@@ -523,10 +527,10 @@ const PROMO = (() => {
   // ── MOCKUP 4: CHECK-IN SEMANAL ────────────────────────────────────────────
   function renderMockCheckin(ctx, d){
     drawBackground(ctx);
-    drawEyebrow(ctx, d.eyebrow, 200);
-    drawHeadline(ctx, d.headline, 340);
+    drawEyebrow(ctx, d.eyebrow, SAFE_TOP);
+    drawHeadline(ctx, d.headline, SAFE_TOP + 140);
 
-    const cx = 90, cy = 620, cw = W - 180, ch = 920;
+    const cx = 90, cy = SAFE_TOP + 320, cw = W - 180, ch = 920;
     ctx.fillStyle = SURF;
     roundedRect(ctx, cx, cy, cw, ch, 28); ctx.fill();
     ctx.strokeStyle = BORDER; ctx.lineWidth = 2;
@@ -615,10 +619,10 @@ const PROMO = (() => {
   // ── MOCKUP 5: MUSCLE MAP ──────────────────────────────────────────────────
   function renderMockMuscle(ctx, d){
     drawBackground(ctx);
-    drawEyebrow(ctx, d.eyebrow, 200);
-    drawHeadline(ctx, d.headline, 340);
+    drawEyebrow(ctx, d.eyebrow, SAFE_TOP);
+    drawHeadline(ctx, d.headline, SAFE_TOP + 140);
 
-    const cx = 90, cy = 620, cw = W - 180, ch = 920;
+    const cx = 90, cy = SAFE_TOP + 320, cw = W - 180, ch = 920;
     ctx.fillStyle = SURF;
     roundedRect(ctx, cx, cy, cw, ch, 28); ctx.fill();
     ctx.strokeStyle = BORDER; ctx.lineWidth = 2;

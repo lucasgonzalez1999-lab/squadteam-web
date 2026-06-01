@@ -1,7 +1,8 @@
 'use strict';
-// SQUAD TEAM — Generador de slides 9:16 para IG stories
-// Abrir con ?promo=1 o vía atajo en el panel coach
-// Genera PNG 1080×1920 con la identidad visual del app
+// SQUAD TEAM — Generador de stories 9:16 para anuncio en IG
+// Abrir con ?promo=1
+// Templates tipográficas (hero/question/etc) + mockups que recrean
+// el UI real del app para anunciar features con copy de hype.
 
 const PROMO = (() => {
   const W = 1080, H = 1920;
@@ -10,69 +11,18 @@ const PROMO = (() => {
   const BG = '#040404';
   const TEXT = '#ffffff';
   const SUB = '#9090a8';
-
-  const TEMPLATES = [
-    {
-      id:'hero',
-      label:'Tipográfica',
-      defaults:{
-        eyebrow:'PRÓXIMAMENTE',
-        line1:'SQUAD',
-        line2:'TEAM',
-        footer:HANDLE,
-      },
-    },
-    {
-      id:'question',
-      label:'Pregunta',
-      defaults:{
-        eyebrow:'PENSALO',
-        headline:'¿Tu coach todavía te manda PDFs?',
-        cta:HANDLE,
-      },
-    },
-    {
-      id:'features',
-      label:'Features',
-      defaults:{
-        eyebrow:'TODO EN UNA APP',
-        bullets:'Tu plan\nTus pagos\nTus check-ins',
-        cta:HANDLE,
-      },
-    },
-    {
-      id:'manifesto',
-      label:'Manifiesto',
-      defaults:{
-        eyebrow:'NUEVA FORMA',
-        headline:'Coaching como debería ser.',
-        sub:'Limpio. Sin Excel. Sin grupos de WhatsApp.',
-        cta:HANDLE,
-      },
-    },
-    {
-      id:'cta',
-      label:'Call to action',
-      defaults:{
-        eyebrow:'SE VIENE',
-        headline:'Sumate a la beta.',
-        sub:'Tu coach lo va a agradecer.',
-        cta:HANDLE,
-      },
-    },
-  ];
+  const SURF = '#0e0e12';
+  const SURF2 = '#16181c';
+  const BORDER = '#1f1f24';
 
   // ── DRAWING HELPERS ────────────────────────────────────────────────────────
   function drawBackground(ctx){
     ctx.fillStyle = BG;
     ctx.fillRect(0, 0, W, H);
-    // Grid sutil
     ctx.strokeStyle = 'rgba(255,255,255,.018)';
     ctx.lineWidth = 1;
-    const step = 96;
-    for(let x=0; x<W; x+=step){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-    for(let y=0; y<H; y+=step){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-    // Glow inferior
+    for(let x=0; x<W; x+=96){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    for(let y=0; y<H; y+=96){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
     const g = ctx.createRadialGradient(W/2, H+200, 0, W/2, H+200, 900);
     g.addColorStop(0, 'rgba(232,255,0,.10)');
     g.addColorStop(.5, 'rgba(232,255,0,.02)');
@@ -82,14 +32,12 @@ const PROMO = (() => {
   }
 
   function drawEyebrow(ctx, text, y){
-    ctx.font = '700 28px "Inter", sans-serif';
     ctx.fillStyle = SUB;
+    ctx.font = '700 28px "Inter", sans-serif';
     ctx.textAlign = 'center';
-    // tracking manual
-    const letters = text.toUpperCase().split('');
+    const letters = (text||'').toUpperCase().split('');
     const tracking = 12;
     let totalW = 0;
-    ctx.font = '700 28px "Inter", sans-serif';
     for(const l of letters) totalW += ctx.measureText(l).width + tracking;
     totalW -= tracking;
     let x = W/2 - totalW/2;
@@ -97,7 +45,6 @@ const PROMO = (() => {
       ctx.fillText(l, x + ctx.measureText(l).width/2, y);
       x += ctx.measureText(l).width + tracking;
     }
-    // dot lima a la izquierda del eyebrow
     ctx.fillStyle = ACC;
     ctx.beginPath();
     ctx.arc(W/2 - totalW/2 - 28, y - 10, 7, 0, Math.PI*2);
@@ -109,7 +56,6 @@ const PROMO = (() => {
     ctx.fillStyle = ACC;
     ctx.textAlign = 'center';
     ctx.fillText(text, W/2, H - 100);
-    // pequeña línea encima
     ctx.strokeStyle = 'rgba(232,255,0,.3)';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -119,7 +65,7 @@ const PROMO = (() => {
   }
 
   function wrapText(ctx, text, maxWidth){
-    const words = text.split(' ');
+    const words = (text||'').split(' ');
     const lines = [];
     let line = '';
     for(const w of words){
@@ -131,16 +77,30 @@ const PROMO = (() => {
     return lines;
   }
 
-  // ── TEMPLATES ──────────────────────────────────────────────────────────────
+  function drawHeadline(ctx, text, yStart, color){
+    ctx.fillStyle = color || TEXT;
+    ctx.textAlign = 'center';
+    ctx.font = '900 italic 76px "Barlow Condensed", sans-serif';
+    const lines = wrapText(ctx, text, W - 160);
+    let y = yStart;
+    for(const line of lines){ ctx.fillText(line, W/2, y); y += 84; }
+    return y;
+  }
+
+  function roundedRect(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    if(ctx.roundRect){ ctx.roundRect(x, y, w, h, r); }
+    else { ctx.rect(x, y, w, h); }
+  }
+
+  // ── TEMPLATES TIPOGRÁFICAS ────────────────────────────────────────────────
   function renderHero(ctx, d){
     drawBackground(ctx);
     drawEyebrow(ctx, d.eyebrow, 280);
-    // SQUAD
     ctx.font = '900 italic 240px "Barlow Condensed", sans-serif';
     ctx.fillStyle = TEXT;
     ctx.textAlign = 'center';
     ctx.fillText(d.line1, W/2, H/2 - 80);
-    // TEAM en lima
     ctx.fillStyle = ACC;
     ctx.font = '900 italic 320px "Barlow Condensed", sans-serif';
     ctx.fillText(d.line2, W/2, H/2 + 180);
@@ -159,88 +119,426 @@ const PROMO = (() => {
     drawFooter(ctx, d.cta);
   }
 
-  function renderFeatures(ctx, d){
+  // ── MOCKUP 1: RUTINA DEL DÍA ──────────────────────────────────────────────
+  function renderMockRutina(ctx, d){
     drawBackground(ctx);
-    drawEyebrow(ctx, d.eyebrow, 280);
-    const bullets = (d.bullets || '').split('\n').filter(Boolean);
-    ctx.textAlign = 'center';
-    let y = H/2 - (bullets.length * 140) / 2 + 60;
-    for(let i=0;i<bullets.length;i++){
-      // número grande lima
-      ctx.font = '900 italic 84px "Barlow Condensed", sans-serif';
-      ctx.fillStyle = ACC;
-      ctx.fillText(`0${i+1}`, W/2 - 280, y);
-      // texto blanco
-      ctx.font = '800 italic 78px "Barlow Condensed", sans-serif';
-      ctx.fillStyle = TEXT;
-      ctx.textAlign = 'left';
-      ctx.fillText(bullets[i].toUpperCase(), W/2 - 200, y);
-      ctx.textAlign = 'center';
-      y += 140;
-    }
-    drawFooter(ctx, d.cta);
-  }
+    drawEyebrow(ctx, d.eyebrow, 200);
+    drawHeadline(ctx, d.headline, 340);
 
-  function renderManifesto(ctx, d){
-    drawBackground(ctx);
-    drawEyebrow(ctx, d.eyebrow, 280);
+    // Card mockup centrado
+    const cx = 90, cy = 620, cw = W - 180, ch = 920;
+    ctx.fillStyle = SURF;
+    roundedRect(ctx, cx, cy, cw, ch, 28); ctx.fill();
+    ctx.strokeStyle = BORDER; ctx.lineWidth = 2;
+    roundedRect(ctx, cx, cy, cw, ch, 28); ctx.stroke();
+
+    // Header del card: nombre del ejercicio + RIR
     ctx.fillStyle = TEXT;
+    ctx.textAlign = 'left';
+    ctx.font = '900 italic 52px "Barlow Condensed", sans-serif';
+    ctx.fillText('PRESS BANCA', cx + 40, cy + 90);
+    // RIR pill
+    const pillX = cx + cw - 200, pillY = cy + 50, pillW = 160, pillH = 50;
+    ctx.fillStyle = 'rgba(232,255,0,.15)';
+    roundedRect(ctx, pillX, pillY, pillW, pillH, 25); ctx.fill();
+    ctx.fillStyle = ACC;
     ctx.textAlign = 'center';
-    ctx.font = '900 italic 96px "Barlow Condensed", sans-serif';
-    const lines = wrapText(ctx, d.headline, W - 200);
-    let y = H/2 - 80;
-    for(const line of lines){ ctx.fillText(line, W/2, y); y += 110; }
-    // sub
-    if(d.sub){
+    ctx.font = '700 22px "Inter", sans-serif';
+    ctx.fillText('RIR 1-2', pillX + pillW/2, pillY + 33);
+
+    // Línea separadora
+    ctx.strokeStyle = BORDER;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx + 40, cy + 140);
+    ctx.lineTo(cx + cw - 40, cy + 140);
+    ctx.stroke();
+
+    // 4 sets — número | peso | reps | check/PR
+    const sets = [
+      { kg:80, reps:10, status:'done' },
+      { kg:80, reps:10, status:'done' },
+      { kg:85, reps:9,  status:'pr' },
+      { kg:85, reps:8,  status:'done' },
+    ];
+    let sy = cy + 200;
+    for(let i=0; i<sets.length; i++){
+      const s = sets[i];
+      // Número
+      ctx.fillStyle = SUB;
+      ctx.textAlign = 'left';
+      ctx.font = '700 24px "Inter", sans-serif';
+      ctx.fillText('SET ' + (i+1), cx + 40, sy);
+      // Peso
+      ctx.fillStyle = TEXT;
+      ctx.font = '900 italic 64px "Barlow Condensed", sans-serif';
+      ctx.fillText(s.kg + 'kg', cx + 200, sy + 18);
+      // ×
       ctx.fillStyle = SUB;
       ctx.font = '500 36px "Inter", sans-serif';
-      const subLines = wrapText(ctx, d.sub, W - 240);
-      y += 30;
-      for(const sl of subLines){ ctx.fillText(sl, W/2, y); y += 50; }
+      ctx.fillText('×', cx + 450, sy + 10);
+      // Reps
+      ctx.fillStyle = TEXT;
+      ctx.font = '900 italic 64px "Barlow Condensed", sans-serif';
+      ctx.fillText(s.reps + '', cx + 510, sy + 18);
+      // Status
+      if(s.status === 'pr'){
+        // PR badge lima
+        const bx = cx + cw - 200, by = sy - 20, bw = 160, bh = 50;
+        ctx.fillStyle = ACC;
+        roundedRect(ctx, bx, by, bw, bh, 25); ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.textAlign = 'center';
+        ctx.font = '800 26px "Inter", sans-serif';
+        ctx.fillText('PR', bx + bw/2, by + 35);
+      } else {
+        // Check verde
+        ctx.fillStyle = '#22c55e';
+        ctx.textAlign = 'center';
+        ctx.font = '700 60px "Inter", sans-serif';
+        ctx.fillText('✓', cx + cw - 120, sy + 18);
+      }
+      sy += 170;
     }
+
     drawFooter(ctx, d.cta);
   }
 
-  function renderCta(ctx, d){
+  // ── MOCKUP 2: MI PLAN (pagos) ─────────────────────────────────────────────
+  function renderMockPagos(ctx, d){
     drawBackground(ctx);
-    drawEyebrow(ctx, d.eyebrow, 280);
+    drawEyebrow(ctx, d.eyebrow, 200);
+    drawHeadline(ctx, d.headline, 340);
+
+    const cx = 90, cy = 620, cw = W - 180, ch = 920;
+    ctx.fillStyle = SURF;
+    roundedRect(ctx, cx, cy, cw, ch, 28); ctx.fill();
+    ctx.strokeStyle = BORDER; ctx.lineWidth = 2;
+    roundedRect(ctx, cx, cy, cw, ch, 28); ctx.stroke();
+
+    // Title MI PLAN
     ctx.fillStyle = TEXT;
-    ctx.textAlign = 'center';
-    ctx.font = '900 italic 120px "Barlow Condensed", sans-serif';
-    const lines = wrapText(ctx, d.headline, W - 200);
-    let y = H/2 - 80;
-    for(const line of lines){ ctx.fillText(line, W/2, y); y += 130; }
-    if(d.sub){
+    ctx.textAlign = 'left';
+    ctx.font = '900 italic 56px "Barlow Condensed", sans-serif';
+    ctx.fillText('MI PLAN', cx + 40, cy + 90);
+    // subtitle
+    ctx.fillStyle = '#22c55e';
+    ctx.font = '700 26px "Inter", sans-serif';
+    ctx.fillText('Al día · próximo cobro 15 jun', cx + 40, cy + 140);
+
+    // 3 columnas: MONTO / MÉTODO / PERÍODO
+    const labels = ['MONTO','MÉTODO','PERÍODO'];
+    const vals = ['$4000','Transfer','Mensual'];
+    const subVals = ['UYU','',''];
+    const colW = (cw - 80) / 3;
+    let cy2 = cy + 230;
+    for(let i=0; i<3; i++){
+      const x = cx + 40 + i*colW;
       ctx.fillStyle = SUB;
-      ctx.font = '500 38px "Inter", sans-serif';
-      ctx.fillText(d.sub, W/2, y + 30);
+      ctx.font = '700 20px "Inter", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(labels[i], x, cy2);
+      ctx.fillStyle = TEXT;
+      ctx.font = '900 italic 64px "Barlow Condensed", sans-serif';
+      ctx.fillText(vals[i], x, cy2 + 80);
+      if(subVals[i]){
+        ctx.fillStyle = SUB;
+        ctx.font = '500 22px "Inter", sans-serif';
+        ctx.fillText(subVals[i], x, cy2 + 115);
+      }
     }
-    // botón fake lima
-    const btnW = 480, btnH = 110, btnY = H - 320;
-    ctx.fillStyle = ACC;
-    if(ctx.roundRect){
-      ctx.beginPath();
-      ctx.roundRect(W/2 - btnW/2, btnY, btnW, btnH, 18);
-      ctx.fill();
-    } else {
-      ctx.fillRect(W/2 - btnW/2, btnY, btnW, btnH);
+
+    // Separator + ÚLTIMOS PAGOS
+    const sy = cy + 430;
+    ctx.strokeStyle = BORDER; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx + 40, sy);
+    ctx.lineTo(cx + cw - 40, sy);
+    ctx.stroke();
+
+    ctx.fillStyle = SUB;
+    ctx.font = '700 22px "Inter", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('ÚLTIMOS PAGOS', cx + 40, sy + 60);
+
+    const pays = [
+      { date:'15 may', amt:'$4000 UYU' },
+      { date:'15 abr', amt:'$4000 UYU' },
+      { date:'15 mar', amt:'$4000 UYU' },
+    ];
+    let py = sy + 130;
+    for(const p of pays){
+      ctx.fillStyle = TEXT;
+      ctx.font = '500 30px "Inter", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(p.date, cx + 40, py);
+      ctx.font = '700 30px "Inter", sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(p.amt, cx + cw - 100, py);
+      // check
+      ctx.fillStyle = '#22c55e';
+      ctx.textAlign = 'center';
+      ctx.font = '700 36px "Inter", sans-serif';
+      ctx.fillText('✓', cx + cw - 60, py);
+      py += 80;
     }
-    ctx.fillStyle = '#000';
-    ctx.font = '800 36px "Inter", sans-serif';
-    ctx.fillText(d.cta.toUpperCase(), W/2, btnY + 70);
+
+    drawFooter(ctx, d.cta);
   }
 
-  const RENDER = {
-    hero: renderHero,
-    question: renderQuestion,
-    features: renderFeatures,
-    manifesto: renderManifesto,
-    cta: renderCta,
-  };
+  // ── MOCKUP 3: FÍSICO (grid 2×2) ───────────────────────────────────────────
+  function renderMockFisico(ctx, d){
+    drawBackground(ctx);
+    drawEyebrow(ctx, d.eyebrow, 200);
+    drawHeadline(ctx, d.headline, 340);
+
+    const cx = 90, cy = 620, cw = W - 180, ch = 920;
+    ctx.fillStyle = SURF;
+    roundedRect(ctx, cx, cy, cw, ch, 28); ctx.fill();
+    ctx.strokeStyle = BORDER; ctx.lineWidth = 2;
+    roundedRect(ctx, cx, cy, cw, ch, 28); ctx.stroke();
+
+    // Header
+    ctx.fillStyle = TEXT;
+    ctx.textAlign = 'left';
+    ctx.font = '900 italic 50px "Barlow Condensed", sans-serif';
+    ctx.fillText('PROGRESO FÍSICO', cx + 40, cy + 80);
+    ctx.fillStyle = SUB;
+    ctx.font = '500 24px "Inter", sans-serif';
+    ctx.fillText('Domingo · 4/4 fotos', cx + 40, cy + 120);
+
+    // Grid 2×2 con siluetas placeholder
+    const gridX = cx + 50, gridY = cy + 180, gap = 24;
+    const slotW = (cw - 100 - gap) / 2;
+    const slotH = (ch - 280) / 2 - gap/2;
+    const poses = [
+      { label:'Frente',     icon:'🧍' },
+      { label:'Perfil izq.',icon:'🚶' },
+      { label:'Perfil der.',icon:'🚶' },
+      { label:'Espalda',    icon:'🔙' },
+    ];
+    for(let i=0; i<4; i++){
+      const col = i % 2, row = Math.floor(i / 2);
+      const sx = gridX + col * (slotW + gap);
+      const sy = gridY + row * (slotH + gap);
+      // Filled slot with gradient
+      const grad = ctx.createLinearGradient(sx, sy, sx, sy+slotH);
+      grad.addColorStop(0, '#1a1a22');
+      grad.addColorStop(1, '#0a0a0d');
+      ctx.fillStyle = grad;
+      roundedRect(ctx, sx, sy, slotW, slotH, 16); ctx.fill();
+      // Border
+      ctx.strokeStyle = '#26262e'; ctx.lineWidth = 2;
+      roundedRect(ctx, sx, sy, slotW, slotH, 16); ctx.stroke();
+      // Icon centered
+      ctx.fillStyle = '#3a3a44';
+      ctx.font = '500 90px "Inter", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(poses[i].icon, sx + slotW/2, sy + slotH/2 - 10);
+      // Label bottom
+      ctx.fillStyle = TEXT;
+      ctx.font = '700 26px "Inter", sans-serif';
+      ctx.fillText(poses[i].label, sx + slotW/2, sy + slotH - 24);
+    }
+
+    drawFooter(ctx, d.cta);
+  }
+
+  // ── MOCKUP 4: CHECK-IN SEMANAL ────────────────────────────────────────────
+  function renderMockCheckin(ctx, d){
+    drawBackground(ctx);
+    drawEyebrow(ctx, d.eyebrow, 200);
+    drawHeadline(ctx, d.headline, 340);
+
+    const cx = 90, cy = 620, cw = W - 180, ch = 920;
+    ctx.fillStyle = SURF;
+    roundedRect(ctx, cx, cy, cw, ch, 28); ctx.fill();
+    ctx.strokeStyle = BORDER; ctx.lineWidth = 2;
+    roundedRect(ctx, cx, cy, cw, ch, 28); ctx.stroke();
+
+    // Eyebrow
+    ctx.fillStyle = ACC;
+    ctx.textAlign = 'left';
+    ctx.font = '800 24px "Inter", sans-serif';
+    ctx.fillText('CHECK-IN SEMANAL', cx + 40, cy + 70);
+    // Semana
+    ctx.fillStyle = TEXT;
+    ctx.font = '900 italic 60px "Barlow Condensed", sans-serif';
+    ctx.fillText('SEMANA 22', cx + 40, cy + 140);
+    ctx.fillStyle = SUB;
+    ctx.font = '500 24px "Inter", sans-serif';
+    ctx.fillText('27 may — 2 jun', cx + 40, cy + 180);
+
+    // Scores en grid
+    const cats = [
+      { label:'Entrenos', val:5 },
+      { label:'Dieta', val:4 },
+      { label:'Pasos', val:4 },
+      { label:'Sueño', val:3 },
+      { label:'Adherencia', val:5 },
+    ];
+    let sy = cy + 250;
+    const colW = (cw - 80) / 5;
+    for(let i=0; i<cats.length; i++){
+      const c = cats[i];
+      const x = cx + 40 + i*colW + colW/2;
+      // Número grande
+      ctx.fillStyle = c.val>=4 ? ACC : TEXT;
+      ctx.textAlign = 'center';
+      ctx.font = '900 italic 76px "Barlow Condensed", sans-serif';
+      ctx.fillText(c.val + '', x, sy + 70);
+      // Dots
+      const dotR = 8, dotGap = 14;
+      const totalDots = 5;
+      const startX = x - ((totalDots-1) * dotGap) / 2;
+      for(let j=0; j<totalDots; j++){
+        ctx.beginPath();
+        ctx.arc(startX + j*dotGap, sy + 110, dotR/2, 0, Math.PI*2);
+        ctx.fillStyle = j < c.val ? ACC : '#2a2a30';
+        ctx.fill();
+      }
+      // Label
+      ctx.fillStyle = SUB;
+      ctx.font = '700 20px "Inter", sans-serif';
+      ctx.fillText(c.label.toUpperCase(), x, sy + 160);
+    }
+
+    // Objetivos
+    const oy = cy + 470;
+    ctx.fillStyle = SUB;
+    ctx.font = '700 22px "Inter", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('OBJETIVOS', cx + 40, oy);
+    const objs = [
+      { text:'Llegar a 3 entrenos esta semana', done:true },
+      { text:'No saltarse el almuerzo', done:true },
+      { text:'8.000 pasos diarios mínimo', done:false },
+    ];
+    let oy2 = oy + 50;
+    for(const o of objs){
+      // checkbox
+      ctx.fillStyle = o.done ? ACC : 'transparent';
+      ctx.strokeStyle = o.done ? ACC : SUB;
+      ctx.lineWidth = 2;
+      roundedRect(ctx, cx + 40, oy2 - 24, 34, 34, 8);
+      ctx.fill(); ctx.stroke();
+      if(o.done){
+        ctx.fillStyle = '#000';
+        ctx.font = '900 28px "Inter", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('✓', cx + 57, oy2 + 4);
+      }
+      // texto
+      ctx.fillStyle = TEXT;
+      ctx.font = '500 26px "Inter", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(o.text, cx + 96, oy2 + 4);
+      oy2 += 60;
+    }
+
+    drawFooter(ctx, d.cta);
+  }
+
+  // ── MOCKUP 5: MUSCLE MAP ──────────────────────────────────────────────────
+  function renderMockMuscle(ctx, d){
+    drawBackground(ctx);
+    drawEyebrow(ctx, d.eyebrow, 200);
+    drawHeadline(ctx, d.headline, 340);
+
+    const cx = 90, cy = 620, cw = W - 180, ch = 920;
+    ctx.fillStyle = SURF;
+    roundedRect(ctx, cx, cy, cw, ch, 28); ctx.fill();
+    ctx.strokeStyle = BORDER; ctx.lineWidth = 2;
+    roundedRect(ctx, cx, cy, cw, ch, 28); ctx.stroke();
+
+    // Title
+    ctx.fillStyle = TEXT;
+    ctx.textAlign = 'left';
+    ctx.font = '900 italic 50px "Barlow Condensed", sans-serif';
+    ctx.fillText('VOLUMEN POR MÚSCULO', cx + 40, cy + 80);
+    ctx.fillStyle = SUB;
+    ctx.font = '500 24px "Inter", sans-serif';
+    ctx.fillText('Últimas 4 semanas', cx + 40, cy + 120);
+
+    // Silueta humana simplificada
+    const sx = cx + cw/2 - 100, sy = cy + 180;
+    // Head
+    ctx.fillStyle = '#1a1a22';
+    ctx.beginPath();
+    ctx.arc(sx + 100, sy + 50, 50, 0, Math.PI*2);
+    ctx.fill();
+    // Body
+    roundedRect(ctx, sx + 30, sy + 110, 140, 260, 30);
+    ctx.fill();
+    // Arms
+    roundedRect(ctx, sx - 30, sy + 130, 50, 220, 18);
+    ctx.fill();
+    roundedRect(ctx, sx + 180, sy + 130, 50, 220, 18);
+    ctx.fill();
+    // Legs
+    roundedRect(ctx, sx + 35, sy + 380, 55, 240, 20);
+    ctx.fill();
+    roundedRect(ctx, sx + 110, sy + 380, 55, 240, 20);
+    ctx.fill();
+    // Pecho destacado lima
+    ctx.fillStyle = ACC;
+    roundedRect(ctx, sx + 38, sy + 130, 124, 70, 14);
+    ctx.fill();
+    // Hombros lima un poco menos
+    ctx.fillStyle = 'rgba(232,255,0,.5)';
+    ctx.beginPath();
+    ctx.arc(sx + 50, sy + 140, 30, 0, Math.PI*2);
+    ctx.arc(sx + 150, sy + 140, 30, 0, Math.PI*2);
+    ctx.fill();
+
+    // Top 3 lista
+    const top = [
+      { name:'PECHO', vol:'12.4t' },
+      { name:'PIERNA', vol:'18.2t' },
+      { name:'ESPALDA', vol:'9.8t' },
+    ];
+    let ty = cy + ch - 220;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = SUB;
+    ctx.font = '700 22px "Inter", sans-serif';
+    ctx.fillText('TOP MÚSCULOS', cx + 40, ty);
+    ty += 50;
+    for(const t of top){
+      ctx.fillStyle = TEXT;
+      ctx.font = '700 28px "Inter", sans-serif';
+      ctx.fillText(t.name, cx + 40, ty);
+      ctx.fillStyle = ACC;
+      ctx.font = '900 italic 36px "Barlow Condensed", sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(t.vol, cx + cw - 40, ty);
+      ctx.textAlign = 'left';
+      ty += 50;
+    }
+
+    drawFooter(ctx, d.cta);
+  }
+
+  // ── TEMPLATES ──────────────────────────────────────────────────────────────
+  const TEMPLATES = [
+    { id:'mock-rutina', label:'Rutina', renderer:renderMockRutina,
+      defaults:{ eyebrow:'CARGÁ TU SESIÓN', headline:'Tu plan del mes. En una pantalla.', cta:HANDLE } },
+    { id:'mock-pagos', label:'Pagos', renderer:renderMockPagos,
+      defaults:{ eyebrow:'TUS PAGOS', headline:'Tu coach ya no te dice cuánto debés.', cta:HANDLE } },
+    { id:'mock-fisico', label:'Físico', renderer:renderMockFisico,
+      defaults:{ eyebrow:'PROGRESO REAL', headline:'Tu progreso físico, sin Excel.', cta:HANDLE } },
+    { id:'mock-checkin', label:'Check-in', renderer:renderMockCheckin,
+      defaults:{ eyebrow:'CADA DOMINGO', headline:'Tu coach te explica la semana.', cta:HANDLE } },
+    { id:'mock-muscle', label:'Volumen', renderer:renderMockMuscle,
+      defaults:{ eyebrow:'TU CUERPO HABLA', headline:'Tu volumen, músculo por músculo.', cta:HANDLE } },
+    { id:'hero', label:'Hero', renderer:renderHero,
+      defaults:{ eyebrow:'PRÓXIMAMENTE', line1:'SQUAD', line2:'TEAM', footer:HANDLE } },
+    { id:'question', label:'Pregunta', renderer:renderQuestion,
+      defaults:{ eyebrow:'PENSALO', headline:'¿Tu coach todavía te manda PDFs?', cta:HANDLE } },
+  ];
 
   // ── OVERLAY UI ─────────────────────────────────────────────────────────────
   let _selected = TEMPLATES[0];
-  let _state = { ...TEMPLATES[0].defaults };
+  let _state = { ..._selected.defaults };
 
   function open(){
     let ov = document.getElementById('promo-ov');
@@ -258,16 +556,16 @@ const PROMO = (() => {
     const fields = Object.entries(_state).map(([k,v]) => `
       <div style="margin-bottom:14px">
         <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.12em;color:#9090a8;text-transform:uppercase;margin-bottom:6px">${k}</label>
-        ${v.includes('\n')
-          ? `<textarea data-key="${k}" rows="${v.split('\n').length+1}" style="width:100%;background:#1a1a1f;border:1px solid #2a2a35;border-radius:8px;padding:10px 12px;color:#fff;font-family:inherit;font-size:14px;resize:vertical">${v}</textarea>`
-          : `<input data-key="${k}" type="text" value="${v.replace(/"/g,'&quot;')}" style="width:100%;background:#1a1a1f;border:1px solid #2a2a35;border-radius:8px;padding:10px 12px;color:#fff;font-family:inherit;font-size:14px">`}
+        ${String(v).includes('\n')
+          ? `<textarea data-key="${k}" rows="${String(v).split('\n').length+1}" style="width:100%;background:#1a1a1f;border:1px solid #2a2a35;border-radius:8px;padding:10px 12px;color:#fff;font-family:inherit;font-size:14px;resize:vertical">${v}</textarea>`
+          : `<input data-key="${k}" type="text" value="${String(v).replace(/"/g,'&quot;')}" style="width:100%;background:#1a1a1f;border:1px solid #2a2a35;border-radius:8px;padding:10px 12px;color:#fff;font-family:inherit;font-size:14px">`}
       </div>`).join('');
     ov.innerHTML = `
     <div style="max-width:1200px;margin:0 auto">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
         <div>
           <div style="font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:900;font-size:40px;line-height:.9">PROMO</div>
-          <div style="font-size:12px;color:#9090a8;margin-top:4px">Generador de stories 1080×1920</div>
+          <div style="font-size:12px;color:#9090a8;margin-top:4px">Stories 1080×1920 — recreación de cada sección del app</div>
         </div>
         <button onclick="document.getElementById('promo-ov').remove()" style="background:#1a1a1f;border:1px solid #2a2a35;border-radius:10px;width:42px;height:42px;color:#fff;font-size:20px;cursor:pointer">×</button>
       </div>
@@ -313,8 +611,7 @@ const PROMO = (() => {
     const cv = document.getElementById('promo-canvas');
     if(!cv) return;
     const ctx = cv.getContext('2d');
-    const fn = RENDER[_selected.id];
-    if(fn) fn(ctx, _state);
+    if(_selected?.renderer) _selected.renderer(ctx, _state);
   }
 
   function download(){
@@ -347,7 +644,6 @@ const PROMO = (() => {
   return { open, select, updateField, download, share };
 })();
 
-// Auto-open con ?promo=1
 if(location.search.includes('promo=1')){
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => PROMO.open(), 300);

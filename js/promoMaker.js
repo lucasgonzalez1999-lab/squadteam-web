@@ -51,9 +51,9 @@ const PROMO = (() => {
     for(let x=0; x<W; x+=96){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
     for(let y=0; y<H; y+=96){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
     const g = ctx.createRadialGradient(W/2, H+200, 0, W/2, H+200, 900);
-    g.addColorStop(0, 'rgba(232,255,0,.10)');
-    g.addColorStop(.5, 'rgba(232,255,0,.02)');
-    g.addColorStop(1, 'rgba(232,255,0,0)');
+    g.addColorStop(0, withAlpha(ACC, 0.10));
+    g.addColorStop(.5, withAlpha(ACC, 0.02));
+    g.addColorStop(1, withAlpha(ACC, 0));
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
   }
@@ -83,7 +83,7 @@ const PROMO = (() => {
     ctx.fillStyle = ACC;
     ctx.textAlign = 'center';
     ctx.fillText(text, W/2, SAFE_BOTTOM + 60);
-    ctx.strokeStyle = 'rgba(232,255,0,.3)';
+    ctx.strokeStyle = withAlpha(ACC, 0.3);
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(W/2 - 60, SAFE_BOTTOM);
@@ -126,6 +126,15 @@ const PROMO = (() => {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  // Color con alpha derivado del ACC actual. Centralizar para que
+  // unificar el accent (#e8ff00 → #d9ff00) requiera cambiar 1 línea.
+  function withAlpha(hex, a){
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${a})`;
   }
 
   let _redrawHandle = null;
@@ -437,7 +446,7 @@ const PROMO = (() => {
     ctx.fillText('PRESS BANCA', cx + 40, cy + 90);
     // RIR pill
     const pillX = cx + cw - 200, pillY = cy + 50, pillW = 160, pillH = 50;
-    ctx.fillStyle = 'rgba(232,255,0,.15)';
+    ctx.fillStyle = withAlpha(ACC, 0.15);
     roundedRect(ctx, pillX, pillY, pillW, pillH, 25); ctx.fill();
     ctx.fillStyle = ACC;
     ctx.textAlign = 'center';
@@ -751,13 +760,13 @@ const PROMO = (() => {
     const tierColors = {
       chestLeft:     ACC,
       chestRight:    ACC,
-      shoulderLeft:  'rgba(232,255,0,0.4)',
-      shoulderRight: 'rgba(232,255,0,0.4)',
+      shoulderLeft:  withAlpha(ACC, 0.4),
+      shoulderRight: withAlpha(ACC, 0.4),
       bicepsLeft:    '#666666',
       bicepsRight:   '#666666',
       abs:           '#333333',
-      quadsLeft:     'rgba(232,255,0,0.4)',
-      quadsRight:    'rgba(232,255,0,0.4)',
+      quadsLeft:     withAlpha(ACC, 0.4),
+      quadsRight:    withAlpha(ACC, 0.4),
     };
     const scale = 1.6;
     const figW = 200 * scale;
@@ -902,7 +911,7 @@ const PROMO = (() => {
           <div style="font-size:12px;color:#9090a8;margin-top:4px">${modeLabel} · 1080×1920</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <a href="?promo=${otherMode}" style="padding:10px 14px;background:#1a1a1f;border:1px solid #2a2a35;border-radius:10px;color:#e8ff00;font-family:inherit;font-weight:700;font-size:12px;text-decoration:none">${otherLabel} →</a>
+          <a href="?promo=${otherMode}" style="padding:10px 14px;background:#1a1a1f;border:1px solid #2a2a35;border-radius:10px;color:${ACC};font-family:inherit;font-weight:700;font-size:12px;text-decoration:none">${otherLabel} →</a>
           <button onclick="document.getElementById('promo-ov').remove()" style="background:#1a1a1f;border:1px solid #2a2a35;border-radius:10px;width:42px;height:42px;color:#fff;font-size:20px;cursor:pointer">×</button>
         </div>
       </div>
@@ -910,7 +919,7 @@ const PROMO = (() => {
       <div class="promo-chips">
         ${_templates.map(t => `
           <button onclick="PROMO.select('${t.id}')"
-            style="padding:10px 16px;background:${t.id===_selected.id?'#e8ff00':'#1a1a1f'};border:1px solid ${t.id===_selected.id?'#e8ff00':'#2a2a35'};color:${t.id===_selected.id?'#000':'#fff'};border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${t.label}</button>
+            style="padding:10px 16px;background:${t.id===_selected.id?ACC:'#1a1a1f'};border:1px solid ${t.id===_selected.id?ACC:'#2a2a35'};color:${t.id===_selected.id?'#000':'#fff'};border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${t.label}</button>
         `).join('')}
       </div>
 
@@ -920,7 +929,7 @@ const PROMO = (() => {
         </div>
         <div>
           <div id="promo-fields" oninput="PROMO.updateField(event)">${fields}</div>
-          <button onclick="PROMO.download()" style="width:100%;padding:14px;background:#e8ff00;border:none;border-radius:12px;color:#000;font-family:inherit;font-weight:800;font-size:14px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;margin-top:8px">Descargar PNG</button>
+          <button onclick="PROMO.download()" style="width:100%;padding:14px;background:${ACC};border:none;border-radius:12px;color:#000;font-family:inherit;font-weight:800;font-size:14px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;margin-top:8px">Descargar PNG</button>
           <button onclick="PROMO.share()" style="width:100%;padding:12px;background:transparent;border:1px solid #2a2a35;border-radius:10px;color:#9090a8;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer;margin-top:8px">Compartir nativo</button>
         </div>
       </div>

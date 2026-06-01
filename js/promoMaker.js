@@ -37,6 +37,7 @@ const PROMO = (() => {
   const SURF = '#0e0e12';
   const SURF2 = '#16181c';
   const BORDER = '#1f1f24';
+  const GREEN  = '#00d084';
 
   // Safe areas de Instagram stories (avatar arriba, send message abajo)
   const SAFE_TOP    = 320;
@@ -506,7 +507,7 @@ const PROMO = (() => {
         ctx.fillText('PR', bx + bw/2, by + 35);
       } else {
         // Check verde dibujado en canvas (consistente cross-platform)
-        drawCheck(ctx, cx + cw - 120, sy + 18, 32, '#00d084');
+        drawCheck(ctx, cx + cw - 120, sy + 18, 32, GREEN);
       }
       sy += 170;
     }
@@ -532,7 +533,7 @@ const PROMO = (() => {
     ctx.font = '900 italic 56px "Barlow Condensed", sans-serif';
     ctx.fillText('MI PLAN', cx + 40, cy + 90);
     // subtitle
-    ctx.fillStyle = '#22c55e';
+    ctx.fillStyle = GREEN;
     ctx.font = '700 26px "Inter", sans-serif';
     ctx.fillText('Al día · próximo cobro 15 jun', cx + 40, cy + 140);
 
@@ -586,7 +587,7 @@ const PROMO = (() => {
       ctx.textAlign = 'right';
       ctx.fillText(p.amt, cx + cw - 100, py);
       // check dibujado en canvas
-      drawCheck(ctx, cx + cw - 60, py - 8, 22, '#00d084');
+      drawCheck(ctx, cx + cw - 60, py - 8, 22, GREEN);
       py += 80;
     }
 

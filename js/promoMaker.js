@@ -174,6 +174,76 @@ const PROMO = (() => {
     ctx.restore();
   }
 
+  // Silueta brutalist con overlays por grupo muscular (front body)
+  function drawBodyFront(ctx, ox, oy, scale, tierColors){
+    const tc = tierColors || {};
+    const muted = '#1a1a22';
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = muted;
+    // cabeza
+    ctx.beginPath(); ctx.ellipse(100, 38, 22, 28, 0, 0, Math.PI*2); ctx.fill();
+    // cuello
+    ctx.beginPath();
+    ctx.moveTo(88,62); ctx.lineTo(112,62);
+    ctx.lineTo(114,86); ctx.lineTo(86,86);
+    ctx.closePath(); ctx.fill();
+    // tronco
+    ctx.beginPath();
+    ctx.moveTo(58,86); ctx.lineTo(142,86);
+    ctx.lineTo(156,124); ctx.lineTo(150,200);
+    ctx.lineTo(138,258); ctx.lineTo(132,296);
+    ctx.lineTo(68,296); ctx.lineTo(62,258);
+    ctx.lineTo(50,200); ctx.lineTo(44,124);
+    ctx.closePath(); ctx.fill();
+    // brazos
+    ctx.beginPath();
+    ctx.moveTo(44,92); ctx.lineTo(62,86);
+    ctx.lineTo(58,130); ctx.lineTo(62,200);
+    ctx.lineTo(56,252); ctx.lineTo(48,296);
+    ctx.lineTo(30,296); ctx.lineTo(26,252);
+    ctx.lineTo(30,200); ctx.lineTo(32,130);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(156,92); ctx.lineTo(138,86);
+    ctx.lineTo(142,130); ctx.lineTo(138,200);
+    ctx.lineTo(144,252); ctx.lineTo(152,296);
+    ctx.lineTo(170,296); ctx.lineTo(174,252);
+    ctx.lineTo(170,200); ctx.lineTo(168,130);
+    ctx.closePath(); ctx.fill();
+    // piernas
+    ctx.beginPath();
+    ctx.moveTo(68,296); ctx.lineTo(99,296);
+    ctx.lineTo(98,400); ctx.lineTo(95,480);
+    ctx.lineTo(66,480); ctx.lineTo(64,400);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(132,296); ctx.lineTo(101,296);
+    ctx.lineTo(102,400); ctx.lineTo(105,480);
+    ctx.lineTo(134,480); ctx.lineTo(136,400);
+    ctx.closePath(); ctx.fill();
+
+    // Overlays por grupo muscular
+    const overlay = (color, points) => {
+      ctx.fillStyle = color || muted;
+      ctx.beginPath();
+      ctx.moveTo(points[0][0], points[0][1]);
+      for(let i=1; i<points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
+      ctx.closePath(); ctx.fill();
+    };
+    overlay(tc.chestLeft,     [[72,102],[98,102],[98,150],[60,148],[58,130]]);
+    overlay(tc.chestRight,    [[128,102],[102,102],[102,150],[140,148],[142,130]]);
+    overlay(tc.shoulderLeft,  [[52,90],[74,88],[70,122],[46,122],[44,100]]);
+    overlay(tc.shoulderRight, [[148,90],[126,88],[130,122],[154,122],[156,100]]);
+    overlay(tc.bicepsLeft,    [[30,128],[60,132],[56,198],[34,196]]);
+    overlay(tc.bicepsRight,   [[170,128],[140,132],[144,198],[166,196]]);
+    overlay(tc.abs,           [[82,155],[118,155],[122,258],[78,258]]);
+    overlay(tc.quadsLeft,     [[70,304],[98,304],[97,402],[66,402]]);
+    overlay(tc.quadsRight,    [[130,304],[102,304],[103,402],[134,402]]);
+    ctx.restore();
+  }
+
   function drawPoseBack(ctx, cx, cy, size, color){
     ctx.save();
     ctx.strokeStyle = color;
@@ -637,41 +707,28 @@ const PROMO = (() => {
     ctx.font = '500 24px "Inter", sans-serif';
     ctx.fillText('Últimas 4 semanas', cx + 40, cy + 120);
 
-    // Silueta humana simplificada
-    const sx = cx + cw/2 - 100, sy = cy + 180;
-    // Head
-    ctx.fillStyle = '#1a1a22';
-    ctx.beginPath();
-    ctx.arc(sx + 100, sy + 50, 50, 0, Math.PI*2);
-    ctx.fill();
-    // Body
-    roundedRect(ctx, sx + 30, sy + 110, 140, 260, 30);
-    ctx.fill();
-    // Arms
-    roundedRect(ctx, sx - 30, sy + 130, 50, 220, 18);
-    ctx.fill();
-    roundedRect(ctx, sx + 180, sy + 130, 50, 220, 18);
-    ctx.fill();
-    // Legs
-    roundedRect(ctx, sx + 35, sy + 380, 55, 240, 20);
-    ctx.fill();
-    roundedRect(ctx, sx + 110, sy + 380, 55, 240, 20);
-    ctx.fill();
-    // Pecho destacado lima
-    ctx.fillStyle = ACC;
-    roundedRect(ctx, sx + 38, sy + 130, 124, 70, 14);
-    ctx.fill();
-    // Hombros lima un poco menos
-    ctx.fillStyle = 'rgba(232,255,0,.5)';
-    ctx.beginPath();
-    ctx.arc(sx + 50, sy + 140, 30, 0, Math.PI*2);
-    ctx.arc(sx + 150, sy + 140, 30, 0, Math.PI*2);
-    ctx.fill();
+    // Silueta brutalist con overlays por grupo muscular
+    const tierColors = {
+      chestLeft:     ACC,
+      chestRight:    ACC,
+      shoulderLeft:  'rgba(232,255,0,0.4)',
+      shoulderRight: 'rgba(232,255,0,0.4)',
+      bicepsLeft:    '#666666',
+      bicepsRight:   '#666666',
+      abs:           '#333333',
+      quadsLeft:     'rgba(232,255,0,0.4)',
+      quadsRight:    'rgba(232,255,0,0.4)',
+    };
+    const scale = 1.6;
+    const figW = 200 * scale;
+    const oxFig = cx + cw/2 - figW/2;
+    const oyFig = cy + 170;
+    drawBodyFront(ctx, oxFig, oyFig, scale, tierColors);
 
-    // Top 3 lista
+    // Top músculos (orden descendente por volumen)
     const top = [
-      { name:'PECHO', vol:'12.4t' },
-      { name:'PIERNA', vol:'18.2t' },
+      { name:'PIERNA',  vol:'18.2t' },
+      { name:'PECHO',   vol:'12.4t' },
       { name:'ESPALDA', vol:'9.8t' },
     ];
     let ty = cy + ch - 220;

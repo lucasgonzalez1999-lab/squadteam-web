@@ -1953,7 +1953,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
 .pp-tl-row:hover{border-color:var(--acc)}
 .pp-tl-day{font-size:14px;font-weight:700;color:var(--text)}
 .pp-tl-year{font-size:11px;color:var(--sub);margin-top:2px}
-.pp-tl-thumbs{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.pp-tl-thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .pp-tl-thumb{aspect-ratio:3/4;background:#000;border-radius:5px;overflow:hidden}
 .pp-tl-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .pp-tl-thumb.pp-tl-empty{background:var(--surf3);border:1px dashed var(--border)}
@@ -1961,8 +1961,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
 
 @media (max-width:640px){
   .pp-tl-row{grid-template-columns:80px 1fr 50px;gap:8px}
-  .pp-tl-thumbs{grid-template-columns:repeat(3,1fr);gap:4px}
-  .pp-tl-thumbs > .pp-tl-thumb:nth-child(n+4){display:none}
+  .pp-tl-thumbs{grid-template-columns:repeat(4,1fr);gap:4px}
 }
 
 /* Empty state */
@@ -1975,8 +1974,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
 .pp-cta-secondary:hover{color:#d9ff00;text-decoration:underline}
 .pp-empty-foot{margin-top:40px;padding-top:20px;border-top:1px solid var(--border);font-family:'Inter',sans-serif;font-weight:500;font-size:11px;color:#48485a;max-width:420px}
 
-/* Grid 2×3 de poses */
-.pp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+/* Grid 2×2 de poses (4 ángulos relax) */
+.pp-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
 .pp-slot{position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;text-align:center;padding:8px;transition:all .15s}
 .pp-slot-empty{background:var(--surf2);border:1.5px dashed var(--border);color:var(--sub)}
 .pp-slot-empty.drag,.pp-slot-empty:hover{border-color:var(--acc);background:var(--surf3)}
@@ -1990,9 +1989,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
 .pp-slot-filled .pp-slot-label{position:absolute;left:0;right:0;bottom:0;padding:8px;background:linear-gradient(to top,rgba(0,0,0,.9),transparent);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
 .pp-slot-x{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.7);border:none;color:#fff;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;z-index:2}
 
-@media (max-width:480px){
-  .pp-grid{grid-template-columns:repeat(2,1fr)}
-}
 
 /* Bottom sheet ad-hoc / session view */
 .pp-sheet-ov{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;padding:0;overflow-y:auto}

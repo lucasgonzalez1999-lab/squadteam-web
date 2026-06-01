@@ -283,7 +283,7 @@ async function ckCoachRenderPhotos(athId, current){
   const n = Object.keys(session.photos||{}).length;
   ph.innerHTML = `<div class="ck-section">
     <div class="ck-section-label" style="display:flex;justify-content:space-between;align-items:center">
-      <span>FOTOS DEL MES · ${n}/6</span>
+      <span>FOTOS DEL MES · ${n}/4</span>
       ${sessions.length>=2?`<button onclick="ckCoachOpenEvolution('${athId}','${current.id}')" style="background:transparent;border:1px solid var(--border);color:var(--sub);font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit">Ver evolución</button>`:''}
     </div>
     <div class="pp-grid">
@@ -763,7 +763,7 @@ async function ckMaybeMountPhotoBlock(athId, current){
     const s = sessions.find(x=>x.sessionId===current.id);
     if(s){
       const n = Object.keys(s.photos||{}).length;
-      placeholder.innerHTML = `<div class="pp-ck-block-summary">${n}/6 FOTOS LISTAS</div>`;
+      placeholder.innerHTML = `<div class="pp-ck-block-summary">${n}/4 FOTOS LISTAS</div>`;
     }
     return;
   }
@@ -805,7 +805,7 @@ function ckUpdateConfirmState(){
     btn.disabled = false;
     btn.style.opacity = '1';
     btn.style.cursor = '';
-    if(msg) msg.innerHTML = `<div class="pp-ck-info">Subiste ${n}/6 fotos. Podés completar después.</div>`;
+    if(msg) msg.innerHTML = `<div class="pp-ck-info">Subiste ${n}/4 fotos. Podés completar después.</div>`;
   } else if(required && n >= 6){
     btn.disabled = false;
     btn.style.opacity = '1';
@@ -813,7 +813,7 @@ function ckUpdateConfirmState(){
     if(msg) msg.innerHTML = '';
     // Colapsar bloque a summary
     const block = document.getElementById('ck-photo-block-'+st.checkinId);
-    if(block) block.innerHTML = `<div class="pp-ck-block-summary">6 FOTOS LISTAS</div>`;
+    if(block) block.innerHTML = `<div class="pp-ck-block-summary">4 FOTOS LISTAS</div>`;
   } else {
     btn.disabled = false;
     btn.style.opacity = '1';

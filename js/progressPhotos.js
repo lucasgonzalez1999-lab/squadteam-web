@@ -8,14 +8,12 @@
 //       createdAt }
 //   ]) }
 
-// ── 6 POSES (grid 2×3) ─────────────────────────────────────────────────────
+// ── 4 POSES (grid 2×2) ─────────────────────────────────────────────────────
 const PP_POSES = [
-  { id:'frente_relax', label:'Frente relax',         icon:'🧍' },
-  { id:'perfil_izq',   label:'Perfil izq.',          icon:'🚶‍♂️' },
-  { id:'perfil_der',   label:'Perfil der.',          icon:'🚶' },
-  { id:'espalda_relax',label:'Espalda relax',        icon:'🔙' },
-  { id:'pecho_pose',   label:'Pecho · doble bíceps', icon:'💪' },
-  { id:'espalda_pose', label:'Espalda · d. bíceps',  icon:'🦾' },
+  { id:'frente_relax', label:'Frente',     icon:'🧍' },
+  { id:'perfil_izq',   label:'Perfil izq.',icon:'🚶‍♂️' },
+  { id:'perfil_der',   label:'Perfil der.',icon:'🚶' },
+  { id:'espalda_relax',label:'Espalda',    icon:'🔙' },
 ];
 const PP_POSE_BY_ID = Object.fromEntries(PP_POSES.map(p=>[p.id,p]));
 
@@ -139,7 +137,7 @@ function ppCountSkippedCheckins(settings, sessions, today){
 }
 
 // ── PHOTO GRID — REUSABLE COMPONENT ────────────────────────────────────────
-// Renders the 2×3 photo grid into `container` for athId+sessionId.
+// Renders the 2×2 photo grid into `container` for athId+sessionId.
 // source: 'checkin' | 'adhoc'
 // onChange(photosByPose) callback — called after each successful upload/delete.
 // session = current session record (null if new). Returns API to query state.
@@ -419,7 +417,7 @@ function ppRenderFisicoArea(){
             }).join('')}
           </div>
           <div class="pp-tl-meta">
-            <div class="pp-tl-count">${photoCount}/6</div>
+            <div class="pp-tl-count">${photoCount}/${PP_POSES.length}</div>
           </div>
         </div>`;
       }).join('')}
@@ -444,7 +442,7 @@ function ppOpenSessionView(sessionId){
     <div class="pp-sheet-head">
       <div>
         <div class="pp-sheet-title">${ppFmtDate(s.date)} · ${s.source==='checkin'?'Check-in':'Ad-hoc'}</div>
-        <div class="pp-sheet-sub">${Object.keys(s.photos||{}).length}/6 fotos</div>
+        <div class="pp-sheet-sub">${Object.keys(s.photos||{}).length}/4 fotos</div>
       </div>
       <button class="pp-x-btn" onclick="document.getElementById('pp-sv-ov').remove()">×</button>
     </div>
@@ -592,7 +590,7 @@ window.ppRenderCheckinBlock = async function({ container, athId, checkinId, date
   <div class="pp-ck-block">
     <div class="pp-ck-head">
       <div class="pp-ck-title">FOTOS DEL MES</div>
-      <div class="pp-ck-sub" id="pp-ck-sub">0/6 fotos</div>
+      <div class="pp-ck-sub" id="pp-ck-sub">0/4 fotos</div>
     </div>
     <div id="pp-ck-grid"></div>
   </div>`;
@@ -606,14 +604,14 @@ window.ppRenderCheckinBlock = async function({ container, athId, checkinId, date
     onChange: (photos)=>{
       const n = Object.keys(photos||{}).length;
       const sub = document.getElementById('pp-ck-sub');
-      if(sub) sub.textContent = `${n}/6 fotos`;
+      if(sub) sub.textContent = `${n}/4 fotos`;
       if(onPhotosCountChange) onPhotosCountChange(n);
     }
   });
   // Initial count notify
   const n0 = api ? api.getCount() : 0;
   const sub = document.getElementById('pp-ck-sub');
-  if(sub) sub.textContent = `${n0}/6 fotos`;
+  if(sub) sub.textContent = `${n0}/4 fotos`;
   if(onPhotosCountChange) onPhotosCountChange(n0);
   return api;
 };

@@ -938,6 +938,10 @@ const PROMO = (() => {
           <div id="promo-fields" oninput="PROMO.updateField(event)">${fields}</div>
           <button onclick="PROMO.download()" style="width:100%;padding:14px;background:${ACC};border:none;border-radius:12px;color:#000;font-family:inherit;font-weight:800;font-size:14px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;margin-top:8px">Descargar PNG</button>
           <button onclick="PROMO.share()" style="width:100%;padding:12px;background:transparent;border:1px solid #2a2a35;border-radius:10px;color:#9090a8;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer;margin-top:8px">Compartir nativo</button>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button onclick="PROMO.reset()" style="flex:1;padding:10px;background:transparent;border:1px solid #2a2a35;border-radius:10px;color:#9090a8;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">Reset a defaults</button>
+            <button onclick="PROMO.copyText()" style="flex:1;padding:10px;background:transparent;border:1px solid #2a2a35;border-radius:10px;color:#9090a8;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">Copiar texto</button>
+          </div>
         </div>
       </div>
     </div>`;
@@ -994,7 +998,37 @@ const PROMO = (() => {
     }, 'image/png');
   }
 
-  return { open, select, updateField, download, share };
+  function reset(){
+    _state = { ..._selected.defaults };
+    renderUI();
+  }
+
+  function promoToast(msg){
+    let t = document.getElementById('promo-toast');
+    if(!t){
+      t = document.createElement('div');
+      t.id = 'promo-toast';
+      t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1f;border:1px solid #2a2a35;border-radius:10px;padding:10px 18px;color:#fff;font-family:inherit;font-size:13px;z-index:100000;opacity:0;transition:opacity .2s';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._h);
+    t._h = setTimeout(() => t.style.opacity = '0', 1800);
+  }
+
+  async function copyText(){
+    const parts = [];
+    for(const [k,v] of Object.entries(_state)){
+      if(v) parts.push(`${k.toUpperCase()}: ${v}`);
+    }
+    try{
+      await navigator.clipboard.writeText(parts.join('\n'));
+      promoToast('Copy copiado.');
+    }catch(e){ promoToast('No se pudo copiar.'); }
+  }
+
+  return { open, select, updateField, download, share, reset, copyText };
 })();
 
 const _promoParam = new URLSearchParams(location.search).get('promo');

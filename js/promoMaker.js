@@ -1084,7 +1084,7 @@ const PROMO = (() => {
     const lTop = 124;
     if(logo) ctx.drawImage(logo, W/2 - lTop/2, topY + 24, lTop, lTop);
     // handle en banda inferior
-    ctx.fillStyle = ACC;
+    ctx.fillStyle = '#ffffff';
     ctx.font = '700 36px "Inter", sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(d.handle || HANDLE, W/2, botY + 64);
@@ -1154,7 +1154,7 @@ const PROMO = (() => {
     { id:'frame-tapa',    label:'Tapa',    renderer:renderFrameTapa,
       defaults:{ handle:HANDLE } },
     { id:'frame-borde',   label:'Borde',   renderer:renderFrameBorde,
-      defaults:{ handle:HANDLE, color:'lima' } },
+      defaults:{ handle:HANDLE, color:'blanco' } },
   ];
 
   // Selección de modo según el param

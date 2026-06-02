@@ -254,6 +254,34 @@ const PROMO = (() => {
     return null;
   }
 
+  // Símbolo TS desde icon-512.png (512x512 es mucho más nítido que el 96×89).
+  let _logoImg = null, _logoLoading = false;
+  function ensureLogoImg(){
+    if(_logoImg || _logoLoading) return _logoImg;
+    _logoLoading = true;
+    const img = new Image();
+    img.onload = () => { _logoImg = img; _logoLoading = false; scheduleRedraw(); };
+    img.onerror = () => { _logoLoading = false; };
+    img.src = 'icons/icon-512.png';
+    return null;
+  }
+
+  // Bloque marca: símbolo TS arriba + wordmark SQUAD TEAM debajo.
+  // size = ancho total del bloque.
+  function drawLogoBlock(ctx, cx, cy, size, color){
+    const logo = ensureLogoImg();
+    const sym = size * 0.55;
+    const gap = size * 0.06;
+    if(logo){
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(logo, cx - sym/2, cy - sym/2 - gap, sym, sym);
+      ctx.restore();
+    }
+    drawWordmark(ctx, cx, cy + sym*0.55 + gap, size*0.42, color);
+  }
+
   // Wordmark "SQUAD TEAM" dibujado en canvas — nítido a cualquier escala.
   // size = altura aproximada del bloque. color = blanco por defecto.
   function drawWordmark(ctx, cx, cy, size, color){
@@ -1074,9 +1102,9 @@ const PROMO = (() => {
   // Ninguno llama a drawBackground(). El canvas queda transparente.
   // Wordmark vectorial: no se pixela a ninguna escala.
 
-  // Sello: wordmark gigante centrado + fade abajo + handle italic
+  // Sello: símbolo + wordmark grande centrado + fade abajo + handle italic
   function renderFrameSello(ctx, d){
-    drawWordmark(ctx, W/2, H/2 - 80, 460, '#ffffff');
+    drawLogoBlock(ctx, W/2, H/2 - 80, 560, '#ffffff');
 
     const g = ctx.createLinearGradient(0, H*0.62, 0, H);
     g.addColorStop(0, 'rgba(0,0,0,0)');
@@ -1090,9 +1118,9 @@ const PROMO = (() => {
     ctx.fillText(d.handle || HANDLE, W/2, H - 110);
   }
 
-  // Esquina: wordmark chico abajo-izq + handle arriba-der con punto lima
+  // Esquina: símbolo + wordmark chico abajo-izq + handle arriba-der con punto lima
   function renderFrameEsquina(ctx, d){
-    drawWordmark(ctx, 180, H - 130, 130, '#ffffff');
+    drawLogoBlock(ctx, 200, H - 170, 200, '#ffffff');
 
     const pad = 64;
     ctx.fillStyle = '#ffffff';
@@ -1121,7 +1149,7 @@ const PROMO = (() => {
     ctx.fillStyle = ACC;
     ctx.fillRect(0, botY - 4, W, 4);
 
-    drawWordmark(ctx, W/2, topY + 130, 150, '#ffffff');
+    drawLogoBlock(ctx, W/2, topY + 110, 200, '#ffffff');
 
     ctx.fillStyle = '#ffffff';
     ctx.font = '700 italic 42px "Barlow Condensed", sans-serif';
@@ -1154,7 +1182,7 @@ const PROMO = (() => {
         ctx.stroke();
       });
 
-    drawWordmark(ctx, W/2, H - 200, 180, color);
+    drawLogoBlock(ctx, W/2, H - 240, 240, color);
 
     ctx.fillStyle = color;
     ctx.font = '700 italic 38px "Barlow Condensed", sans-serif';

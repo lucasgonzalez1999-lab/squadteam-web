@@ -254,17 +254,45 @@ const PROMO = (() => {
     return null;
   }
 
-  // Logo Squad Team cargado desde icons/logo-transparent.png (PNG con alpha)
-  let _logoImg = null;
-  let _logoLoading = false;
-  function ensureLogoImg(){
-    if(_logoImg || _logoLoading) return _logoImg;
-    _logoLoading = true;
-    const img = new Image();
-    img.onload = () => { _logoImg = img; _logoLoading = false; scheduleRedraw(); };
-    img.onerror = () => { _logoLoading = false; };
-    img.src = 'icons/logo-transparent.png';
-    return null;
+  // Wordmark "SQUAD TEAM" dibujado en canvas — nítido a cualquier escala.
+  // size = altura aproximada del bloque. color = blanco por defecto.
+  function drawWordmark(ctx, cx, cy, size, color){
+    const c = color || '#ffffff';
+    ctx.save();
+    ctx.fillStyle = c;
+    ctx.strokeStyle = c;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+
+    // SQUAD grande, italic
+    const sqSize = size * 0.55;
+    ctx.font = `900 italic ${sqSize}px "Barlow Condensed", sans-serif`;
+    ctx.fillText('SQUAD', cx, cy);
+
+    // Línea horizontal fina
+    const lineY = cy + size*0.08;
+    const lineW = size * 0.85;
+    ctx.lineWidth = Math.max(2, size*0.012);
+    ctx.beginPath();
+    ctx.moveTo(cx - lineW/2, lineY);
+    ctx.lineTo(cx + lineW/2, lineY);
+    ctx.stroke();
+
+    // TEAM más chico debajo, con tracking ancho
+    const teamSize = size * 0.22;
+    ctx.font = `800 ${teamSize}px "Inter", sans-serif`;
+    const letters = 'TEAM'.split('');
+    const tracking = teamSize * 0.55;
+    let totalW = 0;
+    for(const l of letters) totalW += ctx.measureText(l).width;
+    totalW += tracking * (letters.length - 1);
+    let x = cx - totalW/2;
+    for(const l of letters){
+      const w = ctx.measureText(l).width;
+      ctx.fillText(l, x + w/2, cy + size*0.32);
+      x += w + tracking;
+    }
+    ctx.restore();
   }
 
   // Dibuja la silueta del app + tint global con destaque por grupo via overlay
@@ -1043,69 +1071,95 @@ const PROMO = (() => {
   }
 
   // ── MARCOS (PNG con transparencia — overlay sobre fotos) ─────────────────
-  // Ninguno de estos llama a drawBackground(), el canvas queda transparente.
+  // Ninguno llama a drawBackground(). El canvas queda transparente.
+  // Wordmark vectorial: no se pixela a ninguna escala.
 
+  // Sello: wordmark gigante centrado + fade abajo + handle italic
   function renderFrameSello(ctx, d){
-    const logo = ensureLogoImg();
-    const lSize = 520;
-    if(logo) ctx.drawImage(logo, W/2 - lSize/2, H/2 - lSize/2 - 120, lSize, lSize);
-    // fade oscuro en el tercio inferior para que el handle legible
-    const g = ctx.createLinearGradient(0, H * 0.58, 0, H);
+    drawWordmark(ctx, W/2, H/2 - 80, 460, '#ffffff');
+
+    const g = ctx.createLinearGradient(0, H*0.62, 0, H);
     g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(1, 'rgba(0,0,0,0.80)');
+    g.addColorStop(1, 'rgba(0,0,0,0.82)');
     ctx.fillStyle = g;
-    ctx.fillRect(0, H * 0.58, W, H * 0.42);
+    ctx.fillRect(0, H*0.62, W, H*0.38);
+
     ctx.fillStyle = '#ffffff';
-    ctx.font = '800 40px "Inter", sans-serif';
+    ctx.font = '700 italic 44px "Barlow Condensed", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(d.handle || HANDLE, W/2, H - 96);
+    ctx.fillText(d.handle || HANDLE, W/2, H - 110);
   }
 
+  // Esquina: wordmark chico abajo-izq + handle arriba-der con punto lima
   function renderFrameEsquina(ctx, d){
-    const logo = ensureLogoImg();
-    const lSize = 210;
-    const pad  = 56;
-    if(logo) ctx.drawImage(logo, W - lSize - pad, H - lSize - pad, lSize, lSize);
+    drawWordmark(ctx, 180, H - 130, 130, '#ffffff');
+
+    const pad = 64;
     ctx.fillStyle = '#ffffff';
-    ctx.font = '700 26px "Inter", sans-serif';
+    ctx.font = '700 italic 38px "Barlow Condensed", sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(d.handle || HANDLE, W - pad, H - lSize - pad - 18);
-  }
+    ctx.fillText(d.handle || HANDLE, W - pad, pad + 30);
 
-  function renderFrameTapa(ctx, d){
-    const logo  = ensureLogoImg();
-    const topY  = SAFE_TOP - 40, topH = 190;
-    const botY  = SAFE_BOTTOM;
-    // bandas oscuras arriba y abajo (dentro de las safe areas)
-    ctx.fillStyle = 'rgba(4,4,4,0.88)';
-    ctx.fillRect(0, topY, W, topH);
-    ctx.fillRect(0, botY, W, H - botY);
-    // logo en banda superior
-    const lTop = 124;
-    if(logo) ctx.drawImage(logo, W/2 - lTop/2, topY + 24, lTop, lTop);
-    // handle en banda inferior
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '700 36px "Inter", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(d.handle || HANDLE, W/2, botY + 64);
-  }
-
-  function renderFrameBorde(ctx, d){
-    const color = (d.color || '').toLowerCase() === 'blanco' ? '#ffffff' : ACC;
-    const pad   = 28;
-    ctx.strokeStyle = color;
-    ctx.lineWidth   = 5;
+    // Punto lima de acento
+    ctx.fillStyle = ACC;
     ctx.beginPath();
-    ctx.roundRect(pad, pad, W - pad*2, H - pad*2, 40);
+    ctx.arc(W - pad - ctx.measureText(d.handle || HANDLE).width - 24, pad + 18, 8, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Tapa: bandas arriba y abajo + wordmark arriba + handle italic abajo
+  function renderFrameTapa(ctx, d){
+    const topY = SAFE_TOP - 60, topH = 220;
+    const botY = SAFE_BOTTOM;
+    const botH = H - botY;
+
+    ctx.fillStyle = 'rgba(4,4,4,0.92)';
+    ctx.fillRect(0, topY, W, topH);
+    ctx.fillRect(0, botY, W, botH);
+
+    // Línea fina lima entre la foto y la banda inferior
+    ctx.fillStyle = ACC;
+    ctx.fillRect(0, botY - 4, W, 4);
+
+    drawWordmark(ctx, W/2, topY + 130, 150, '#ffffff');
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '700 italic 42px "Barlow Condensed", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(d.handle || HANDLE, W/2, botY + 80);
+  }
+
+  // Borde: marco redondeado + ticks en las 4 esquinas + wordmark abajo
+  function renderFrameBorde(ctx, d){
+    const color = (d.color || '').toLowerCase() === 'lima' ? ACC : '#ffffff';
+    const pad   = 32;
+    const w = W - pad*2, h = H - pad*2;
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.roundRect(pad, pad, w, h, 24);
     ctx.stroke();
-    // logo en la mitad inferior
-    const logo  = ensureLogoImg();
-    const lSize = 260;
-    if(logo) ctx.drawImage(logo, W/2 - lSize/2, H - lSize - 136, lSize, lSize);
-    ctx.fillStyle  = color;
-    ctx.font       = '700 36px "Inter", sans-serif';
-    ctx.textAlign  = 'center';
-    ctx.fillText(d.handle || HANDLE, W/2, H - 68);
+
+    // Ticks en las 4 esquinas — detalle brutalist
+    const tick = 36;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'square';
+    [[pad, pad, 1, 1], [pad+w, pad, -1, 1], [pad, pad+h, 1, -1], [pad+w, pad+h, -1, -1]]
+      .forEach(([x, y, sx, sy]) => {
+        ctx.beginPath();
+        ctx.moveTo(x, y + sy*tick);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x + sx*tick, y);
+        ctx.stroke();
+      });
+
+    drawWordmark(ctx, W/2, H - 200, 180, color);
+
+    ctx.fillStyle = color;
+    ctx.font = '700 italic 38px "Barlow Condensed", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(d.handle || HANDLE, W/2, H - 90);
   }
 
   // ── TEMPLATES ──────────────────────────────────────────────────────────────

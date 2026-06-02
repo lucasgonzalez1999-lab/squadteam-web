@@ -117,11 +117,13 @@ const CGEN = (() => {
     return fitText(ctx, text, maxW, maxH, o);
   }
 
-  // Aplica un translate vertical al bloque de texto sin mover la foto/watermark.
+  // Aplica un translate al bloque de texto sin mover la foto/watermark.
+  // posY (slider %) + textOffsetX/Y (drag, en px del canvas).
   function withTextOffset(ctx, H, d, fn){
-    const dy = ((d.posY || 0) / 100) * H;
+    const dy = ((d.posY || 0) / 100) * H + (d.textOffsetY || 0);
+    const dx = (d.textOffsetX || 0);
     ctx.save();
-    ctx.translate(0, dy);
+    ctx.translate(dx, dy);
     try { fn(); } finally { ctx.restore(); }
   }
 
@@ -597,6 +599,9 @@ const CGEN = (() => {
       #cgen-ov .cg-toggle .cg-sw::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#9090a8;transition:left .15s,background .15s;}
       #cgen-ov .cg-toggle input:checked + .cg-sw{background:#e8ff00;}
       #cgen-ov .cg-toggle input:checked + .cg-sw::after{left:16px;background:#000;}
+      #cgen-ov #cgen-canvas{touch-action:none;cursor:grab;}
+      #cgen-ov #cgen-canvas.dragging{cursor:grabbing;}
+      #cgen-ov .cg-hint{font-size:10px;color:#6a6a78;text-align:center;margin:6px 0 12px;letter-spacing:.06em;text-transform:uppercase;}
     `;
     document.head.appendChild(s);
   }
@@ -727,12 +732,56 @@ const CGEN = (() => {
             ${thumb}<span>${uploadText}</span>
           </div>
           <div id="cgen-fields" oninput="CGEN.updateField(event)" onchange="CGEN.updateField(event)">${fieldsHtml}</div>
-          <button onclick="CGEN.download()" style="width:100%;padding:14px;background:#e8ff00;border:none;border-radius:12px;color:#000;font-family:inherit;font-weight:800;font-size:14px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;margin-top:10px">Descargar PNG</button>
-          <button onclick="CGEN.reset()" style="width:100%;padding:10px;background:transparent;border:1px solid #2a2a35;border-radius:10px;color:#9090a8;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer;margin-top:8px">Reset</button>
+          <div class="cg-hint">Arrastrá el texto sobre la imagen para moverlo</div>
+          <button onclick="CGEN.download()" style="width:100%;padding:14px;background:#e8ff00;border:none;border-radius:12px;color:#000;font-family:inherit;font-weight:800;font-size:14px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;margin-top:4px">Descargar PNG</button>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button onclick="CGEN.centerText()" style="flex:1;padding:10px;background:transparent;border:1px solid #2a2a35;border-radius:10px;color:#9090a8;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">Centrar texto</button>
+            <button onclick="CGEN.reset()" style="flex:1;padding:10px;background:transparent;border:1px solid #2a2a35;border-radius:10px;color:#9090a8;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">Reset</button>
+          </div>
         </div>
       </div>
     </div>`;
+    attachDragHandlers();
     scheduleRedraw();
+  }
+
+  let _drag = null;
+  function attachDragHandlers(){
+    const cv = document.getElementById('cgen-canvas');
+    if(!cv) return;
+    const onDown = (e) => {
+      cv.setPointerCapture(e.pointerId);
+      cv.classList.add('dragging');
+      const r = cv.getBoundingClientRect();
+      _drag = {
+        startX: e.clientX, startY: e.clientY,
+        originX: _state.textOffsetX || 0,
+        originY: _state.textOffsetY || 0,
+        scaleX: cv.width / r.width,
+        scaleY: cv.height / r.height,
+      };
+      e.preventDefault();
+    };
+    const onMove = (e) => {
+      if(!_drag) return;
+      const dx = (e.clientX - _drag.startX) * _drag.scaleX;
+      const dy = (e.clientY - _drag.startY) * _drag.scaleY;
+      _state.textOffsetX = Math.round(_drag.originX + dx);
+      _state.textOffsetY = Math.round(_drag.originY + dy);
+      scheduleRedraw();
+    };
+    const onUp = () => { _drag = null; cv.classList.remove('dragging'); };
+    cv.addEventListener('pointerdown', onDown);
+    cv.addEventListener('pointermove', onMove);
+    cv.addEventListener('pointerup', onUp);
+    cv.addEventListener('pointercancel', onUp);
+  }
+
+  function centerText(){
+    _state.textOffsetX = 0;
+    _state.textOffsetY = 0;
+    _state.posY = 0;
+    renderUI();
   }
 
   function setFormat(f){
@@ -826,7 +875,7 @@ const CGEN = (() => {
     renderUI();
   }
 
-  return { open, setFormat, selectTemplate, onPhoto, updateField, download, reset };
+  return { open, setFormat, selectTemplate, onPhoto, updateField, download, reset, centerText };
 })();
 
 const _genParam = new URLSearchParams(location.search).get('gen');

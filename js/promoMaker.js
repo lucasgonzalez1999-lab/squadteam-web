@@ -325,15 +325,27 @@ const PROMO = (() => {
     return null;
   }
 
-  // Bloque marca: solo símbolo TS. size = lado del símbolo.
-  function drawLogoBlock(ctx, cx, cy, size, _color){
+  // Bloque marca: símbolo TS (cropped sin wordmark) + wordmark vectorial debajo.
+  // size = ancho total. El símbolo respeta su ratio nativo y va sobre el texto.
+  function drawLogoBlock(ctx, cx, cy, size, color){
     const logo = ensureLogoImg();
-    if(!logo) return;
-    ctx.save();
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(logo, cx - size/2, cy - size/2, size, size);
-    ctx.restore();
+    const symW = size * 0.50;
+    let symH = symW;
+    if(logo && logo.height){
+      symH = symW * (logo.height / logo.width);
+    }
+    const wordSize = size * 0.40;
+    const gap = size * 0.08;
+    const totalH = symH + gap + wordSize*0.35;
+    const symY = cy - totalH/2;
+    if(logo){
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(logo, cx - symW/2, symY, symW, symH);
+      ctx.restore();
+    }
+    drawWordmark(ctx, cx, symY + symH + gap + wordSize*0.18, wordSize, color);
   }
 
   // Wordmark "SQUAD TEAM" dibujado en canvas — nítido a cualquier escala.
@@ -1158,7 +1170,7 @@ const PROMO = (() => {
 
   // Sello: símbolo + wordmark grande centrado + fade abajo + handle italic
   function renderFrameSello(ctx, d){
-    drawLogoBlock(ctx, W/2, H/2 - 80, 380, '#ffffff');
+    drawLogoBlock(ctx, W/2, H/2 - 80, 540, '#ffffff');
 
     const g = ctx.createLinearGradient(0, H*0.62, 0, H);
     g.addColorStop(0, 'rgba(0,0,0,0)');
@@ -1174,7 +1186,7 @@ const PROMO = (() => {
 
   // Esquina: símbolo + wordmark chico abajo-izq + handle arriba-der con punto lima
   function renderFrameEsquina(ctx, d){
-    drawLogoBlock(ctx, 180, H - 170, 150, '#ffffff');
+    drawLogoBlock(ctx, 200, H - 180, 220, '#ffffff');
 
     const pad = 64;
     ctx.fillStyle = '#ffffff';
@@ -1203,7 +1215,7 @@ const PROMO = (() => {
     ctx.fillStyle = ACC;
     ctx.fillRect(0, botY - 4, W, 4);
 
-    drawLogoBlock(ctx, W/2, topY + 110, 150, '#ffffff');
+    drawLogoBlock(ctx, W/2, topY + 110, 220, '#ffffff');
 
     ctx.fillStyle = '#ffffff';
     ctx.font = '700 italic 42px "Barlow Condensed", sans-serif';
@@ -1236,7 +1248,7 @@ const PROMO = (() => {
         ctx.stroke();
       });
 
-    drawLogoBlock(ctx, W/2, H - 230, 180, color);
+    drawLogoBlock(ctx, W/2, H - 240, 260, color);
 
     ctx.fillStyle = color;
     ctx.font = '700 italic 38px "Barlow Condensed", sans-serif';

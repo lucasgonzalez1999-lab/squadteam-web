@@ -305,20 +305,15 @@ const PROMO = (() => {
     return null;
   }
 
-  // Bloque marca: símbolo TS arriba + wordmark SQUAD TEAM debajo.
-  // size = ancho total del bloque.
-  function drawLogoBlock(ctx, cx, cy, size, color){
+  // Bloque marca: solo símbolo TS. size = lado del símbolo.
+  function drawLogoBlock(ctx, cx, cy, size, _color){
     const logo = ensureLogoImg();
-    const sym = size * 0.55;
-    const gap = size * 0.06;
-    if(logo){
-      ctx.save();
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(logo, cx - sym/2, cy - sym/2 - gap, sym, sym);
-      ctx.restore();
-    }
-    drawWordmark(ctx, cx, cy + sym*0.55 + gap, size*0.42, color);
+    if(!logo) return;
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(logo, cx - size/2, cy - size/2, size, size);
+    ctx.restore();
   }
 
   // Wordmark "SQUAD TEAM" dibujado en canvas — nítido a cualquier escala.

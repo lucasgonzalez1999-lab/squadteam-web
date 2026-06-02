@@ -287,9 +287,29 @@ const PROMO = (() => {
           }
         }
         cx.putImageData(data, 0, 0);
-        // Crop al bounding box del contenido visible
+        // Detectar gap entre el escudo y el wordmark: la primera fila vacía
+        // de >= 6 filas después del primer contenido marca el fin del símbolo.
+        let symEnd = maxY;
+        let gapStart = -1, gapLen = 0;
+        for(let y=minY; y<=maxY; y++){
+          let rowHas = false;
+          for(let x=minX; x<=maxX; x++){
+            if(p[(y*c.width + x)*4 + 3] > 32){ rowHas = true; break; }
+          }
+          if(rowHas){
+            if(gapLen >= 6 && gapStart > minY){
+              symEnd = gapStart;
+              break;
+            }
+            gapStart = -1; gapLen = 0;
+          } else {
+            if(gapStart < 0) gapStart = y;
+            gapLen++;
+          }
+        }
+        // Crop al bounding box del SÍMBOLO solamente
         const cw = Math.max(1, maxX - minX);
-        const ch = Math.max(1, maxY - minY);
+        const ch = Math.max(1, symEnd - minY);
         const cropped = document.createElement('canvas');
         cropped.width = cw; cropped.height = ch;
         cropped.getContext('2d').drawImage(c, minX, minY, cw, ch, 0, 0, cw, ch);
@@ -1138,7 +1158,7 @@ const PROMO = (() => {
 
   // Sello: símbolo + wordmark grande centrado + fade abajo + handle italic
   function renderFrameSello(ctx, d){
-    drawLogoBlock(ctx, W/2, H/2 - 80, 560, '#ffffff');
+    drawLogoBlock(ctx, W/2, H/2 - 80, 380, '#ffffff');
 
     const g = ctx.createLinearGradient(0, H*0.62, 0, H);
     g.addColorStop(0, 'rgba(0,0,0,0)');
@@ -1154,7 +1174,7 @@ const PROMO = (() => {
 
   // Esquina: símbolo + wordmark chico abajo-izq + handle arriba-der con punto lima
   function renderFrameEsquina(ctx, d){
-    drawLogoBlock(ctx, 200, H - 170, 200, '#ffffff');
+    drawLogoBlock(ctx, 180, H - 170, 150, '#ffffff');
 
     const pad = 64;
     ctx.fillStyle = '#ffffff';
@@ -1183,7 +1203,7 @@ const PROMO = (() => {
     ctx.fillStyle = ACC;
     ctx.fillRect(0, botY - 4, W, 4);
 
-    drawLogoBlock(ctx, W/2, topY + 110, 200, '#ffffff');
+    drawLogoBlock(ctx, W/2, topY + 110, 150, '#ffffff');
 
     ctx.fillStyle = '#ffffff';
     ctx.font = '700 italic 42px "Barlow Condensed", sans-serif';
@@ -1216,7 +1236,7 @@ const PROMO = (() => {
         ctx.stroke();
       });
 
-    drawLogoBlock(ctx, W/2, H - 240, 240, color);
+    drawLogoBlock(ctx, W/2, H - 230, 180, color);
 
     ctx.fillStyle = color;
     ctx.font = '700 italic 38px "Barlow Condensed", sans-serif';

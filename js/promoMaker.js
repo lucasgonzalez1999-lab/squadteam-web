@@ -254,15 +254,54 @@ const PROMO = (() => {
     return null;
   }
 
-  // Símbolo TS desde icon-512.png (512x512 es mucho más nítido que el 96×89).
+  // Símbolo TS desde icon-512.png. El PNG es maskable (fondo negro built-in),
+  // así que lo procesamos: pixeles negros → transparentes, y croppeamos el
+  // padding. El resultado se cachea como una nueva Image para drawImage.
   let _logoImg = null, _logoLoading = false;
   function ensureLogoImg(){
     if(_logoImg || _logoLoading) return _logoImg;
     _logoLoading = true;
-    const img = new Image();
-    img.onload = () => { _logoImg = img; _logoLoading = false; scheduleRedraw(); };
-    img.onerror = () => { _logoLoading = false; };
-    img.src = 'icons/icon-512.png';
+    const src = new Image();
+    src.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = src.width; c.height = src.height;
+        const cx = c.getContext('2d');
+        cx.drawImage(src, 0, 0);
+        const data = cx.getImageData(0, 0, c.width, c.height);
+        const p = data.data;
+        let minX = c.width, minY = c.height, maxX = 0, maxY = 0;
+        // Tomamos negro/gris oscuro como fondo. Umbral generoso por suavidad.
+        for(let y=0; y<c.height; y++){
+          for(let x=0; x<c.width; x++){
+            const i = (y*c.width + x) * 4;
+            const r = p[i], g = p[i+1], b = p[i+2];
+            if(r < 24 && g < 24 && b < 24){
+              p[i+3] = 0;
+            } else if(p[i+3] > 32){
+              if(x < minX) minX = x;
+              if(x > maxX) maxX = x;
+              if(y < minY) minY = y;
+              if(y > maxY) maxY = y;
+            }
+          }
+        }
+        cx.putImageData(data, 0, 0);
+        // Crop al bounding box del contenido visible
+        const cw = Math.max(1, maxX - minX);
+        const ch = Math.max(1, maxY - minY);
+        const cropped = document.createElement('canvas');
+        cropped.width = cw; cropped.height = ch;
+        cropped.getContext('2d').drawImage(c, minX, minY, cw, ch, 0, 0, cw, ch);
+        const out = new Image();
+        out.onload = () => { _logoImg = out; _logoLoading = false; scheduleRedraw(); };
+        out.src = cropped.toDataURL('image/png');
+      } catch (e) {
+        _logoImg = src; _logoLoading = false; scheduleRedraw();
+      }
+    };
+    src.onerror = () => { _logoLoading = false; };
+    src.src = 'icons/icon-512.png';
     return null;
   }
 

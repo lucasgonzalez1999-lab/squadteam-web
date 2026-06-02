@@ -985,6 +985,66 @@ async function _mrDrawWorkoutCanvas({ athName, day, week, resolvedColor, exItems
   toast(isDemo ? '📸 Demo generada' : '📸 Imagen generada');
 }
 
+// Carga icon-512.png una sola vez. Saca el negro del maskable y croppea
+// el escudo (descartando el wordmark hardcoded debajo).
+let _mrLogoCache = null;
+function _mrLoadLogo(){
+  if(_mrLogoCache) return _mrLogoCache;
+  _mrLogoCache = new Promise(resolve => {
+    const src = new Image();
+    src.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = src.width; c.height = src.height;
+        const cx = c.getContext('2d');
+        cx.drawImage(src, 0, 0);
+        const data = cx.getImageData(0, 0, c.width, c.height);
+        const p = data.data;
+        let minX = c.width, minY = c.height, maxX = 0, maxY = 0;
+        for(let y=0; y<c.height; y++){
+          for(let x=0; x<c.width; x++){
+            const i = (y*c.width + x)*4;
+            if(p[i] < 24 && p[i+1] < 24 && p[i+2] < 24){
+              p[i+3] = 0;
+            } else if(p[i+3] > 32){
+              if(x < minX) minX = x; if(x > maxX) maxX = x;
+              if(y < minY) minY = y; if(y > maxY) maxY = y;
+            }
+          }
+        }
+        cx.putImageData(data, 0, 0);
+        // Detectar gap entre el escudo y el wordmark
+        let symEnd = maxY, gapStart = -1, gapLen = 0;
+        for(let y=minY; y<=maxY; y++){
+          let rowHas = false;
+          for(let x=minX; x<=maxX; x++){
+            if(p[(y*c.width + x)*4 + 3] > 32){ rowHas = true; break; }
+          }
+          if(rowHas){
+            if(gapLen >= 6 && gapStart > minY){ symEnd = gapStart; break; }
+            gapStart = -1; gapLen = 0;
+          } else {
+            if(gapStart < 0) gapStart = y;
+            gapLen++;
+          }
+        }
+        const cw = Math.max(1, maxX - minX);
+        const ch = Math.max(1, symEnd - minY);
+        const out = document.createElement('canvas');
+        out.width = cw; out.height = ch;
+        out.getContext('2d').drawImage(c, minX, minY, cw, ch, 0, 0, cw, ch);
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = out.toDataURL('image/png');
+      } catch(_){ resolve(null); }
+    };
+    src.onerror = () => resolve(null);
+    src.src = 'icons/icon-512.png';
+  });
+  return _mrLogoCache;
+}
+
 function _mrDownloadImage(dataUrl, suffix){
   const a = document.createElement('a');
   a.download = `squad_entreno_${suffix||'workout'}.png`;
@@ -1145,6 +1205,20 @@ async function mrExportStory(photoFile, isDemo){
   bracket(W-28,28,44,'tr','white',0.28);
   bracket(28,H-28,44,'bl',accent,0.55);
   bracket(W-28,H-28,44,'br',accent,0.55);
+
+  // ── WATERMARK: escudo TS al centro, semi-transparente ──
+  try {
+    const logo = await _mrLoadLogo();
+    if(logo){
+      const lw = 720;
+      const lh = lw * (logo.height / logo.width);
+      ctx.save();
+      ctx.globalAlpha = 0.07;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(logo, (W - lw)/2, (H - lh)/2 - 40, lw, lh);
+      ctx.restore();
+    }
+  } catch(_){}
 
   // ── HEADER (y: 0-130) ──
   ctx.fillStyle='rgba(255,255,255,0.28)';

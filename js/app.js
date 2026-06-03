@@ -448,15 +448,19 @@ async function quickSyncFromFirebase() {
 
     // ── Sesiones ──
     let sessionsChanged = false;
-    await Promise.all(athletes.map(async a => {
+    // Lista de ids a sincronizar: athletes + currentUser si no está incluido.
+    // Cubre el caso de un alumno logueado que no aparece en su propio array.
+    const syncIds = new Set(athletes.map(a => a.id));
+    if (currentUser?.id) syncIds.add(currentUser.id);
+    await Promise.all([...syncIds].map(async id => {
       try {
-        const sDoc = await window.db.collection('sessions').doc(a.id).get();
+        const sDoc = await window.db.collection('sessions').doc(id).get();
         if (!sDoc.exists) return;
         const raw = sDoc.data()?.data;
         if (!raw) return;
         const fresh = JSON.parse(raw);
-        if (Array.isArray(fresh) && JSON.stringify(fresh) !== JSON.stringify(sessions[a.id])) {
-          sessions[a.id] = fresh;
+        if (Array.isArray(fresh) && JSON.stringify(fresh) !== JSON.stringify(sessions[id])) {
+          sessions[id] = fresh;
           sessionsChanged = true;
         }
       } catch(e) {}
@@ -465,6 +469,11 @@ async function quickSyncFromFirebase() {
       DB.set('sessions', sessions);
       if (currentSection === 'dashboard') renderDashboard();
       if (currentSection === 'progreso')  renderProgreso();
+      // El alumno puede tener mi-rutina abierta cuando el coach guarda
+      // desde su panel — re-rendereamos para que vea los kg cargados.
+      if (currentSection === 'mi-rutina' && typeof renderMiRutina === 'function') {
+        renderMiRutina();
+      }
     }
 
     // ── Horarios ──

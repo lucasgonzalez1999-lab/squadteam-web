@@ -56,14 +56,20 @@ const SQK = (() => {
       }
       .sqk-sh-backdrop.show{ opacity:1; }
       .sqk-sh{
-        position:fixed; left:0; right:0; bottom:0; z-index:99997;
-        background:#0a0b0d; border-top:1px solid #1f1f24;
+        position:fixed; left:50%; right:auto; bottom:0; z-index:99997;
+        width:100%; max-width:520px;
+        transform:translateX(-50%) translateY(100%);
+        background:#0a0b0d; border:1px solid #1f1f24; border-bottom:none;
+        border-radius:16px 16px 0 0;
         max-height:92vh; display:flex; flex-direction:column;
-        transform:translateY(100%);
         transition:transform .36s cubic-bezier(.16,1,.3,1);
         padding-bottom:env(safe-area-inset-bottom);
       }
-      .sqk-sh.show{ transform:translateY(0); }
+      .sqk-sh.show{ transform:translateX(-50%) translateY(0); }
+      @media (max-width: 520px){
+        .sqk-sh{ left:0; right:0; max-width:none; transform:translateY(100%); border-radius:0; }
+        .sqk-sh.show{ transform:translateY(0); }
+      }
       .sqk-sh-handle{
         flex:0 0 auto; display:flex; justify-content:center;
         padding:10px 0 6px; touch-action:none; cursor:grab;
@@ -230,12 +236,13 @@ const SQK = (() => {
       sheet.classList.add('show');
     });
 
+    const isCenteredOnClose = () => window.innerWidth > 520;
     let closed = false;
     function close(){
       if(closed) return; closed = true;
       backdrop.classList.remove('show');
       sheet.classList.remove('show');
-      sheet.style.transform = 'translateY(100%)';
+      sheet.style.transform = (isCenteredOnClose() ? 'translateX(-50%) ' : '') + 'translateY(100%)';
       setTimeout(() => {
         backdrop.remove(); sheet.remove();
         document.body.style.overflow = '';
@@ -247,9 +254,13 @@ const SQK = (() => {
       backdrop.addEventListener('click', close);
     }
 
-    // Drag desde el handle (UX nativa-style)
+    // Drag desde el handle (UX nativa-style).
+    // En desktop el sheet está centrado con translateX(-50%), así que el drag
+    // tiene que preservar ese eje X. En mobile el sheet ocupa todo el ancho.
     const handle = sheet.querySelector('.sqk-sh-handle');
     let dragY = 0, startY = 0, dragging = false;
+    const isCentered = () => window.innerWidth > 520;
+    const tx = () => isCentered() ? 'translateX(-50%) ' : '';
     handle.addEventListener('pointerdown', (e) => {
       dragging = true; startY = e.clientY; dragY = 0;
       handle.setPointerCapture(e.pointerId);
@@ -258,7 +269,7 @@ const SQK = (() => {
     handle.addEventListener('pointermove', (e) => {
       if(!dragging) return;
       dragY = Math.max(0, e.clientY - startY);
-      sheet.style.transform = `translateY(${dragY}px)`;
+      sheet.style.transform = `${tx()}translateY(${dragY}px)`;
       backdrop.style.opacity = String(Math.max(0, 1 - dragY / 400));
     });
     handle.addEventListener('pointerup', () => {
@@ -267,7 +278,7 @@ const SQK = (() => {
       backdrop.style.transition = '';
       if(dragY > 140) close();
       else {
-        sheet.style.transform = 'translateY(0)';
+        sheet.style.transform = `${tx()}translateY(0)`;
         backdrop.style.opacity = '';
       }
     });

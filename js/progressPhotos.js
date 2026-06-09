@@ -462,35 +462,65 @@ function ppOpenSessionView(sessionId){
 }
 
 // ── BOTTOM SHEET AD-HOC ────────────────────────────────────────────────────
+let _ppAhSheetApi = null;
 function ppOpenAdhocSheet(prefillDate){
   const today = new Date().toISOString().split('T')[0];
   const date = prefillDate || today;
-  const sessionId = date; // adhoc sessions keyed by date
+  const sessionId = date;
 
-  let ov = document.getElementById('pp-ah-ov');
-  if(!ov){ ov=document.createElement('div'); ov.id='pp-ah-ov'; document.body.appendChild(ov); }
-  ov.className = 'pp-sheet-ov';
-  ov.onclick = e=>{ if(e.target===ov) ov.remove(); };
-
-  ov.innerHTML = `
-  <div class="pp-sheet">
-    <div class="pp-sheet-head">
-      <div>
-        <div class="pp-sheet-title">Subir fotos</div>
-        <div class="pp-sheet-sub">Sesión suelta — no cuenta para el ciclo del check-in</div>
+  // Fallback al overlay viejo si por algún motivo sqSheet no está disponible
+  // (uiKit.js no cargó). No queremos romper la feature.
+  if(typeof sqSheet !== 'function'){
+    let ov = document.getElementById('pp-ah-ov');
+    if(!ov){ ov=document.createElement('div'); ov.id='pp-ah-ov'; document.body.appendChild(ov); }
+    ov.className = 'pp-sheet-ov';
+    ov.onclick = e=>{ if(e.target===ov) ov.remove(); };
+    ov.innerHTML = `
+    <div class="pp-sheet">
+      <div class="pp-sheet-head">
+        <div>
+          <div class="pp-sheet-title">Subir fotos</div>
+          <div class="pp-sheet-sub">Sesión suelta — no cuenta para el ciclo del check-in</div>
+        </div>
+        <button class="pp-x-btn" onclick="document.getElementById('pp-ah-ov').remove()">×</button>
       </div>
-      <button class="pp-x-btn" onclick="document.getElementById('pp-ah-ov').remove()">×</button>
-    </div>
-    <div class="pp-sheet-row">
-      <label class="pp-sheet-lbl">Fecha</label>
-      <input id="pp-ah-date" type="date" value="${date}" max="${today}" class="pp-sheet-inp"
-        onchange="ppAdhocDateChange()">
-    </div>
-    <div id="pp-ah-grid"></div>
-    <div class="pp-sheet-foot">
-      <button class="pp-sheet-close" onclick="document.getElementById('pp-ah-ov').remove()">GUARDAR Y CERRAR</button>
-    </div>
-  </div>`;
+      <div class="pp-sheet-row">
+        <label class="pp-sheet-lbl">Fecha</label>
+        <input id="pp-ah-date" type="date" value="${date}" max="${today}" class="pp-sheet-inp" onchange="ppAdhocDateChange()">
+      </div>
+      <div id="pp-ah-grid"></div>
+      <div class="pp-sheet-foot">
+        <button class="pp-sheet-close" onclick="document.getElementById('pp-ah-ov').remove()">GUARDAR Y CERRAR</button>
+      </div>
+    </div>`;
+    ppMountAdhocGrid(sessionId);
+    return;
+  }
+
+  _ppAhSheetApi = sqSheet({
+    title: 'Subir fotos',
+    content: `
+      <div class="pp-sheet-sub" style="margin:-4px 0 14px;color:#9090a8;font-size:12px">
+        Sesión suelta — no cuenta para el ciclo del check-in
+      </div>
+      <div class="pp-sheet-row" style="margin-bottom:14px">
+        <label class="pp-sheet-lbl" style="display:block;font-size:10px;font-weight:700;letter-spacing:.12em;color:#9090a8;text-transform:uppercase;margin-bottom:6px">Fecha</label>
+        <input id="pp-ah-date" type="date" value="${date}" max="${today}"
+          class="pp-sheet-inp"
+          style="width:100%;background:#16181c;border:1px solid #1f1f24;border-radius:8px;padding:9px 12px;color:#fff;font-family:inherit;font-size:14px"
+          onchange="ppAdhocDateChange()">
+      </div>
+      <div id="pp-ah-grid"></div>
+      <button id="pp-ah-close-btn"
+        style="width:100%;margin-top:14px;padding:14px;background:#e8ff00;border:none;border-radius:10px;color:#000;font-family:inherit;font-weight:800;font-size:13px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase">
+        Guardar y cerrar
+      </button>
+    `,
+    onClose: ()=>{ _ppAhSheetApi = null; },
+  });
+  document.getElementById('pp-ah-close-btn')?.addEventListener('click', ()=>{
+    _ppAhSheetApi?.close();
+  });
   ppMountAdhocGrid(sessionId);
 }
 

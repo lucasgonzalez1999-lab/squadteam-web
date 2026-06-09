@@ -413,6 +413,16 @@ function renderDashboard(){
     const feedList=feedCard.querySelector('.feed-list,.es-premium');
     if(feedList) feedList.outerHTML=dashFeedHTML(freshAct.slice(0,7),athletes,true);
   },30000);
+
+  // Animar los stat cards: count-up de 0 al valor real (estética Kowalski sutil)
+  if(typeof sqAnimateN==='function'){
+    requestAnimationFrame(()=>{
+      cont.querySelectorAll('.stat-val').forEach(el=>{
+        const target=parseFloat(el.textContent.replace(/\./g,''))||0;
+        if(target>0) sqAnimateN(el,target,700);
+      });
+    });
+  }
 }
 
 // ── ALUMNOS ──

@@ -360,3 +360,14 @@ window.sqCelebrate = SQK.confetti;
 // Reemplaza el toast viejo manteniendo retro-compat: toast(msg) sigue funcionando
 // pero ahora muestra el toast nuevo apilable.
 window.toast = (msg) => SQK.toast(typeof msg === 'string' ? msg : String(msg ?? ''));
+
+// PR celebration: confetti lima + toast cuando un set rompe el PR del ejercicio.
+// El evento sq:pr:broken lo dispara miRutina.js cuando detecta kg > prevPR.
+document.addEventListener('sq:pr:broken', (e) => {
+  const d = e.detail || {};
+  SQK.confetti();
+  SQK.toast.success(`Nuevo PR · ${d.exercise || ''}`, {
+    description: `${d.kg} ${d.unit || 'kg'} × ${d.reps || ''} reps`,
+    duration: 3200,
+  });
+});

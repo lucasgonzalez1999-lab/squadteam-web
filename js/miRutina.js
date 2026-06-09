@@ -12,6 +12,9 @@ let _mrInputs        = {};
 let _mrSaved         = false;
 let _mrAutoSaveTimer = null;
 let _mrReadOnly      = false;
+// Sesión activa que se está editando — null si arrancamos una nueva.
+// Cuando se setea, mrSave la actualiza en vez de crear una nueva entrada.
+let _mrCurrentSessionId = null;
 let _mrSyncing       = false;
 
 // ── UNIT HELPERS ──
@@ -69,6 +72,7 @@ async function renderMiRutina(){
   }
 
   await mrLoadTodayDraft();
+  _mrCurrentSessionId = null;  // arrancamos limpio al entrar a Mi Rutina
 
   // Heal "done" state from session data — handles cross-device sync
   // If a session exists for this day+week, mark as done even on a new device
@@ -77,6 +81,9 @@ async function renderMiRutina(){
     if(syncedSession){
       const doneKey = `mr_done_${_mrAthId}_${_mrWeek}_${_mrDay}`;
       DB.set(doneKey, syncedSession.date || today());
+      // Si la sesión synced ya tiene ID, lo cargamos para que un Editar+Save
+      // actualice esa misma entrada en lugar de crear una nueva.
+      if(syncedSession.id) _mrCurrentSessionId = syncedSession.id;
       // Also restore inputs from the saved session so Editar works correctly
       syncedSession.exercises?.forEach(ex => {
         if(!ex.name) return;
@@ -604,7 +611,17 @@ async function mrSave(){
   // y NO es self-entreno (_coachOriginalProfile.id !== _mrAthId), taggear la fuente.
   const coachOrig = window._coachOriginalProfile;
   const isCoachTraining = coachOrig && coachOrig.role === 'coach' && coachOrig.id !== _mrAthId;
+
+  // ID único por sesión para preservar historial. En modo coach-presencial usamos
+  // timestamp para que cada save acumule en vez de pisarse. En modo self-entreno
+  // del alumno mantenemos un ID determinístico (un save por día) para que editar
+  // y volver a guardar siga reemplazando la misma entrada.
+  // Si la sesión actual ya tiene un sessionId cargado (estamos editando), lo reusamos.
+  const sessionId = _mrCurrentSessionId
+    || (isCoachTraining ? `${today()}_${_mrDay}_${Date.now()}` : `${today()}_${_mrDay}`);
+
   const sessionObj = {
+    id:     sessionId,
     date:   today(),
     name:   _mrDay,
     dia:    _mrDay,
@@ -617,12 +634,21 @@ async function mrSave(){
     sessionObj.coachName = coachOrig.name;
   }
 
-  // Save to global sessions array (same as bot)
+  // Save to global sessions array. Filtro nuevo: matcheamos por ID si lo tiene,
+  // y como fallback para sesiones viejas sin ID, por date+dia (solo en self mode
+  // para no pisar la historia de coach-presencial).
   const existing = getAthSessions(_mrAthId);
-  const withoutToday = existing.filter(s => !(s.date === today() && s.dia === _mrDay));
-  const updated = [sessionObj, ...withoutToday];
+  const withoutThis = existing.filter(s => {
+    if(s.id && sessionObj.id) return s.id !== sessionObj.id;
+    if(s.id) return true; // tiene ID distinto, conservar
+    // Sesión legacy sin ID: solo reemplazar si es self-mode (no coach-presencial)
+    if(isCoachTraining) return true;
+    return !(s.date === today() && s.dia === _mrDay);
+  });
+  const updated = [sessionObj, ...withoutThis];
   sessions[_mrAthId] = updated;
   DB.set('sessions', sessions);
+  _mrCurrentSessionId = sessionId;
   const fbOk = await fbSet('sessions', _mrAthId, { data: JSON.stringify(updated) });
 
   // Mark as done in localStorage
@@ -755,6 +781,7 @@ function mrGetLastWeekRef(exName, week){
 async function mrSetWeek(w){
   _mrWeek  = w;
   _mrInputs = {};
+  _mrCurrentSessionId = null;
   clearTimeout(_mrAutoSaveTimer);
   await mrLoadTodayDraft();
   const cont = document.getElementById('mi-rutina-content');
@@ -763,6 +790,7 @@ async function mrSetWeek(w){
 async function mrSetDay(day){
   _mrDay   = day;
   _mrInputs = {};
+  _mrCurrentSessionId = null;
   clearTimeout(_mrAutoSaveTimer);
   await mrLoadTodayDraft();
   const cont = document.getElementById('mi-rutina-content');

@@ -164,8 +164,7 @@ function renderDashHeader(){
     <div class="dash-status">${parts.join(' · ')}</div>`;
 }
 
-// Stubs intermedios — las epicas posteriores los reemplazan.
-function countOpenTasks(){ return 0; }
+// Stub que la E7 reemplaza con la cifra real.
 function sumBilledThisMonth(){ return 0; }
 function fmtMoney(n){ return Math.round(n||0).toLocaleString('es-UY'); }
 function escapeHtml(s){
@@ -311,7 +310,197 @@ function openWhatsAppAudioPrompt(ath, reason, ctx){
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
-function renderDashToday(){  /* E4 */ }
+// ── E4 · BLOQUE HOY · TAREAS TACHABLES ──
+// Las tareas se auto-generan a partir del estado del equipo. El "tachado"
+// persiste solo por el dia local; al cambiar de fecha, el doc anterior no
+// aplica y las tareas vuelven a verse si siguen vigentes.
+let _dashTasksDone = new Set();        // ids tachadas hoy (snapshot local)
+let _dashTasksLoaded = false;
+let _dashTasksDate = '';
+
+function localDateISO(d){
+  d = d || new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+function isoWeekId(d){
+  d = new Date(d || Date.now());
+  const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNr = (target.getUTCDay() + 6) % 7;
+  target.setUTCDate(target.getUTCDate() - dayNr + 3);
+  const firstThursday = new Date(Date.UTC(target.getUTCFullYear(),0,4));
+  const week = 1 + Math.round(((target - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay()+6)%7)) / 7);
+  return `${target.getUTCFullYear()}_W${String(week).padStart(2,'0')}`;
+}
+
+function monthIdToday(){
+  const d = new Date();
+  return `${d.getFullYear()}_${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+async function loadDashTasks(){
+  const today = localDateISO();
+  if(_dashTasksLoaded && _dashTasksDate === today) return;
+  _dashTasksDate = today;
+  _dashTasksDone = new Set();
+  _dashTasksLoaded = true;
+  const uid = window.auth?.currentUser?.uid;
+  if(!uid || !window.db) return;
+  try{
+    const snap = await window.db.collection('users').doc(uid)
+      .collection('dashTasks').doc(today).get();
+    if(snap.exists){
+      const ids = (snap.data()||{}).doneIds || [];
+      _dashTasksDone = new Set(ids);
+    }
+  }catch(e){}
+}
+
+async function markDashTaskDone(taskId){
+  _dashTasksDone.add(taskId);
+  const uid = window.auth?.currentUser?.uid;
+  if(!uid || !window.db) return;
+  try{
+    await window.db.collection('users').doc(uid)
+      .collection('dashTasks').doc(localDateISO())
+      .set({
+        doneIds: firebase.firestore.FieldValue.arrayUnion(taskId),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+  }catch(e){}
+}
+
+async function unmarkDashTaskDone(taskId){
+  _dashTasksDone.delete(taskId);
+  const uid = window.auth?.currentUser?.uid;
+  if(!uid || !window.db) return;
+  try{
+    await window.db.collection('users').doc(uid)
+      .collection('dashTasks').doc(localDateISO())
+      .set({
+        doneIds: firebase.firestore.FieldValue.arrayRemove(taskId),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+  }catch(e){}
+}
+
+// Generadores de tareas. Cada uno devuelve { id, label, actionLabel, onclick }.
+function getOpenTasks(){
+  const list = [];
+  const monthId = monthIdToday();
+  const monthName = new Date().toLocaleDateString('es-UY',{month:'long'}).toUpperCase();
+  const now = Date.now();
+  const oneDay = 86400000;
+
+  for(const a of (athletes||[]).filter(x=>!x.inactive && !x.archived && !x.guest)){
+    // A) Check-in respondido sin feedback del coach hace > 24h.
+    const ck = a.lastCheckin || null;
+    if(ck && ck.respondedAt && (now - new Date(ck.respondedAt).getTime() > oneDay) && !ck.coachFeedback){
+      const weekId = ck.weekId || isoWeekId(ck.respondedAt);
+      list.push({
+        id:`checkin:${a.id}:${weekId}`,
+        label:`Responder check-in de ${a.name}`,
+        actionLabel:'ABRIR',
+        onclick:`coachAction('openAthlete','${a.id}')`,
+      });
+    }
+    // B) Sin plan asignado para el mes en curso.
+    const planMonths = a.plan?.months || a.planMonths || [];
+    if(Array.isArray(planMonths) && !planMonths.includes(monthId)){
+      list.push({
+        id:`plan:${a.id}:${monthId}`,
+        label:`Cargar plan de ${monthName.toLowerCase()} a ${a.name}`,
+        actionLabel:'ARMAR',
+        onclick:`coachAction('openAthlete','${a.id}')`,
+      });
+    }
+    // C) PR registrado por el alumno en < 24h, sin audio enviado.
+    const ss = getAthSessions(a.id);
+    for(const s of ss.slice(0,3)){
+      const stamp = new Date(s.date+'T12:00:00').getTime();
+      if(now - stamp > oneDay) continue;
+      (s.exercises||[]).forEach(ex => {
+        (ex.sets||[]).forEach((st,i) => {
+          if(st.pr){
+            const prId = `${s.date}_${ex.name}_${i}`.replace(/\W+/g,'_');
+            list.push({
+              id:`pr-audio:${a.id}:${prId}`,
+              label:`Audio a ${a.name} por PR de ${ex.name} · ${st.kg}KG`,
+              actionLabel:'AUDIO',
+              onclick:`coachAction('audioWA','${a.id}','pr','${prId}')`,
+            });
+          }
+        });
+      });
+    }
+    // D) Pago marcado como "pendiente confirmar".
+    const pay = a.payment || {};
+    if(pay.status === 'pending-confirm' && pay.pendingId){
+      list.push({
+        id:`confirm-pay:${a.id}:${pay.pendingId}`,
+        label:`Confirmar pago de ${a.name} (${pay.method||'sin método'})`,
+        actionLabel:'CONFIRMAR',
+        onclick:`coachAction('markPaid','${a.id}')`,
+      });
+    }
+  }
+  return list;
+}
+
+function countOpenTasks(){
+  return getOpenTasks().filter(t => !_dashTasksDone.has(t.id)).length;
+}
+
+function renderDashToday(){
+  const el = document.getElementById('dash-today');
+  if(!el) return;
+
+  // Async: cargamos las tareas tachadas del dia y re-rendereamos. La primera
+  // pasada muestra todas como pendientes hasta que llega Firestore.
+  loadDashTasks().then(() => {
+    const tasks = getOpenTasks();
+    if(!tasks.length){ el.style.display='none'; el.innerHTML=''; return; }
+    el.style.display='';
+    const pending = tasks.filter(t => !_dashTasksDone.has(t.id));
+    const head = pending.length
+      ? `HOY · ${pending.length} PENDIENTE${pending.length!==1?'S':''}`
+      : 'HOY · TODO RESUELTO.';
+
+    const rows = tasks.map(t => {
+      const done = _dashTasksDone.has(t.id);
+      return `<div class="dash-task${done?' done':''}" data-task-id="${escapeHtml(t.id)}">
+        <button class="dash-task-check" onclick="toggleDashTask('${escapeHtml(t.id)}')" aria-label="Marcar como hecho"></button>
+        <div class="dash-task-label">${escapeHtml(t.label)}</div>
+        <button class="dash-btn dash-task-action" onclick="${t.onclick}">${escapeHtml(t.actionLabel)}</button>
+      </div>`;
+    }).join('');
+
+    el.innerHTML = `<div class="dash-block">
+      <div class="dash-block-head">${head}</div>
+      ${pending.length ? rows : `<div class="dash-task-resolved">${rows ? rows : ''}</div>`}
+    </div>`;
+
+    // Si todo esta resuelto, colapsamos a la linea unica.
+    if(!pending.length){
+      el.innerHTML = `<div class="dash-block">
+        <div class="dash-block-head">HOY · TODO RESUELTO.</div>
+      </div>`;
+    }
+  });
+}
+
+async function toggleDashTask(taskId){
+  const isDone = _dashTasksDone.has(taskId);
+  if(isDone) await unmarkDashTaskDone(taskId);
+  else       await markDashTaskDone(taskId);
+  renderDashToday();
+  renderDashHeader();
+}
+window.toggleDashTask = toggleDashTask;
+
 function renderDashHitos(){  /* E5 */ }
 function renderDashRiesgo(){ /* E6 */ }
 function renderDashCaja(){   /* E7 */ }

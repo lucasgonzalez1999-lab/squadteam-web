@@ -104,35 +104,6 @@ function cmdKey(e){
   items.forEach((el,i)=>el.classList.toggle('active',i===_cmdIdx));
 }
 
-// ── FEED DE ACTIVIDAD ──
-function dashFeedHTML(activity, athletes, isRefresh=false){
-  if(!activity||!activity.length){
-    return `<div class="es-premium">
-      <div class="es-premium-label">Sin actividad reciente</div>
-      <div class="es-premium-sub">Las sesiones aparecerán aquí al registrarlas</div>
-    </div>`;
-  }
-  return `<div class="feed-list">
-    ${activity.map((s,i)=>{
-      const a=athletes.find(x=>x.id===s.athId);
-      const color=a?athColor(a.id):'#888';
-      const hasPR=(s.exercises||[]).some(e=>(e.sets||[]).some(st=>st.pr));
-      const vol=calcVol(s);
-      const exCount=(s.exercises||[]).length;
-      const todayStr=new Date().toISOString().split('T')[0];
-      return `<div class="feed-item${isRefresh&&i===0?' feed-new':''}">
-        <div class="feed-av" style="background:${color}">${athInitial(s.athName||'?')}</div>
-        <div class="feed-body">
-          <div class="feed-text"><strong>${s.athName||'Atleta'}</strong> · ${s.name||'Sesión'}</div>
-          <div class="feed-vol">${exCount>0?exCount+' ejerc · ':''}${vol>0?vol.toLocaleString('es-UY')+' kg':''}</div>
-          <div class="feed-ts${s.date===todayStr?' today':''}">${fmtTs(s.date)}</div>
-        </div>
-        ${hasPR?`<span class="feed-tag pr">PR</span>`:`<span class="feed-tag done">✓</span>`}
-      </div>`;
-    }).join('')}
-  </div>`;
-}
-
 // ── TIMESTAMP INTELIGENTE ──
 function fmtTs(dateStr){
   if(!dateStr)return '';
@@ -146,284 +117,46 @@ function fmtTs(dateStr){
 }
 
 // ── DASHBOARD ──
-let _dashFeedTimer=null;
+// Bandeja de entrada operativa: bloques aparecen solo cuando hay algo
+// accionable. Cada renderer maneja su propia visibilidad. El cleanup
+// de listeners se hace al cambiar de seccion (ver _stopAllTimersAndSubs).
 function renderDashboard(){
   if(!Array.isArray(athletes)||!athletes.length) athletes=typeof DEFAULT_ATHLETES!=='undefined'?DEFAULT_ATHLETES:[];
 
-  const cont=document.getElementById('dashboard-content');
-  if(!cont)return;
+  const root=document.getElementById('dashboard-content');
+  if(!root) return;
 
-  const now=new Date();
-  const weekAgo=new Date();weekAgo.setDate(weekAgo.getDate()-7);
+  root.innerHTML = `
+    <div class="dash">
+      <div id="dash-header"></div>
+      <div id="dash-alerts"></div>
+      <div id="dash-today"></div>
+      <div id="dash-hitos"></div>
+      <div id="dash-riesgo"></div>
+      <div class="dash-divider"></div>
+      <div id="dash-caja"></div>
+      <div id="dash-empty" class="hidden"></div>
+    </div>`;
 
-  // ── Compute stats (fix: getStreak recibe ID, no array) ──
-  let trainedToday=0;
-  const athData=athletes.map(a=>{
-    const ss=getAthSessions(a.id);
-    const sorted=[...ss].sort((x,y)=>new Date(y.date)-new Date(x.date));
-    const last=sorted[0];
-    const ds=last?Math.floor((now-new Date(last.date+'T12:00:00'))/86400000):999;
-    const streak=getStreak(a.id);
-    const adh=calcAdherence(ss);
-    const trainedTd=ds===0;
-    if(trainedTd)trainedToday++;
-    return {a,ss,last,ds,streak,adh,trainedTd};
-  });
-
-  const weekSess=athData.reduce((t,x)=>t+x.ss.filter(s=>new Date(s.date+'T12:00:00')>=weekAgo).length,0);
-  const prevWeekAgo=new Date();prevWeekAgo.setDate(prevWeekAgo.getDate()-14);
-  const prevWeekSess=athData.reduce((t,x)=>t+x.ss.filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=prevWeekAgo&&d<weekAgo;}).length,0);
-  const sessDelta=weekSess-prevWeekSess;
-
-  // ── Alertas ──
-  const alerts=[];
-  for(const {a,ss,ds} of athData){
-    if(ds>=5)alerts.push({type:'inactivity',ath:a,days:ds});
-    const pay=a.payment||{};
-    if(pay.payday&&pay.status!=='paid'){
-      const dl=pay.payday>=now.getDate()?pay.payday-now.getDate():(pay.payday+30)-now.getDate();
-      if(dl<=5)alerts.push({type:'payment',ath:a,days:dl});
-    }
-  }
-  alerts.sort((a,b)=>a.days-b.days);
-  const urgentAlerts=alerts.filter(al=>al.days<=1).length;
-
-  // ── Pagos vencidos (agrupados por moneda) ──
-  let overdueCount=0;
-  const overdueByCcy={};
-  if(typeof payCalc==='function'){
-    for(const a of athletes){
-      if(a.inactive||a.guest)continue;
-      try{
-        const c=payCalc(a);
-        if(c.status==='overdue'){
-          overdueCount++;
-          const amt=parseFloat(a.payment?.amount)||0;
-          const ccy=a.payment?.currency||'UYU';
-          overdueByCcy[ccy]=(overdueByCcy[ccy]||0)+amt;
-        }
-      }catch(e){}
-    }
-  }
-  const overdueStr=Object.entries(overdueByCcy).filter(([,v])=>v>0).map(([c,v])=>`$${v.toLocaleString('es-UY')} ${c}`).join(' · ');
-
-  // ── Inactivos 3+ días (excluye los que nunca entrenaron, ya cubierto por "sin sesiones") ──
-  const inactive3=athData.filter(x=>x.ds>=3&&x.ds!==999).length;
-
-  // ── Actividad reciente ──
-  const allActivity=[];
-  for(const {a,ss} of athData) ss.slice(0,5).forEach(s=>allActivity.push({...s,athId:a.id,athName:a.name}));
-  allActivity.sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const recentAct=allActivity.slice(0,7);
-
-  // ── Rachas ranking ──
-  const streakRanking=[...athData].map(({a,streak})=>({a,streak})).filter(x=>x.streak>0).sort((a,b)=>b.streak-a.streak).slice(0,5);
-
-  // ── SVG icons ──
-  const ico={
-    flash:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`,
-    money:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
-    sleep:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
-    warn:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
-  };
-
-  cont.innerHTML=`
-  <!-- STATS ROW — sólo accionable -->
-  <div class="stats-grid" style="margin-bottom:16px">
-    <div class="stat-card" onclick="goSection('alumnos',document.querySelector('[data-tab=alumnos]'))" style="cursor:pointer">
-      <div class="stat-top">
-        <div class="stat-label">Esta semana</div>
-        <div class="stat-icon-sq blue">${ico.flash}</div>
-      </div>
-      ${weekSess>0
-        ?`<div class="stat-val">${weekSess}</div>
-           <div class="stat-sub-note ${sessDelta>=0?'pos':'neg'}"><b>${sessDelta>=0?'↑ +':'↓ '}${Math.abs(sessDelta)}</b> vs semana anterior</div>`
-        :`<div class="stat-empty">Sin sesiones</div>
-           <div class="stat-sub-note">Registrá la primera del equipo</div>`
-      }
-    </div>
-    <div class="stat-card" onclick="goSection('alumnos',document.querySelector('[data-tab=alumnos]'))" style="cursor:pointer">
-      <div class="stat-top">
-        <div class="stat-label">Alertas</div>
-        <div class="stat-icon-sq ${alerts.length?'red':'green'}">${ico.warn}</div>
-      </div>
-      ${alerts.length
-        ?`<div class="stat-val accent">${alerts.length}</div>
-           <div class="stat-sub-note neg"><b>${urgentAlerts>0?urgentAlerts+' urgentes':'Revisá el equipo'}</b></div>`
-        :`<div class="stat-empty" style="color:var(--green)">Sin alertas</div>
-           <div class="stat-sub-note pos">Equipo al día</div>`
-      }
-    </div>
-    <div class="stat-card" onclick="goSection('pagos',document.querySelector('[data-tab=pagos]'))" style="cursor:pointer">
-      <div class="stat-top">
-        <div class="stat-label">Pagos vencidos</div>
-        <div class="stat-icon-sq ${overdueCount?'red':'green'}">${ico.money}</div>
-      </div>
-      ${overdueCount
-        ?`<div class="stat-val">${overdueCount}</div>
-           <div class="stat-sub-note neg"><b>${overdueStr||'Cobrar'}</b></div>`
-        :`<div class="stat-empty" style="color:var(--green)">Al día</div>
-           <div class="stat-sub-note pos">Sin atrasos</div>`
-      }
-    </div>
-    <div class="stat-card" onclick="goSection('alumnos',document.querySelector('[data-tab=alumnos]'))" style="cursor:pointer">
-      <div class="stat-top">
-        <div class="stat-label">Inactivos 3+d</div>
-        <div class="stat-icon-sq ${inactive3?'orange':'green'}">${ico.sleep}</div>
-      </div>
-      ${inactive3
-        ?`<div class="stat-val">${inactive3}</div>
-           <div class="stat-sub-note neg"><b>En riesgo</b></div>`
-        :`<div class="stat-empty" style="color:var(--green)">Todo activo</div>
-           <div class="stat-sub-note pos">Equipo enchufado</div>`
-      }
-    </div>
-  </div>
-
-  <!-- MAIN GRID -->
-  <div class="dash-grid">
-    <div class="dash-left">
-
-      <!-- ENTRENAN HOY -->
-      <div class="card">
-        <div class="blk-head">
-          <div class="blk-title">ENTRENAN HOY — ${now.toLocaleDateString('es-UY',{weekday:'long'}).toUpperCase()}</div>
-          <button class="blk-action" onclick="goSection('alumnos',document.querySelector('[data-tab=alumnos]'))">Ver todos →</button>
-        </div>
-        <div class="today-list">
-          ${athData
-            .sort((a,b)=>{ // Prioridad: urgentes arriba, luego entrenaron hoy
-              const urgA=a.ds>=5?0:a.ds>=3?1:a.trainedTd?3:2;
-              const urgB=b.ds>=5?0:b.ds>=3?1:b.trainedTd?3:2;
-              return urgA-urgB;
-            })
-            .map(({a,ds,streak,adh,trainedTd})=>{
-              const pay=a.payment||{};
-              const payUrgent=pay.payday&&pay.status!=='paid'&&((pay.payday>=now.getDate()?pay.payday-now.getDate():(pay.payday+30)-now.getDate())<=3);
-
-              // Urgency class para borde izquierdo
-              let urgCls,statusHtml;
-              if(trainedTd){
-                urgCls='urgency-done';
-                statusHtml=`<div class="today-status done"><span class="status-dot"></span>Entrenó</div>`;
-              } else if(ds<=2){
-                urgCls='urgency-recent';
-                statusHtml=`<div class="today-status pending"><span class="status-dot"></span>${ds===1?'Ayer':'Hace 2d'}</div>`;
-              } else if(ds>=3&&ds<5){
-                urgCls='urgency-warn';
-                statusHtml=`<div class="today-status warn"><span class="status-dot"></span>${ds}d sin entrenar</div>`;
-              } else if(ds>=5&&ds!==999){
-                urgCls='urgency-danger';
-                statusHtml=`<div class="today-status live"><span class="status-dot pulse"></span>${ds}d inactivo</div>`;
-              } else {
-                urgCls='urgency-never';
-                statusHtml=`<div class="today-status pending"><span class="status-dot"></span>Sin sesiones</div>`;
-              }
-
-              return `<div class="today-row ${urgCls}" onclick="openAthProfile('${a.id}')">
-                <div class="today-av" style="background:${athColor(a.id)}">${athInitial(a.name)}</div>
-                <div style="flex:1;min-width:0">
-                  <div class="today-name">${a.name}</div>
-                  <div class="today-meta">${streak>0?'Racha '+streak+'d · ':''}${adh}% adherencia${payUrgent?' · <span style="color:var(--orange);font-weight:600">Pago pendiente</span>':''}</div>
-                </div>
-                ${statusHtml}
-              </div>`;
-            }).join('')}
-        </div>
-      </div>
-
-    </div><!-- /dash-left -->
-
-    <div class="dash-right">
-
-      <!-- ACTIVIDAD RECIENTE -->
-      <div class="card" id="dash-feed-card">
-        <div class="blk-head">
-          <div class="blk-title" style="display:flex;align-items:center;gap:8px">
-            ACTIVIDAD RECIENTE
-          </div>
-          <button class="blk-action" onclick="goSection('progreso',document.querySelector('[data-tab=progreso]'))">Ver todo →</button>
-        </div>
-        ${dashFeedHTML(recentAct,athletes)}
-      </div>
-
-      <!-- REQUIEREN ATENCIÓN -->
-      ${alerts.length?`<div class="card">
-        <div class="blk-head">
-          <div class="blk-title" style="color:var(--red)">REQUIEREN ATENCIÓN</div>
-          <button class="blk-action" onclick="goSection('pagos',document.querySelector('[data-tab=pagos]'))">Ver todo →</button>
-        </div>
-        <div class="alert-list">
-          ${alerts.slice(0,6).map(al=>{
-            const isPayment=al.type==='payment';
-            const isRed=al.days<=1;
-            const isOrange=al.days<=3&&!isRed;
-            const urgColor=isRed?'#ef4444':isOrange?'#f97316':'#ca8a04';
-            const chipText=isPayment
-              ?(al.days===0?'HOY':'en '+al.days+'d')
-              :(al.days>=7?al.days+'d sin ir':al.days+'d');
-            const detail=isPayment
-              ?(al.days===0?'💳 Pago vence HOY':'💳 Vence en '+al.days+' días')
-              :'🏋️ Sin entrenar hace '+al.days+' días';
-            return `<div class="alert-row${isRed?' urgent':''}" style="cursor:pointer" onclick="${isPayment?`goSection('pagos',null)`:`goSection('alumnos',null)`}">
-              <div class="alert-ic" style="background:${urgColor}22;border:1.5px solid ${urgColor}44;width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px"></div>
-              <div style="flex:1">
-                <div class="alert-name">${al.ath.name}</div>
-                <div class="alert-detail">${detail}</div>
-              </div>
-              <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;background:${urgColor}20;color:${urgColor};flex-shrink:0">${chipText}</span>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>`:''}
-
-      <!-- RACHAS -->
-      <div class="card">
-        <div class="blk-head">
-          <div class="blk-title">RACHAS DEL EQUIPO</div>
-        </div>
-        ${streakRanking.length?`<div class="streak-list">
-          ${streakRanking.map((x,i)=>`
-            <div class="streak-row">
-              <div class="streak-rank${i===0?' top':''}">${i+1}</div>
-              <div class="streak-av" style="background:${athColor(x.a.id)}">${athInitial(x.a.name)}</div>
-              <div class="streak-name">${x.a.name}</div>
-              <div class="streak-val">${x.streak}<span class="streak-lbl">d</span></div>
-            </div>
-          `).join('')}
-        </div>`:`<div class="es-premium">
-          <div class="es-premium-label">Sin rachas activas</div>
-          <div class="es-premium-sub">Las rachas aparecen al registrar sesiones consecutivas</div>
-        </div>`}
-      </div>
-
-    </div><!-- /dash-right -->
-  </div><!-- /dash-grid -->
-  `;
-
-  // Auto-refresh del feed cada 30s
-  if(_dashFeedTimer)clearInterval(_dashFeedTimer);
-  _dashFeedTimer=setInterval(()=>{
-    if(currentSection!=='dashboard')return;
-    const feedCard=document.getElementById('dash-feed-card');
-    if(!feedCard)return;
-    const freshAct=[];
-    for(const a of athletes) getAthSessions(a.id).slice(0,5).forEach(s=>freshAct.push({...s,athId:a.id,athName:a.name}));
-    freshAct.sort((a,b)=>new Date(b.date)-new Date(a.date));
-    const feedList=feedCard.querySelector('.feed-list,.es-premium');
-    if(feedList) feedList.outerHTML=dashFeedHTML(freshAct.slice(0,7),athletes,true);
-  },30000);
-
-  // Animar los stat cards: count-up de 0 al valor real (estética Kowalski sutil)
-  if(typeof sqAnimateN==='function'){
-    requestAnimationFrame(()=>{
-      cont.querySelectorAll('.stat-val').forEach(el=>{
-        const target=parseFloat(el.textContent.replace(/\./g,''))||0;
-        if(target>0) sqAnimateN(el,target,700);
-      });
-    });
-  }
+  renderDashHeader();
+  renderDashAlerts();
+  renderDashToday();
+  renderDashHitos();
+  renderDashRiesgo();
+  renderDashCaja();
+  checkDashEmpty();
 }
+
+// Stubs vacios — cada epica los reemplaza por la implementacion real.
+function renderDashHeader(){ /* E2 */ }
+function renderDashAlerts(){ /* E3 */ }
+function renderDashToday(){  /* E4 */ }
+function renderDashHitos(){  /* E5 */ }
+function renderDashRiesgo(){ /* E6 */ }
+function renderDashCaja(){   /* E7 */ }
+function checkDashEmpty(){   /* E8 */ }
+
+
 
 // ── ALUMNOS ──
 function renderAlumnos(){

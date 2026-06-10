@@ -501,7 +501,119 @@ async function toggleDashTask(taskId){
 }
 window.toggleDashTask = toggleDashTask;
 
-function renderDashHitos(){  /* E5 */ }
+// ── E5 · BLOQUE HITOS · ULTIMAS 24H ──
+function getRecentPRs(athId, sinceTs){
+  const out = [];
+  const ss = getAthSessions(athId);
+  for(const s of ss){
+    const ts = new Date(s.date+'T12:00:00').getTime();
+    if(ts < sinceTs) continue;
+    (s.exercises||[]).forEach(ex => {
+      (ex.sets||[]).forEach((st,i) => {
+        if(st.pr){
+          const prId = `${s.date}_${ex.name}_${i}`.replace(/\W+/g,'_');
+          out.push({
+            id: prId,
+            exercise: ex.name,
+            kg: st.kg,
+            reps: st.reps,
+            delta: st.deltaKg || null,
+            ts,
+          });
+        }
+      });
+    });
+  }
+  return out;
+}
+
+// Milestones simples sin estado persistido: chequea estado actual + fecha
+// del ultimo cambio. La validacion de "nuevo en 24h" la hace el filtro de ts.
+function getRecentMilestones(athId, sinceTs){
+  const out = [];
+  const ss = getAthSessions(athId);
+  if(!ss.length) return out;
+
+  // 1) Conteo de sesiones cae justo en multiplo de 50.
+  const total = ss.length;
+  const lastTs = new Date(ss[0].date+'T12:00:00').getTime();
+  if(lastTs >= sinceTs && total > 0 && total % 50 === 0){
+    out.push({ label:`${total} sesiones cumplidas`, context:'milestone', ts: lastTs });
+  }
+
+  // 2) Rachas: 7, 21, 50, 100. Solo se muestra si la racha actual coincide
+  // exactamente y la ultima sesion fue en las ultimas 24h.
+  const streak = getStreak(athId);
+  if([7,21,50,100].includes(streak) && lastTs >= sinceTs){
+    out.push({ label:`${streak} días de racha`, context:'racha', ts: lastTs });
+  }
+
+  // 3) Cruce de peso redondo (60/80/100/120/140) en ejercicios mayores.
+  const big = ['banca','sentadilla','peso muerto','press','squat','deadlift','bench'];
+  const rounds = [60,80,100,120,140];
+  for(const s of ss){
+    const ts = new Date(s.date+'T12:00:00').getTime();
+    if(ts < sinceTs) continue;
+    (s.exercises||[]).forEach(ex => {
+      const isBig = big.some(k => (ex.name||'').toLowerCase().includes(k));
+      if(!isBig) return;
+      (ex.sets||[]).forEach(st => {
+        const kg = parseFloat(st.kg) || 0;
+        for(const r of rounds){
+          if(kg >= r){
+            // Solo notificar la primera vez que cruza ese umbral.
+            const prevMax = Math.max(0, ...ss.flatMap(s2 => {
+              if(new Date(s2.date+'T12:00:00').getTime() >= ts) return [];
+              return (s2.exercises||[]).filter(e=>e.name===ex.name).flatMap(e=>(e.sets||[]).map(x=>parseFloat(x.kg)||0));
+            }));
+            if(prevMax < r && kg >= r){
+              out.push({ label:`Cruzó ${r}KG en ${ex.name}`, context:'milestone', ts });
+            }
+          }
+        }
+      });
+    });
+  }
+  return out;
+}
+
+function getHitos(){
+  const since = Date.now() - 24*60*60*1000;
+  const list = [];
+  for(const a of (athletes||[]).filter(x=>!x.inactive && !x.archived && !x.guest)){
+    for(const pr of getRecentPRs(a.id, since)){
+      list.push({
+        type:'pr', athId:a.id, athName:a.name,
+        headline:`${a.name.toUpperCase()} · PR ${(pr.exercise||'').toUpperCase()} · ${pr.kg} KG`,
+        detail: pr.delta ? `+${pr.delta}KG vs último` : 'primer PR registrado',
+        actions:[{ label:'AUDIO', primary:true, onclick:`coachAction('audioWA','${a.id}','pr','${pr.id}')` }],
+        ts: pr.ts,
+      });
+    }
+    for(const m of getRecentMilestones(a.id, since)){
+      list.push({
+        type:'milestone', athId:a.id, athName:a.name,
+        headline:`${a.name.toUpperCase()} · ${m.label}`,
+        detail: m.context || '',
+        actions:[{ label:'AUDIO', primary:true, onclick:`coachAction('audioWA','${a.id}','milestone')` }],
+        ts: m.ts,
+      });
+    }
+  }
+  return list.sort((x,y)=>y.ts-x.ts).slice(0,6);
+}
+
+function renderDashHitos(){
+  const el = document.getElementById('dash-hitos');
+  if(!el) return;
+  const list = getHitos();
+  if(!list.length){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='';
+  el.innerHTML = `<div class="dash-block">
+    <div class="dash-block-head">Hitos · últimas 24h</div>
+    ${list.map(it => dashRowHTML(it)).join('')}
+  </div>`;
+}
 function renderDashRiesgo(){ /* E6 */ }
 function renderDashCaja(){   /* E7 */ }
 function checkDashEmpty(){   /* E8 */ }

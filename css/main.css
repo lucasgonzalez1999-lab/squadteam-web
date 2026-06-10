@@ -2124,3 +2124,28 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
   font-size:12px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;font-weight:700;
   padding:8px 12px;
 }
+
+/* ── DASHBOARD COACH (E7 — caja del mes) ── */
+.dash-caja{
+  background:var(--surf);border:1px solid var(--border);
+  border-radius:14px;padding:18px 20px;
+}
+.dash-caja-head{
+  font-size:11px;font-weight:700;letter-spacing:2px;
+  color:var(--sub);text-transform:uppercase;margin-bottom:14px;
+}
+.dash-caja-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.dash-caja-cell{min-width:0;}
+.caja-label{
+  font-size:10px;font-weight:700;letter-spacing:1px;
+  color:var(--sub);text-transform:uppercase;
+}
+.caja-val{
+  font-family:var(--FD);font-weight:900;font-style:italic;
+  font-size:32px;color:var(--text);line-height:1;margin-top:4px;
+  word-break:break-word;
+}
+.caja-sub{font-size:11px;color:var(--sub);margin-top:3px;}
+.caja-sub.pos{color:var(--green);}
+.caja-sub.neg{color:var(--red);}
+.caja-sub.neu{color:var(--orange);}

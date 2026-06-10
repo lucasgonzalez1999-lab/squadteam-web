@@ -164,8 +164,154 @@ function renderDashHeader(){
     <div class="dash-status">${parts.join(' · ')}</div>`;
 }
 
-// Stub que la E7 reemplaza con la cifra real.
-function sumBilledThisMonth(){ return 0; }
+// ── E7 · CAJA DEL MES (datos compartidos con el header) ──
+function paymentMatchesMonth(p, monthDate){
+  const ts = new Date(p.date || p.paidAt || p.createdAt || 0);
+  return ts.getFullYear() === monthDate.getFullYear()
+      && ts.getMonth() === monthDate.getMonth();
+}
+
+function getAllPayments(){
+  const out = [];
+  for(const a of (athletes||[])){
+    const hist = a.payment?.history || a.paymentHistory || [];
+    if(Array.isArray(hist)) hist.forEach(p => out.push({ ...p, athId:a.id }));
+  }
+  return out;
+}
+
+function sumBilledThisMonth(){
+  const monthDate = new Date();
+  let total = 0;
+  for(const p of getAllPayments()){
+    if(p.status !== 'paid') continue;
+    if(!paymentMatchesMonth(p, monthDate)) continue;
+    total += parseFloat(p.amount) || 0;
+  }
+  return total;
+}
+
+function sumPendingThisMonth(){
+  const monthDate = new Date();
+  let total = 0;
+  const athSet = new Set();
+  for(const p of getAllPayments()){
+    if(p.status !== 'pending' && p.status !== 'overdue') continue;
+    if(!paymentMatchesMonth(p, monthDate)) continue;
+    total += parseFloat(p.amount) || 0;
+    athSet.add(p.athId);
+  }
+  return { amount: total, count: athSet.size };
+}
+
+function countActiveAthletes(monthOffset){
+  const list = (athletes||[]).filter(a => !a.inactive && !a.archived && !a.guest);
+  if(!monthOffset) return list.length;
+  // Aproximacion: si tiene al menos 1 sesion en el mes objetivo, era activo.
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 1);
+  let n = 0;
+  for(const a of list){
+    const ss = getAthSessions(a.id);
+    const hasOne = ss.some(s => {
+      const d = new Date(s.date+'T12:00:00');
+      return d >= start && d < end;
+    });
+    if(hasOne) n++;
+  }
+  return n;
+}
+
+function avgAdherence(monthOffset){
+  const list = (athletes||[]).filter(a => !a.inactive && !a.archived && !a.guest);
+  if(!list.length) return 0;
+  const sum = list.reduce((t,a) => t + calcAdherenceForMonth(a.id, monthOffset||0), 0);
+  return Math.round(sum / list.length);
+}
+
+function getCajaMes(){
+  return {
+    billed: sumBilledThisMonth(),
+    pending: sumPendingThisMonth(),
+    active: {
+      n: countActiveAthletes(0),
+      delta: countActiveAthletes(0) - countActiveAthletes(-1),
+    },
+    adherence: {
+      pct: avgAdherence(0),
+      delta: avgAdherence(0) - avgAdherence(-1),
+    },
+  };
+}
+
+function renderDashCaja(){
+  const el = document.getElementById('dash-caja');
+  if(!el) return;
+  let data;
+  try { data = getCajaMes(); }
+  catch(e){ data = null; }
+
+  const monthName = new Date().toLocaleDateString('es-UY',{month:'long'}).toUpperCase();
+  const day = new Date().getDate();
+
+  if(!data){
+    el.innerHTML = `<div class="dash-caja">
+      <div class="dash-caja-head">${monthName} · DÍA ${day}</div>
+      <div class="dash-caja-grid">
+        <div class="dash-caja-cell"><div class="caja-label">Facturado</div><div class="caja-val">—</div></div>
+        <div class="dash-caja-cell"><div class="caja-label">Pendiente</div><div class="caja-val">—</div></div>
+        <div class="dash-caja-cell"><div class="caja-label">Activos</div><div class="caja-val">—</div></div>
+        <div class="dash-caja-cell"><div class="caja-label">Adherencia</div><div class="caja-val">—</div></div>
+      </div>
+    </div>`;
+    return;
+  }
+
+  const billedSub = data.billed > 0 ? 'UYU' : 'sin pagos cobrados';
+  const pendSub = data.pending.amount > 0
+    ? `${data.pending.count} alumno${data.pending.count!==1?'s':''}`
+    : 'al día';
+  const pendCls = data.pending.amount > 0 ? 'neu' : 'pos';
+
+  const activeDelta = data.active.delta;
+  const activeSub = activeDelta === 0
+    ? 'estable vs mes anterior'
+    : `${activeDelta > 0 ? '+' : ''}${activeDelta} vs mes anterior`;
+  const activeCls = activeDelta > 0 ? 'pos' : (activeDelta < 0 ? 'neg' : '');
+
+  const adhDelta = data.adherence.delta;
+  const adhSub = adhDelta === 0
+    ? 'sin cambio'
+    : `${adhDelta > 0 ? '+' : ''}${adhDelta}% vs mes anterior`;
+  const adhCls = adhDelta > 0 ? 'pos' : (adhDelta < 0 ? 'neg' : '');
+
+  el.innerHTML = `<div class="dash-caja">
+    <div class="dash-caja-head">${monthName} · DÍA ${day}</div>
+    <div class="dash-caja-grid">
+      <div class="dash-caja-cell">
+        <div class="caja-label">Facturado</div>
+        <div class="caja-val">$${fmtMoney(data.billed)}</div>
+        <div class="caja-sub">${billedSub}</div>
+      </div>
+      <div class="dash-caja-cell">
+        <div class="caja-label">Pendiente</div>
+        <div class="caja-val">$${fmtMoney(data.pending.amount)}</div>
+        <div class="caja-sub ${pendCls}">${pendSub}</div>
+      </div>
+      <div class="dash-caja-cell">
+        <div class="caja-label">Activos</div>
+        <div class="caja-val">${data.active.n}</div>
+        <div class="caja-sub ${activeCls}">${activeSub}</div>
+      </div>
+      <div class="dash-caja-cell">
+        <div class="caja-label">Adherencia</div>
+        <div class="caja-val">${data.adherence.pct}%</div>
+        <div class="caja-sub ${adhCls}">${adhSub}</div>
+      </div>
+    </div>
+  </div>`;
+}
 function fmtMoney(n){ return Math.round(n||0).toLocaleString('es-UY'); }
 function escapeHtml(s){
   return String(s==null?'':s)

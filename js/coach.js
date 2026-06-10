@@ -1458,6 +1458,11 @@ function openEditAthleteModal(id){
         <input id="ea-name" type="text" placeholder="${a.name}" value="${a.name}" style="${inp}">
       </div>
       <div>
+        <div style="${lbl}">Teléfono (WhatsApp)</div>
+        <input id="ea-phone" type="tel" inputmode="tel" placeholder="+598 99 123 456" value="${a.phone||''}" style="${inp}">
+        <div style="font-size:10px;color:var(--sub);margin-top:4px">Con código de país. Se usa para recordatorios y audios del coach.</div>
+      </div>
+      <div>
         <div style="${lbl}">Tipo</div>
         <div style="display:flex;gap:8px">
           <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 13px;background:var(--surf2);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text)">
@@ -1614,6 +1619,7 @@ async function _saveEditAthlete(id){
   const a = athletes.find(x=>x.id===id);
   if(!a) return;
   const name   = (document.getElementById('ea-name')?.value||'').trim() || a.name;
+  const phone  = (document.getElementById('ea-phone')?.value||'').trim();
   const type   = document.querySelector('input[name="ea-type"]:checked')?.value||'plan';
   const amount = parseFloat(document.getElementById('ea-amount')?.value)||0;
   const currency = document.getElementById('ea-currency')?.value||'UYU';
@@ -1624,6 +1630,7 @@ async function _saveEditAthlete(id){
   const dopamine = document.getElementById('ea-dopamine-cb')?.checked || false;
   const guest = document.getElementById('ea-guest')?.checked || false;
   a.name      = name;
+  a.phone     = phone;
   a.freestyle = type==='freestyle';
   a.guest     = guest;
   a.color     = color;

@@ -166,7 +166,6 @@ function renderDashHeader(){
 
 // Stubs intermedios — las epicas posteriores los reemplazan.
 function countOpenTasks(){ return 0; }
-function countAlerts(){ return 0; }
 function sumBilledThisMonth(){ return 0; }
 function fmtMoney(n){ return Math.round(n||0).toLocaleString('es-UY'); }
 function escapeHtml(s){
@@ -175,7 +174,143 @@ function escapeHtml(s){
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-function renderDashAlerts(){ /* E3 */ }
+// ── E3 · BLOQUE ALERTAS ──
+// Solo dispara con criticidad real: pago vencido >= 7d o dropout >= 14d.
+function getLastOverduePayment(athId){
+  const a = (athletes||[]).find(x=>x.id===athId);
+  if(!a) return null;
+  // Reutilizamos payCalc que ya entiende el ciclo y status.
+  if(typeof payCalc !== 'function') return null;
+  let calc; try{ calc = payCalc(a); }catch(e){ return null; }
+  if(!calc || calc.status !== 'overdue') return null;
+  const amount = parseFloat(a.payment?.amount) || 0;
+  const currency = a.payment?.currency || 'UYU';
+  const now = new Date();
+  // Aprox: la cuota vencio hace daysOverdue dias respecto al payday del mes pasado.
+  const payday = parseInt(a.payment?.payday) || 1;
+  const lastDue = new Date(now.getFullYear(), now.getMonth() - (now.getDate() < payday ? 1 : 0), payday);
+  const daysOverdue = Math.max(0, Math.floor((now - lastDue) / 86400000));
+  return { amount, currency, daysOverdue };
+}
+
+function daysSinceLastSession(athId){
+  const ss = getAthSessions(athId);
+  if(!ss.length) return 999;
+  const sorted = [...ss].sort((x,y)=>new Date(y.date)-new Date(x.date));
+  return Math.floor((Date.now() - new Date(sorted[0].date+'T12:00:00')) / 86400000);
+}
+
+function getNormalFrequency(athId){
+  // Sesiones por semana en los ultimos 60 dias.
+  const ss = getAthSessions(athId);
+  const cutoff = Date.now() - 60*86400000;
+  const recent = ss.filter(s => new Date(s.date+'T12:00:00') >= cutoff);
+  return recent.length / (60/7);
+}
+
+function getAlerts(){
+  const list = [];
+  for(const a of (athletes||[]).filter(x=>!x.inactive && !x.archived && !x.guest)){
+    const pay = getLastOverduePayment(a.id);
+    if(pay && pay.daysOverdue >= 7){
+      list.push({
+        type:'payment', athId:a.id, athName:a.name,
+        severity: 100 + pay.daysOverdue,
+        headline:`${a.name.toUpperCase()} · pago vencido hace ${pay.daysOverdue} días`,
+        detail:`$${fmtMoney(pay.amount)} ${pay.currency}`,
+        actions:[
+          { label:'COBRAR',  primary:true, onclick:`coachAction('markPaid','${a.id}')` },
+          { label:'AVISAR',  onclick:`coachAction('paymentReminder','${a.id}')` },
+        ],
+      });
+    }
+    const days = daysSinceLastSession(a.id);
+    const freq = getNormalFrequency(a.id);
+    if(days >= 14 && days !== 999 && freq >= 2){
+      list.push({
+        type:'dropout', athId:a.id, athName:a.name,
+        severity: 200 + days,
+        headline:`${a.name.toUpperCase()} · sin entrenar hace ${days} días`,
+        detail:`solía hacer ${Math.round(freq)}×/semana`,
+        actions:[
+          { label:'AUDIO', primary:true, onclick:`coachAction('audioWA','${a.id}','dropout')` },
+          { label:'PLAN',  onclick:`coachAction('openAthlete','${a.id}')` },
+        ],
+      });
+    }
+  }
+  return list.sort((x,y)=>y.severity-x.severity);
+}
+
+function countAlerts(){ return getAlerts().length; }
+
+function dashRowHTML(item, extraCls){
+  const acts = (item.actions||[]).map(a =>
+    `<button class="dash-btn${a.primary?' primary':''}" onclick="${a.onclick}">${a.label}</button>`
+  ).join('');
+  return `<div class="dash-row ${extraCls||''}">
+    <div class="dash-row-body">
+      <div class="dash-row-headline">${item.headline}</div>
+      ${item.detail?`<div class="dash-row-detail">${item.detail}</div>`:''}
+    </div>
+    <div class="dash-row-actions">${acts}</div>
+  </div>`;
+}
+
+function renderDashAlerts(){
+  const el = document.getElementById('dash-alerts');
+  if(!el) return;
+  const list = getAlerts();
+  if(!list.length){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='';
+  el.innerHTML = `<div class="dash-block">
+    <div class="dash-block-head">Alertas</div>
+    ${list.map(it => dashRowHTML(it,'alert')).join('')}
+  </div>`;
+}
+
+// ── Accion centralizada (compartida E3-E6) ──
+function coachAction(type, athId, ...args){
+  const ath = (athletes||[]).find(a => a.id === athId);
+  if(!ath) return;
+  switch(type){
+    case 'markPaid':
+      if(typeof pgOpenMarkPaid==='function') pgOpenMarkPaid(athId);
+      else goSection('pagos', document.querySelector('[data-tab=pagos]'));
+      break;
+    case 'paymentReminder':
+      openWhatsAppPaymentReminder(ath); break;
+    case 'audioWA':
+      openWhatsAppAudioPrompt(ath, args[0], args[1]); break;
+    case 'openAthlete':
+      if(typeof openAthProfile==='function') openAthProfile(athId);
+      else goSection('alumnos', document.querySelector('[data-tab=alumnos]'));
+      break;
+    default:
+      console.warn('[coachAction] tipo desconocido:', type);
+  }
+}
+
+function openWhatsAppPaymentReminder(ath){
+  const phone = (ath.phone||'').replace(/\D/g,'');
+  if(!phone){ toast('El alumno no tiene teléfono cargado.'); return; }
+  const amt = parseFloat(ath.payment?.amount) || 0;
+  const ccy = ath.payment?.currency || 'UYU';
+  const msg = `Hola ${ath.name}, te paso el recordatorio del pago: $${fmtMoney(amt)} ${ccy}. ¿Cómo lo coordinamos?`;
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+function openWhatsAppAudioPrompt(ath, reason, ctx){
+  const phone = (ath.phone||'').replace(/\D/g,'');
+  if(!phone){ toast('El alumno no tiene teléfono cargado.'); return; }
+  let msg = '';
+  if(reason==='pr')        msg = `${ath.name}, vi tu PR. Te mando audio en un toque.`;
+  if(reason==='dropout')   msg = `${ath.name}, hace días que no entrenás. ¿Está todo bien?`;
+  if(reason==='milestone') msg = `${ath.name}, vi tu marca. Felicitaciones.`;
+  if(reason==='checkin')   msg = `${ath.name}, ¿podemos repasar el check-in?`;
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
 function renderDashToday(){  /* E4 */ }
 function renderDashHitos(){  /* E5 */ }
 function renderDashRiesgo(){ /* E6 */ }

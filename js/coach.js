@@ -605,8 +605,11 @@ function renderDashToday(){
   if(!el) return;
 
   // Async: cargamos las tareas tachadas del dia y re-rendereamos. La primera
-  // pasada muestra todas como pendientes hasta que llega Firestore.
+  // pasada muestra todas como pendientes hasta que llega Firestore. Al final
+  // re-evaluamos el estado vacio porque cambia el conteo.
   loadDashTasks().then(() => {
+    // Recompute empty state once Firestore catches up.
+    setTimeout(() => { try{ checkDashEmpty(); }catch(e){} }, 0);
     const tasks = getOpenTasks();
     if(!tasks.length){ el.style.display='none'; el.innerHTML=''; return; }
     el.style.display='';
@@ -870,7 +873,36 @@ function renderDashRiesgo(){
   </div>`;
 }
 function renderDashCaja(){   /* E7 */ }
-function checkDashEmpty(){   /* E8 */ }
+// ── E8 · ESTADO VACIO HONESTO ──
+// Solo se muestra si las 4 secciones intermedias estan vacias. La caja
+// del mes sigue visible debajo.
+function checkDashEmpty(){
+  const el = document.getElementById('dash-empty');
+  if(!el) return;
+
+  const pendingTasks = getOpenTasks().filter(t => !_dashTasksDone.has(t.id)).length;
+  const isEmpty = getAlerts().length === 0
+               && pendingTasks === 0
+               && getHitos().length === 0
+               && getRiesgo().length === 0;
+
+  ['dash-alerts','dash-today','dash-hitos','dash-riesgo'].forEach(id => {
+    const node = document.getElementById(id);
+    if(!node) return;
+    if(isEmpty) node.style.display = 'none';
+  });
+
+  if(isEmpty){
+    el.classList.add('show');
+    el.innerHTML = `
+      <div class="dash-empty-line1">NADA QUE HACER HOY.</div>
+      <div class="dash-empty-line2">EL EQUIPO ESTÁ AL DÍA.</div>
+      <div class="dash-empty-line3">VOLVÉ MAÑANA.</div>`;
+  } else {
+    el.classList.remove('show');
+    el.innerHTML = '';
+  }
+}
 
 
 

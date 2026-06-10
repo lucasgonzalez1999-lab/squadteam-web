@@ -2149,3 +2149,21 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
 .caja-sub.pos{color:var(--green);}
 .caja-sub.neg{color:var(--red);}
 .caja-sub.neu{color:var(--orange);}
+
+/* ── DASHBOARD COACH (E8 — estado vacio) ── */
+#dash-empty{display:none;text-align:center;padding:80px 20px 60px;}
+#dash-empty.show{display:block;}
+.dash-empty-line1{
+  font-family:var(--FD);font-style:italic;font-weight:900;
+  font-size:clamp(48px,9vw,120px);color:var(--text);
+  line-height:1;letter-spacing:-1px;
+}
+.dash-empty-line2{
+  font-family:var(--FD);font-style:italic;font-weight:900;
+  font-size:clamp(24px,4vw,44px);color:var(--text2);
+  line-height:1.1;margin-top:12px;
+}
+.dash-empty-line3{
+  font-size:12px;font-weight:700;letter-spacing:3px;
+  color:var(--sub);text-transform:uppercase;margin-top:18px;
+}

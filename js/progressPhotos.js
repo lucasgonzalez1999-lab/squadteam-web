@@ -323,7 +323,7 @@ async function ppSelectAth(athId){
   document.getElementById('pp-tab-'+athId)?.classList.add('on');
   const area = document.getElementById('pp-area');
   if(!area) return;
-  area.innerHTML = '<div class="pp-loading">Cargando fotos...</div>';
+  area.innerHTML = '<div class="pp-loading" style="display:flex;justify-content:center;padding:36px">'+(typeof sqLoaderHTML==='function'?sqLoaderHTML('Cargando fotos'):'Cargando fotos...')+'</div>';
   [_ppCurSessions, _ppCurSettings] = await Promise.all([
     ppLoadSessions(athId),
     ppGetSettings(athId),

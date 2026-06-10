@@ -86,6 +86,53 @@ const SQK = (() => {
       }
       .sqk-sh-body{ flex:1; overflow-y:auto; padding:0 20px 20px;
         -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+
+      /* LOADER — escudo TS girando + arco lima + breath */
+      .sqk-loader{
+        display:inline-flex; flex-direction:column; align-items:center; gap:14px;
+        font:600 12px/1 "Inter",system-ui,sans-serif; color:#9090a8;
+        letter-spacing:.06em; text-transform:uppercase;
+      }
+      .sqk-loader-ring{
+        position:relative; width:64px; height:64px;
+        animation:sqk-breath 1.8s ease-in-out infinite;
+      }
+      /* Escudo TS desde icon-512.png. Recortado al 58% superior con
+         background-position para descartar el wordmark embebido del PNG. */
+      .sqk-loader-shield{
+        position:absolute; inset:8px;
+        background:url('icons/icon-512.png') center -6px / 110px 110px no-repeat;
+        animation:sqk-spin 1.1s linear infinite;
+      }
+      /* Arco lima trazando alrededor del escudo, sentido opuesto al spin. */
+      .sqk-loader-arc{
+        position:absolute; inset:0; pointer-events:none;
+        animation:sqk-spin-back 1.4s linear infinite;
+      }
+      .sqk-loader-arc::before{
+        content:''; position:absolute; inset:0;
+        border-radius:50%;
+        border:2px solid transparent;
+        border-top-color:#e8ff00;
+        border-right-color:rgba(232,255,0,.35);
+      }
+      .sqk-loader-text{ opacity:.7; }
+      @keyframes sqk-spin{ from{ transform:rotate(0); } to{ transform:rotate(360deg); } }
+      @keyframes sqk-spin-back{ from{ transform:rotate(0); } to{ transform:rotate(-360deg); } }
+      @keyframes sqk-breath{
+        0%,100%{ transform:scale(1); }
+        50%{ transform:scale(1.04); }
+      }
+
+      /* Fullscreen loader (login / acciones bloqueantes) */
+      .sqk-loader-fs{
+        position:fixed; inset:0; z-index:99998;
+        background:rgba(4,4,4,0.88);
+        backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+        display:flex; align-items:center; justify-content:center;
+        opacity:0; transition:opacity .2s ease;
+      }
+      .sqk-loader-fs.show{ opacity:1; }
     `;
     document.head.appendChild(s);
   }
@@ -359,14 +406,56 @@ const SQK = (() => {
     raf = requestAnimationFrame(tick);
   }
 
-  return { toast: sqToast, sheet: sqSheet, animateNumber: sqAnimateNumber, confetti: sqConfettiLime };
+  // ─── LOADER ────────────────────────────────────────────────────────────────
+  // HTML reutilizable para reemplazar los "Cargando..." inline.
+  function sqLoaderHTML(text){
+    ensureStyles();
+    const t = text || 'Cargando…';
+    return `
+      <div class="sqk-loader" role="status" aria-label="${escapeHtml(t)}">
+        <div class="sqk-loader-ring">
+          <div class="sqk-loader-arc"></div>
+          <div class="sqk-loader-shield"></div>
+        </div>
+        <div class="sqk-loader-text">${escapeHtml(t)}</div>
+      </div>`;
+  }
+  function escapeHtml(s){
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  // Overlay fullscreen — para login o acciones bloqueantes.
+  function sqShowLoader(text){
+    ensureStyles();
+    let ov = document.getElementById('sqk-loader-fs');
+    if(!ov){
+      ov = document.createElement('div');
+      ov.id = 'sqk-loader-fs';
+      ov.className = 'sqk-loader-fs';
+      document.body.appendChild(ov);
+    }
+    ov.innerHTML = sqLoaderHTML(text);
+    requestAnimationFrame(() => ov.classList.add('show'));
+  }
+  function sqHideLoader(){
+    const ov = document.getElementById('sqk-loader-fs');
+    if(!ov) return;
+    ov.classList.remove('show');
+    setTimeout(() => ov.remove(), 220);
+  }
+
+  return { toast: sqToast, sheet: sqSheet, animateNumber: sqAnimateNumber, confetti: sqConfettiLime,
+           loaderHTML: sqLoaderHTML, showLoader: sqShowLoader, hideLoader: sqHideLoader };
 })();
 
 // Globals retro-compatibles
-window.sqToast    = SQK.toast;
-window.sqSheet    = SQK.sheet;
-window.sqAnimateN = SQK.animateNumber;
-window.sqCelebrate = SQK.confetti;
+window.sqToast      = SQK.toast;
+window.sqSheet      = SQK.sheet;
+window.sqAnimateN   = SQK.animateNumber;
+window.sqCelebrate  = SQK.confetti;
+window.sqLoaderHTML = SQK.loaderHTML;
+window.sqShowLoader = SQK.showLoader;
+window.sqHideLoader = SQK.hideLoader;
 
 // Reemplaza el toast viejo manteniendo retro-compat: toast(msg) sigue funcionando
 // pero ahora muestra el toast nuevo apilable.

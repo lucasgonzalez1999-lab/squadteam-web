@@ -42,7 +42,7 @@ async function renderMiRutina(){
 
   const cont = document.getElementById('mi-rutina-content');
   if(!cont) return;
-  cont.innerHTML = `<div style="text-align:center;padding:40px;color:var(--sub)">Cargando tu rutina...</div>`;
+  cont.innerHTML = `<div style="text-align:center;padding:48px">${typeof sqLoaderHTML==='function'?sqLoaderHTML('Cargando tu rutina'):'Cargando tu rutina...'}</div>`;
 
   _mrPlan = await mrLoadPlan(_mrAthId);
   if(!_mrPlan){

@@ -1294,7 +1294,7 @@ async function openNutrAth(athId){
   });
   const area=document.getElementById('nutr-builder-area');
   if(!area)return;
-  area.innerHTML='<div style="text-align:center;padding:30px;color:var(--sub)">Cargando plan...</div>';
+  area.innerHTML='<div style="text-align:center;padding:36px">'+(typeof sqLoaderHTML==='function'?sqLoaderHTML('Cargando plan'):'Cargando plan...')+'</div>';
   await renderNutritionBuilder(area, athId);
 }
 

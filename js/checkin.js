@@ -605,7 +605,7 @@ async function ckAthleteView(cont, user){
   if(!user) return;
   const athId = user.id;
   const color = athColor(athId);
-  cont.innerHTML = '<div class="ck-loading">Cargando tu check-in...</div>';
+  cont.innerHTML = '<div class="ck-loading" style="display:flex;justify-content:center;padding:36px">'+(typeof sqLoaderHTML==='function'?sqLoaderHTML('Cargando check-in'):'Cargando tu check-in...')+'</div>';
 
   const list = await ckGet(athId);
   const sorted = [...list].sort((x,y)=>y.id.localeCompare(x.id));

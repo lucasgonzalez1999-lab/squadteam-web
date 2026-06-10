@@ -3,6 +3,8 @@
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
+  --F:'Inter',system-ui,sans-serif;
+  --FD:'Barlow Condensed',sans-serif;
   --bg:#07070a;
   --surf:#0e0e12;
   --surf2:#131318;
@@ -2047,3 +2049,17 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--F
   transition:transform .25s ease-out;
 }
 .offline-banner.show{transform:translateY(0)}
+
+/* ── DASHBOARD COACH (E2 — saludo + estado) ── */
+.dash{padding:0;}
+.dash-greeting{
+  font-family:var(--FD);font-style:italic;font-weight:900;
+  font-size:clamp(32px,4vw,44px);color:var(--text);
+  line-height:1;margin-bottom:4px;word-break:break-word;
+}
+.dash-status{
+  font-family:var(--F);font-weight:700;
+  font-size:12px;letter-spacing:1.2px;
+  color:var(--text2);text-transform:uppercase;
+  margin-bottom:28px;
+}

@@ -147,8 +147,34 @@ function renderDashboard(){
   checkDashEmpty();
 }
 
-// Stubs vacios — cada epica los reemplaza por la implementacion real.
-function renderDashHeader(){ /* E2 */ }
+// ── E2 · LINEA DE ESTADO Y SALUDO ──
+function renderDashHeader(){
+  const el = document.getElementById('dash-header');
+  if(!el) return;
+  const name = ((currentUser?.name) || 'Coach').split(' ')[0];
+  const tasks  = countOpenTasks();
+  const alerts = countAlerts();
+  const billed = sumBilledThisMonth();
+  const parts = [];
+  parts.push(`${tasks} TAREA${tasks!==1?'S':''} HOY`);
+  parts.push(alerts > 0 ? `${alerts} ALERTA${alerts!==1?'S':''}` : 'SIN ALERTAS');
+  parts.push(`$${fmtMoney(billed)} FACTURADO`);
+  el.innerHTML = `
+    <div class="dash-greeting">HOLA, ${escapeHtml(name.toUpperCase())}.</div>
+    <div class="dash-status">${parts.join(' · ')}</div>`;
+}
+
+// Stubs intermedios — las epicas posteriores los reemplazan.
+function countOpenTasks(){ return 0; }
+function countAlerts(){ return 0; }
+function sumBilledThisMonth(){ return 0; }
+function fmtMoney(n){ return Math.round(n||0).toLocaleString('es-UY'); }
+function escapeHtml(s){
+  return String(s==null?'':s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function renderDashAlerts(){ /* E3 */ }
 function renderDashToday(){  /* E4 */ }
 function renderDashHitos(){  /* E5 */ }

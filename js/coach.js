@@ -104,35 +104,6 @@ function cmdKey(e){
   items.forEach((el,i)=>el.classList.toggle('active',i===_cmdIdx));
 }
 
-// ── FEED DE ACTIVIDAD ──
-function dashFeedHTML(activity, athletes, isRefresh=false){
-  if(!activity||!activity.length){
-    return `<div class="es-premium">
-      <div class="es-premium-label">Sin actividad reciente</div>
-      <div class="es-premium-sub">Las sesiones aparecerán aquí al registrarlas</div>
-    </div>`;
-  }
-  return `<div class="feed-list">
-    ${activity.map((s,i)=>{
-      const a=athletes.find(x=>x.id===s.athId);
-      const color=a?athColor(a.id):'#888';
-      const hasPR=(s.exercises||[]).some(e=>(e.sets||[]).some(st=>st.pr));
-      const vol=calcVol(s);
-      const exCount=(s.exercises||[]).length;
-      const todayStr=new Date().toISOString().split('T')[0];
-      return `<div class="feed-item${isRefresh&&i===0?' feed-new':''}">
-        <div class="feed-av" style="background:${color}">${athInitial(s.athName||'?')}</div>
-        <div class="feed-body">
-          <div class="feed-text"><strong>${s.athName||'Atleta'}</strong> · ${s.name||'Sesión'}</div>
-          <div class="feed-vol">${exCount>0?exCount+' ejerc · ':''}${vol>0?vol.toLocaleString('es-UY')+' kg':''}</div>
-          <div class="feed-ts${s.date===todayStr?' today':''}">${fmtTs(s.date)}</div>
-        </div>
-        ${hasPR?`<span class="feed-tag pr">PR</span>`:`<span class="feed-tag done">✓</span>`}
-      </div>`;
-    }).join('')}
-  </div>`;
-}
-
 // ── TIMESTAMP INTELIGENTE ──
 function fmtTs(dateStr){
   if(!dateStr)return '';
@@ -146,284 +117,794 @@ function fmtTs(dateStr){
 }
 
 // ── DASHBOARD ──
-let _dashFeedTimer=null;
+// Bandeja de entrada operativa: bloques aparecen solo cuando hay algo
+// accionable. Cada renderer maneja su propia visibilidad. El cleanup
+// de listeners se hace al cambiar de seccion (ver _stopAllTimersAndSubs).
 function renderDashboard(){
   if(!Array.isArray(athletes)||!athletes.length) athletes=typeof DEFAULT_ATHLETES!=='undefined'?DEFAULT_ATHLETES:[];
 
-  const cont=document.getElementById('dashboard-content');
-  if(!cont)return;
+  const root=document.getElementById('dashboard-content');
+  if(!root) return;
 
-  const now=new Date();
-  const weekAgo=new Date();weekAgo.setDate(weekAgo.getDate()-7);
+  root.innerHTML = `
+    <div class="dash">
+      <div id="dash-header"></div>
+      <div id="dash-alerts"></div>
+      <div id="dash-today"></div>
+      <div id="dash-hitos"></div>
+      <div id="dash-riesgo"></div>
+      <div class="dash-divider"></div>
+      <div id="dash-caja"></div>
+      <div id="dash-empty" class="hidden"></div>
+    </div>`;
 
-  // ── Compute stats (fix: getStreak recibe ID, no array) ──
-  let trainedToday=0;
-  const athData=athletes.map(a=>{
-    const ss=getAthSessions(a.id);
-    const sorted=[...ss].sort((x,y)=>new Date(y.date)-new Date(x.date));
-    const last=sorted[0];
-    const ds=last?Math.floor((now-new Date(last.date+'T12:00:00'))/86400000):999;
-    const streak=getStreak(a.id);
-    const adh=calcAdherence(ss);
-    const trainedTd=ds===0;
-    if(trainedTd)trainedToday++;
-    return {a,ss,last,ds,streak,adh,trainedTd};
-  });
+  renderDashHeader();
+  renderDashAlerts();
+  renderDashToday();
+  renderDashHitos();
+  renderDashRiesgo();
+  renderDashCaja();
+  checkDashEmpty();
+}
 
-  const weekSess=athData.reduce((t,x)=>t+x.ss.filter(s=>new Date(s.date+'T12:00:00')>=weekAgo).length,0);
-  const prevWeekAgo=new Date();prevWeekAgo.setDate(prevWeekAgo.getDate()-14);
-  const prevWeekSess=athData.reduce((t,x)=>t+x.ss.filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=prevWeekAgo&&d<weekAgo;}).length,0);
-  const sessDelta=weekSess-prevWeekSess;
+// ── E2 · LINEA DE ESTADO Y SALUDO ──
+function renderDashHeader(){
+  const el = document.getElementById('dash-header');
+  if(!el) return;
+  const name = ((currentUser?.name) || 'Coach').split(' ')[0];
+  const tasks  = countOpenTasks();
+  const alerts = countAlerts();
+  const billed = sumBilledThisMonth();
+  const parts = [];
+  parts.push(`${tasks} TAREA${tasks!==1?'S':''} HOY`);
+  parts.push(alerts > 0 ? `${alerts} ALERTA${alerts!==1?'S':''}` : 'SIN ALERTAS');
+  parts.push(`$${fmtMoney(billed)} FACTURADO`);
+  el.innerHTML = `
+    <div class="dash-greeting">HOLA, ${escapeHtml(name.toUpperCase())}.</div>
+    <div class="dash-status">${parts.join(' · ')}</div>`;
+}
 
-  // ── Alertas ──
-  const alerts=[];
-  for(const {a,ss,ds} of athData){
-    if(ds>=5)alerts.push({type:'inactivity',ath:a,days:ds});
-    const pay=a.payment||{};
-    if(pay.payday&&pay.status!=='paid'){
-      const dl=pay.payday>=now.getDate()?pay.payday-now.getDate():(pay.payday+30)-now.getDate();
-      if(dl<=5)alerts.push({type:'payment',ath:a,days:dl});
-    }
+// ── E7 · CAJA DEL MES (datos compartidos con el header) ──
+function paymentMatchesMonth(p, monthDate){
+  const ts = new Date(p.date || p.paidAt || p.createdAt || 0);
+  return ts.getFullYear() === monthDate.getFullYear()
+      && ts.getMonth() === monthDate.getMonth();
+}
+
+function getAllPayments(){
+  const out = [];
+  for(const a of (athletes||[])){
+    const hist = a.payment?.history || a.paymentHistory || [];
+    if(Array.isArray(hist)) hist.forEach(p => out.push({ ...p, athId:a.id }));
   }
-  alerts.sort((a,b)=>a.days-b.days);
-  const urgentAlerts=alerts.filter(al=>al.days<=1).length;
+  return out;
+}
 
-  // ── Pagos vencidos (agrupados por moneda) ──
-  let overdueCount=0;
-  const overdueByCcy={};
-  if(typeof payCalc==='function'){
-    for(const a of athletes){
-      if(a.inactive||a.guest)continue;
-      try{
-        const c=payCalc(a);
-        if(c.status==='overdue'){
-          overdueCount++;
-          const amt=parseFloat(a.payment?.amount)||0;
-          const ccy=a.payment?.currency||'UYU';
-          overdueByCcy[ccy]=(overdueByCcy[ccy]||0)+amt;
-        }
-      }catch(e){}
-    }
+function sumBilledThisMonth(){
+  const monthDate = new Date();
+  let total = 0;
+  for(const p of getAllPayments()){
+    if(p.status !== 'paid') continue;
+    if(!paymentMatchesMonth(p, monthDate)) continue;
+    total += parseFloat(p.amount) || 0;
   }
-  const overdueStr=Object.entries(overdueByCcy).filter(([,v])=>v>0).map(([c,v])=>`$${v.toLocaleString('es-UY')} ${c}`).join(' · ');
+  return total;
+}
 
-  // ── Inactivos 3+ días (excluye los que nunca entrenaron, ya cubierto por "sin sesiones") ──
-  const inactive3=athData.filter(x=>x.ds>=3&&x.ds!==999).length;
+function sumPendingThisMonth(){
+  const monthDate = new Date();
+  let total = 0;
+  const athSet = new Set();
+  for(const p of getAllPayments()){
+    if(p.status !== 'pending' && p.status !== 'overdue') continue;
+    if(!paymentMatchesMonth(p, monthDate)) continue;
+    total += parseFloat(p.amount) || 0;
+    athSet.add(p.athId);
+  }
+  return { amount: total, count: athSet.size };
+}
 
-  // ── Actividad reciente ──
-  const allActivity=[];
-  for(const {a,ss} of athData) ss.slice(0,5).forEach(s=>allActivity.push({...s,athId:a.id,athName:a.name}));
-  allActivity.sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const recentAct=allActivity.slice(0,7);
+function countActiveAthletes(monthOffset){
+  const list = (athletes||[]).filter(a => !a.inactive && !a.archived && !a.guest);
+  if(!monthOffset) return list.length;
+  // Aproximacion: si tiene al menos 1 sesion en el mes objetivo, era activo.
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 1);
+  let n = 0;
+  for(const a of list){
+    const ss = getAthSessions(a.id);
+    const hasOne = ss.some(s => {
+      const d = new Date(s.date+'T12:00:00');
+      return d >= start && d < end;
+    });
+    if(hasOne) n++;
+  }
+  return n;
+}
 
-  // ── Rachas ranking ──
-  const streakRanking=[...athData].map(({a,streak})=>({a,streak})).filter(x=>x.streak>0).sort((a,b)=>b.streak-a.streak).slice(0,5);
+function avgAdherence(monthOffset){
+  const list = (athletes||[]).filter(a => !a.inactive && !a.archived && !a.guest);
+  if(!list.length) return 0;
+  const sum = list.reduce((t,a) => t + calcAdherenceForMonth(a.id, monthOffset||0), 0);
+  return Math.round(sum / list.length);
+}
 
-  // ── SVG icons ──
-  const ico={
-    flash:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`,
-    money:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
-    sleep:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
-    warn:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+function getCajaMes(){
+  return {
+    billed: sumBilledThisMonth(),
+    pending: sumPendingThisMonth(),
+    active: {
+      n: countActiveAthletes(0),
+      delta: countActiveAthletes(0) - countActiveAthletes(-1),
+    },
+    adherence: {
+      pct: avgAdherence(0),
+      delta: avgAdherence(0) - avgAdherence(-1),
+    },
   };
+}
 
-  cont.innerHTML=`
-  <!-- STATS ROW — sólo accionable -->
-  <div class="stats-grid" style="margin-bottom:16px">
-    <div class="stat-card" onclick="goSection('alumnos',document.querySelector('[data-tab=alumnos]'))" style="cursor:pointer">
-      <div class="stat-top">
-        <div class="stat-label">Esta semana</div>
-        <div class="stat-icon-sq blue">${ico.flash}</div>
+function renderDashCaja(){
+  const el = document.getElementById('dash-caja');
+  if(!el) return;
+  let data;
+  try { data = getCajaMes(); }
+  catch(e){ data = null; }
+
+  const monthName = new Date().toLocaleDateString('es-UY',{month:'long'}).toUpperCase();
+  const day = new Date().getDate();
+
+  if(!data){
+    el.innerHTML = `<div class="dash-caja">
+      <div class="dash-caja-head">${monthName} · DÍA ${day}</div>
+      <div class="dash-caja-grid">
+        <div class="dash-caja-cell"><div class="caja-label">Facturado</div><div class="caja-val">—</div></div>
+        <div class="dash-caja-cell"><div class="caja-label">Pendiente</div><div class="caja-val">—</div></div>
+        <div class="dash-caja-cell"><div class="caja-label">Activos</div><div class="caja-val">—</div></div>
+        <div class="dash-caja-cell"><div class="caja-label">Adherencia</div><div class="caja-val">—</div></div>
       </div>
-      ${weekSess>0
-        ?`<div class="stat-val">${weekSess}</div>
-           <div class="stat-sub-note ${sessDelta>=0?'pos':'neg'}"><b>${sessDelta>=0?'↑ +':'↓ '}${Math.abs(sessDelta)}</b> vs semana anterior</div>`
-        :`<div class="stat-empty">Sin sesiones</div>
-           <div class="stat-sub-note">Registrá la primera del equipo</div>`
-      }
+    </div>`;
+    return;
+  }
+
+  const billedSub = data.billed > 0 ? 'UYU' : 'sin pagos cobrados';
+  const pendSub = data.pending.amount > 0
+    ? `${data.pending.count} alumno${data.pending.count!==1?'s':''}`
+    : 'al día';
+  const pendCls = data.pending.amount > 0 ? 'neu' : 'pos';
+
+  const activeDelta = data.active.delta;
+  const activeSub = activeDelta === 0
+    ? 'estable vs mes anterior'
+    : `${activeDelta > 0 ? '+' : ''}${activeDelta} vs mes anterior`;
+  const activeCls = activeDelta > 0 ? 'pos' : (activeDelta < 0 ? 'neg' : '');
+
+  const adhDelta = data.adherence.delta;
+  const adhSub = adhDelta === 0
+    ? 'sin cambio'
+    : `${adhDelta > 0 ? '+' : ''}${adhDelta}% vs mes anterior`;
+  const adhCls = adhDelta > 0 ? 'pos' : (adhDelta < 0 ? 'neg' : '');
+
+  el.innerHTML = `<div class="dash-caja">
+    <div class="dash-caja-head">${monthName} · DÍA ${day}</div>
+    <div class="dash-caja-grid">
+      <div class="dash-caja-cell">
+        <div class="caja-label">Facturado</div>
+        <div class="caja-val">$${fmtMoney(data.billed)}</div>
+        <div class="caja-sub">${billedSub}</div>
+      </div>
+      <div class="dash-caja-cell">
+        <div class="caja-label">Pendiente</div>
+        <div class="caja-val">$${fmtMoney(data.pending.amount)}</div>
+        <div class="caja-sub ${pendCls}">${pendSub}</div>
+      </div>
+      <div class="dash-caja-cell">
+        <div class="caja-label">Activos</div>
+        <div class="caja-val">${data.active.n}</div>
+        <div class="caja-sub ${activeCls}">${activeSub}</div>
+      </div>
+      <div class="dash-caja-cell">
+        <div class="caja-label">Adherencia</div>
+        <div class="caja-val">${data.adherence.pct}%</div>
+        <div class="caja-sub ${adhCls}">${adhSub}</div>
+      </div>
     </div>
-    <div class="stat-card" onclick="goSection('alumnos',document.querySelector('[data-tab=alumnos]'))" style="cursor:pointer">
-      <div class="stat-top">
-        <div class="stat-label">Alertas</div>
-        <div class="stat-icon-sq ${alerts.length?'red':'green'}">${ico.warn}</div>
-      </div>
-      ${alerts.length
-        ?`<div class="stat-val accent">${alerts.length}</div>
-           <div class="stat-sub-note neg"><b>${urgentAlerts>0?urgentAlerts+' urgentes':'Revisá el equipo'}</b></div>`
-        :`<div class="stat-empty" style="color:var(--green)">Sin alertas</div>
-           <div class="stat-sub-note pos">Equipo al día</div>`
-      }
+  </div>`;
+}
+function fmtMoney(n){ return Math.round(n||0).toLocaleString('es-UY'); }
+function escapeHtml(s){
+  return String(s==null?'':s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── E3 · BLOQUE ALERTAS ──
+// Solo dispara con criticidad real: pago vencido >= 7d o dropout >= 14d.
+function getLastOverduePayment(athId){
+  const a = (athletes||[]).find(x=>x.id===athId);
+  if(!a) return null;
+  // Reutilizamos payCalc que ya entiende el ciclo y status.
+  if(typeof payCalc !== 'function') return null;
+  let calc; try{ calc = payCalc(a); }catch(e){ return null; }
+  if(!calc || calc.status !== 'overdue') return null;
+  const amount = parseFloat(a.payment?.amount) || 0;
+  const currency = a.payment?.currency || 'UYU';
+  const now = new Date();
+  // Aprox: la cuota vencio hace daysOverdue dias respecto al payday del mes pasado.
+  const payday = parseInt(a.payment?.payday) || 1;
+  const lastDue = new Date(now.getFullYear(), now.getMonth() - (now.getDate() < payday ? 1 : 0), payday);
+  const daysOverdue = Math.max(0, Math.floor((now - lastDue) / 86400000));
+  return { amount, currency, daysOverdue };
+}
+
+function daysSinceLastSession(athId){
+  const ss = getAthSessions(athId);
+  if(!ss.length) return 999;
+  const sorted = [...ss].sort((x,y)=>new Date(y.date)-new Date(x.date));
+  return Math.floor((Date.now() - new Date(sorted[0].date+'T12:00:00')) / 86400000);
+}
+
+function getNormalFrequency(athId){
+  // Sesiones por semana en los ultimos 60 dias.
+  const ss = getAthSessions(athId);
+  const cutoff = Date.now() - 60*86400000;
+  const recent = ss.filter(s => new Date(s.date+'T12:00:00') >= cutoff);
+  return recent.length / (60/7);
+}
+
+function getAlerts(){
+  const list = [];
+  for(const a of (athletes||[]).filter(x=>!x.inactive && !x.archived && !x.guest)){
+    const pay = getLastOverduePayment(a.id);
+    if(pay && pay.daysOverdue >= 7){
+      list.push({
+        type:'payment', athId:a.id, athName:a.name,
+        severity: 100 + pay.daysOverdue,
+        headline:`${a.name.toUpperCase()} · pago vencido hace ${pay.daysOverdue} días`,
+        detail:`$${fmtMoney(pay.amount)} ${pay.currency}`,
+        actions:[
+          { label:'COBRAR',  primary:true, onclick:`coachAction('markPaid','${a.id}')` },
+          { label:'AVISAR',  onclick:`coachAction('paymentReminder','${a.id}')` },
+        ],
+      });
+    }
+    const days = daysSinceLastSession(a.id);
+    const freq = getNormalFrequency(a.id);
+    if(days >= 14 && days !== 999 && freq >= 2){
+      list.push({
+        type:'dropout', athId:a.id, athName:a.name,
+        severity: 200 + days,
+        headline:`${a.name.toUpperCase()} · sin entrenar hace ${days} días`,
+        detail:`solía hacer ${Math.round(freq)}×/semana`,
+        actions:[
+          { label:'AUDIO', primary:true, onclick:`coachAction('audioWA','${a.id}','dropout')` },
+          { label:'PLAN',  onclick:`coachAction('openAthlete','${a.id}')` },
+        ],
+      });
+    }
+  }
+  return list.sort((x,y)=>y.severity-x.severity);
+}
+
+function countAlerts(){ return getAlerts().length; }
+
+function dashRowHTML(item, extraCls){
+  const acts = (item.actions||[]).map(a =>
+    `<button class="dash-btn${a.primary?' primary':''}" onclick="${a.onclick}">${a.label}</button>`
+  ).join('');
+  return `<div class="dash-row ${extraCls||''}">
+    <div class="dash-row-body">
+      <div class="dash-row-headline">${item.headline}</div>
+      ${item.detail?`<div class="dash-row-detail">${item.detail}</div>`:''}
     </div>
-    <div class="stat-card" onclick="goSection('pagos',document.querySelector('[data-tab=pagos]'))" style="cursor:pointer">
-      <div class="stat-top">
-        <div class="stat-label">Pagos vencidos</div>
-        <div class="stat-icon-sq ${overdueCount?'red':'green'}">${ico.money}</div>
-      </div>
-      ${overdueCount
-        ?`<div class="stat-val">${overdueCount}</div>
-           <div class="stat-sub-note neg"><b>${overdueStr||'Cobrar'}</b></div>`
-        :`<div class="stat-empty" style="color:var(--green)">Al día</div>
-           <div class="stat-sub-note pos">Sin atrasos</div>`
-      }
-    </div>
-    <div class="stat-card" onclick="goSection('alumnos',document.querySelector('[data-tab=alumnos]'))" style="cursor:pointer">
-      <div class="stat-top">
-        <div class="stat-label">Inactivos 3+d</div>
-        <div class="stat-icon-sq ${inactive3?'orange':'green'}">${ico.sleep}</div>
-      </div>
-      ${inactive3
-        ?`<div class="stat-val">${inactive3}</div>
-           <div class="stat-sub-note neg"><b>En riesgo</b></div>`
-        :`<div class="stat-empty" style="color:var(--green)">Todo activo</div>
-           <div class="stat-sub-note pos">Equipo enchufado</div>`
-      }
-    </div>
-  </div>
+    <div class="dash-row-actions">${acts}</div>
+  </div>`;
+}
 
-  <!-- MAIN GRID -->
-  <div class="dash-grid">
-    <div class="dash-left">
+function renderDashAlerts(){
+  const el = document.getElementById('dash-alerts');
+  if(!el) return;
+  const list = getAlerts();
+  if(!list.length){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='';
+  el.innerHTML = `<div class="dash-block">
+    <div class="dash-block-head">Alertas</div>
+    ${list.map(it => dashRowHTML(it,'alert')).join('')}
+  </div>`;
+}
 
-      <!-- ENTRENAN HOY -->
-      <div class="card">
-        <div class="blk-head">
-          <div class="blk-title">ENTRENAN HOY — ${now.toLocaleDateString('es-UY',{weekday:'long'}).toUpperCase()}</div>
-          <button class="blk-action" onclick="goSection('alumnos',document.querySelector('[data-tab=alumnos]'))">Ver todos →</button>
-        </div>
-        <div class="today-list">
-          ${athData
-            .sort((a,b)=>{ // Prioridad: urgentes arriba, luego entrenaron hoy
-              const urgA=a.ds>=5?0:a.ds>=3?1:a.trainedTd?3:2;
-              const urgB=b.ds>=5?0:b.ds>=3?1:b.trainedTd?3:2;
-              return urgA-urgB;
-            })
-            .map(({a,ds,streak,adh,trainedTd})=>{
-              const pay=a.payment||{};
-              const payUrgent=pay.payday&&pay.status!=='paid'&&((pay.payday>=now.getDate()?pay.payday-now.getDate():(pay.payday+30)-now.getDate())<=3);
+// ── Accion centralizada (compartida E3-E6) ──
+function coachAction(type, athId, ...args){
+  const ath = (athletes||[]).find(a => a.id === athId);
+  if(!ath) return;
+  switch(type){
+    case 'markPaid':
+      if(typeof pgOpenMarkPaid==='function') pgOpenMarkPaid(athId);
+      else goSection('pagos', document.querySelector('[data-tab=pagos]'));
+      break;
+    case 'paymentReminder':
+      openWhatsAppPaymentReminder(ath); break;
+    case 'audioWA':
+      openWhatsAppAudioPrompt(ath, args[0], args[1]); break;
+    case 'openAthlete':
+      if(typeof openAthProfile==='function') openAthProfile(athId);
+      else goSection('alumnos', document.querySelector('[data-tab=alumnos]'));
+      break;
+    default:
+      console.warn('[coachAction] tipo desconocido:', type);
+  }
+}
 
-              // Urgency class para borde izquierdo
-              let urgCls,statusHtml;
-              if(trainedTd){
-                urgCls='urgency-done';
-                statusHtml=`<div class="today-status done"><span class="status-dot"></span>Entrenó</div>`;
-              } else if(ds<=2){
-                urgCls='urgency-recent';
-                statusHtml=`<div class="today-status pending"><span class="status-dot"></span>${ds===1?'Ayer':'Hace 2d'}</div>`;
-              } else if(ds>=3&&ds<5){
-                urgCls='urgency-warn';
-                statusHtml=`<div class="today-status warn"><span class="status-dot"></span>${ds}d sin entrenar</div>`;
-              } else if(ds>=5&&ds!==999){
-                urgCls='urgency-danger';
-                statusHtml=`<div class="today-status live"><span class="status-dot pulse"></span>${ds}d inactivo</div>`;
-              } else {
-                urgCls='urgency-never';
-                statusHtml=`<div class="today-status pending"><span class="status-dot"></span>Sin sesiones</div>`;
-              }
+function openWhatsAppPaymentReminder(ath){
+  const phone = (ath.phone||'').replace(/\D/g,'');
+  if(!phone){ toast('El alumno no tiene teléfono cargado.'); return; }
+  const amt = parseFloat(ath.payment?.amount) || 0;
+  const ccy = ath.payment?.currency || 'UYU';
+  const msg = `Hola ${ath.name}, te paso el recordatorio del pago: $${fmtMoney(amt)} ${ccy}. ¿Cómo lo coordinamos?`;
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+}
 
-              return `<div class="today-row ${urgCls}" onclick="openAthProfile('${a.id}')">
-                <div class="today-av" style="background:${athColor(a.id)}">${athInitial(a.name)}</div>
-                <div style="flex:1;min-width:0">
-                  <div class="today-name">${a.name}</div>
-                  <div class="today-meta">${streak>0?'Racha '+streak+'d · ':''}${adh}% adherencia${payUrgent?' · <span style="color:var(--orange);font-weight:600">Pago pendiente</span>':''}</div>
-                </div>
-                ${statusHtml}
-              </div>`;
-            }).join('')}
-        </div>
-      </div>
+function openWhatsAppAudioPrompt(ath, reason, ctx){
+  const phone = (ath.phone||'').replace(/\D/g,'');
+  if(!phone){ toast('El alumno no tiene teléfono cargado.'); return; }
+  let msg = '';
+  if(reason==='pr')        msg = `${ath.name}, vi tu PR. Te mando audio en un toque.`;
+  if(reason==='dropout')   msg = `${ath.name}, hace días que no entrenás. ¿Está todo bien?`;
+  if(reason==='milestone') msg = `${ath.name}, vi tu marca. Felicitaciones.`;
+  if(reason==='checkin')   msg = `${ath.name}, ¿podemos repasar el check-in?`;
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+}
 
-    </div><!-- /dash-left -->
+// ── E4 · BLOQUE HOY · TAREAS TACHABLES ──
+// Las tareas se auto-generan a partir del estado del equipo. El "tachado"
+// persiste solo por el dia local; al cambiar de fecha, el doc anterior no
+// aplica y las tareas vuelven a verse si siguen vigentes.
+let _dashTasksDone = new Set();        // ids tachadas hoy (snapshot local)
+let _dashTasksLoaded = false;
+let _dashTasksDate = '';
 
-    <div class="dash-right">
+function localDateISO(d){
+  d = d || new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
 
-      <!-- ACTIVIDAD RECIENTE -->
-      <div class="card" id="dash-feed-card">
-        <div class="blk-head">
-          <div class="blk-title" style="display:flex;align-items:center;gap:8px">
-            ACTIVIDAD RECIENTE
-          </div>
-          <button class="blk-action" onclick="goSection('progreso',document.querySelector('[data-tab=progreso]'))">Ver todo →</button>
-        </div>
-        ${dashFeedHTML(recentAct,athletes)}
-      </div>
+function isoWeekId(d){
+  d = new Date(d || Date.now());
+  const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNr = (target.getUTCDay() + 6) % 7;
+  target.setUTCDate(target.getUTCDate() - dayNr + 3);
+  const firstThursday = new Date(Date.UTC(target.getUTCFullYear(),0,4));
+  const week = 1 + Math.round(((target - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay()+6)%7)) / 7);
+  return `${target.getUTCFullYear()}_W${String(week).padStart(2,'0')}`;
+}
 
-      <!-- REQUIEREN ATENCIÓN -->
-      ${alerts.length?`<div class="card">
-        <div class="blk-head">
-          <div class="blk-title" style="color:var(--red)">REQUIEREN ATENCIÓN</div>
-          <button class="blk-action" onclick="goSection('pagos',document.querySelector('[data-tab=pagos]'))">Ver todo →</button>
-        </div>
-        <div class="alert-list">
-          ${alerts.slice(0,6).map(al=>{
-            const isPayment=al.type==='payment';
-            const isRed=al.days<=1;
-            const isOrange=al.days<=3&&!isRed;
-            const urgColor=isRed?'#ef4444':isOrange?'#f97316':'#ca8a04';
-            const chipText=isPayment
-              ?(al.days===0?'HOY':'en '+al.days+'d')
-              :(al.days>=7?al.days+'d sin ir':al.days+'d');
-            const detail=isPayment
-              ?(al.days===0?'💳 Pago vence HOY':'💳 Vence en '+al.days+' días')
-              :'🏋️ Sin entrenar hace '+al.days+' días';
-            return `<div class="alert-row${isRed?' urgent':''}" style="cursor:pointer" onclick="${isPayment?`goSection('pagos',null)`:`goSection('alumnos',null)`}">
-              <div class="alert-ic" style="background:${urgColor}22;border:1.5px solid ${urgColor}44;width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px"></div>
-              <div style="flex:1">
-                <div class="alert-name">${al.ath.name}</div>
-                <div class="alert-detail">${detail}</div>
-              </div>
-              <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;background:${urgColor}20;color:${urgColor};flex-shrink:0">${chipText}</span>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>`:''}
+function monthIdToday(){
+  const d = new Date();
+  return `${d.getFullYear()}_${String(d.getMonth()+1).padStart(2,'0')}`;
+}
 
-      <!-- RACHAS -->
-      <div class="card">
-        <div class="blk-head">
-          <div class="blk-title">RACHAS DEL EQUIPO</div>
-        </div>
-        ${streakRanking.length?`<div class="streak-list">
-          ${streakRanking.map((x,i)=>`
-            <div class="streak-row">
-              <div class="streak-rank${i===0?' top':''}">${i+1}</div>
-              <div class="streak-av" style="background:${athColor(x.a.id)}">${athInitial(x.a.name)}</div>
-              <div class="streak-name">${x.a.name}</div>
-              <div class="streak-val">${x.streak}<span class="streak-lbl">d</span></div>
-            </div>
-          `).join('')}
-        </div>`:`<div class="es-premium">
-          <div class="es-premium-label">Sin rachas activas</div>
-          <div class="es-premium-sub">Las rachas aparecen al registrar sesiones consecutivas</div>
-        </div>`}
-      </div>
+async function loadDashTasks(){
+  const today = localDateISO();
+  if(_dashTasksLoaded && _dashTasksDate === today) return;
+  _dashTasksDate = today;
+  _dashTasksDone = new Set();
+  _dashTasksLoaded = true;
+  const uid = window.auth?.currentUser?.uid;
+  if(!uid || !window.db) return;
+  try{
+    const snap = await window.db.collection('users').doc(uid)
+      .collection('dashTasks').doc(today).get();
+    if(snap.exists){
+      const ids = (snap.data()||{}).doneIds || [];
+      _dashTasksDone = new Set(ids);
+    }
+  }catch(e){}
+}
 
-    </div><!-- /dash-right -->
-  </div><!-- /dash-grid -->
-  `;
+async function markDashTaskDone(taskId){
+  _dashTasksDone.add(taskId);
+  const uid = window.auth?.currentUser?.uid;
+  if(!uid || !window.db) return;
+  try{
+    await window.db.collection('users').doc(uid)
+      .collection('dashTasks').doc(localDateISO())
+      .set({
+        doneIds: firebase.firestore.FieldValue.arrayUnion(taskId),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+  }catch(e){}
+}
 
-  // Auto-refresh del feed cada 30s
-  if(_dashFeedTimer)clearInterval(_dashFeedTimer);
-  _dashFeedTimer=setInterval(()=>{
-    if(currentSection!=='dashboard')return;
-    const feedCard=document.getElementById('dash-feed-card');
-    if(!feedCard)return;
-    const freshAct=[];
-    for(const a of athletes) getAthSessions(a.id).slice(0,5).forEach(s=>freshAct.push({...s,athId:a.id,athName:a.name}));
-    freshAct.sort((a,b)=>new Date(b.date)-new Date(a.date));
-    const feedList=feedCard.querySelector('.feed-list,.es-premium');
-    if(feedList) feedList.outerHTML=dashFeedHTML(freshAct.slice(0,7),athletes,true);
-  },30000);
+async function unmarkDashTaskDone(taskId){
+  _dashTasksDone.delete(taskId);
+  const uid = window.auth?.currentUser?.uid;
+  if(!uid || !window.db) return;
+  try{
+    await window.db.collection('users').doc(uid)
+      .collection('dashTasks').doc(localDateISO())
+      .set({
+        doneIds: firebase.firestore.FieldValue.arrayRemove(taskId),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+  }catch(e){}
+}
 
-  // Animar los stat cards: count-up de 0 al valor real (estética Kowalski sutil)
-  if(typeof sqAnimateN==='function'){
-    requestAnimationFrame(()=>{
-      cont.querySelectorAll('.stat-val').forEach(el=>{
-        const target=parseFloat(el.textContent.replace(/\./g,''))||0;
-        if(target>0) sqAnimateN(el,target,700);
+// Generadores de tareas. Cada uno devuelve { id, label, actionLabel, onclick }.
+function getOpenTasks(){
+  const list = [];
+  const monthId = monthIdToday();
+  const monthName = new Date().toLocaleDateString('es-UY',{month:'long'}).toUpperCase();
+  const now = Date.now();
+  const oneDay = 86400000;
+
+  for(const a of (athletes||[]).filter(x=>!x.inactive && !x.archived && !x.guest)){
+    // A) Check-in respondido sin feedback del coach hace > 24h.
+    const ck = a.lastCheckin || null;
+    if(ck && ck.respondedAt && (now - new Date(ck.respondedAt).getTime() > oneDay) && !ck.coachFeedback){
+      const weekId = ck.weekId || isoWeekId(ck.respondedAt);
+      list.push({
+        id:`checkin:${a.id}:${weekId}`,
+        label:`Responder check-in de ${a.name}`,
+        actionLabel:'ABRIR',
+        onclick:`coachAction('openAthlete','${a.id}')`,
+      });
+    }
+    // B) Sin plan asignado para el mes en curso.
+    const planMonths = a.plan?.months || a.planMonths || [];
+    if(Array.isArray(planMonths) && !planMonths.includes(monthId)){
+      list.push({
+        id:`plan:${a.id}:${monthId}`,
+        label:`Cargar plan de ${monthName.toLowerCase()} a ${a.name}`,
+        actionLabel:'ARMAR',
+        onclick:`coachAction('openAthlete','${a.id}')`,
+      });
+    }
+    // C) PR registrado por el alumno en < 24h, sin audio enviado.
+    const ss = getAthSessions(a.id);
+    for(const s of ss.slice(0,3)){
+      const stamp = new Date(s.date+'T12:00:00').getTime();
+      if(now - stamp > oneDay) continue;
+      (s.exercises||[]).forEach(ex => {
+        (ex.sets||[]).forEach((st,i) => {
+          if(st.pr){
+            const prId = `${s.date}_${ex.name}_${i}`.replace(/\W+/g,'_');
+            list.push({
+              id:`pr-audio:${a.id}:${prId}`,
+              label:`Audio a ${a.name} por PR de ${ex.name} · ${st.kg}KG`,
+              actionLabel:'AUDIO',
+              onclick:`coachAction('audioWA','${a.id}','pr','${prId}')`,
+            });
+          }
+        });
+      });
+    }
+    // D) Pago marcado como "pendiente confirmar".
+    const pay = a.payment || {};
+    if(pay.status === 'pending-confirm' && pay.pendingId){
+      list.push({
+        id:`confirm-pay:${a.id}:${pay.pendingId}`,
+        label:`Confirmar pago de ${a.name} (${pay.method||'sin método'})`,
+        actionLabel:'CONFIRMAR',
+        onclick:`coachAction('markPaid','${a.id}')`,
+      });
+    }
+  }
+  return list;
+}
+
+function countOpenTasks(){
+  return getOpenTasks().filter(t => !_dashTasksDone.has(t.id)).length;
+}
+
+function renderDashToday(){
+  const el = document.getElementById('dash-today');
+  if(!el) return;
+
+  // Async: cargamos las tareas tachadas del dia y re-rendereamos. La primera
+  // pasada muestra todas como pendientes hasta que llega Firestore. Al final
+  // re-evaluamos el estado vacio porque cambia el conteo.
+  loadDashTasks().then(() => {
+    // Recompute empty state once Firestore catches up.
+    setTimeout(() => { try{ checkDashEmpty(); }catch(e){} }, 0);
+    const tasks = getOpenTasks();
+    if(!tasks.length){ el.style.display='none'; el.innerHTML=''; return; }
+    el.style.display='';
+    const pending = tasks.filter(t => !_dashTasksDone.has(t.id));
+    const head = pending.length
+      ? `HOY · ${pending.length} PENDIENTE${pending.length!==1?'S':''}`
+      : 'HOY · TODO RESUELTO.';
+
+    const rows = tasks.map(t => {
+      const done = _dashTasksDone.has(t.id);
+      return `<div class="dash-task${done?' done':''}" data-task-id="${escapeHtml(t.id)}">
+        <button class="dash-task-check" onclick="toggleDashTask('${escapeHtml(t.id)}')" aria-label="Marcar como hecho"></button>
+        <div class="dash-task-label">${escapeHtml(t.label)}</div>
+        <button class="dash-btn dash-task-action" onclick="${t.onclick}">${escapeHtml(t.actionLabel)}</button>
+      </div>`;
+    }).join('');
+
+    el.innerHTML = `<div class="dash-block">
+      <div class="dash-block-head">${head}</div>
+      ${pending.length ? rows : `<div class="dash-task-resolved">${rows ? rows : ''}</div>`}
+    </div>`;
+
+    // Si todo esta resuelto, colapsamos a la linea unica.
+    if(!pending.length){
+      el.innerHTML = `<div class="dash-block">
+        <div class="dash-block-head">HOY · TODO RESUELTO.</div>
+      </div>`;
+    }
+  });
+}
+
+async function toggleDashTask(taskId){
+  const isDone = _dashTasksDone.has(taskId);
+  if(isDone) await unmarkDashTaskDone(taskId);
+  else       await markDashTaskDone(taskId);
+  renderDashToday();
+  renderDashHeader();
+}
+window.toggleDashTask = toggleDashTask;
+
+// ── E5 · BLOQUE HITOS · ULTIMAS 24H ──
+function getRecentPRs(athId, sinceTs){
+  const out = [];
+  const ss = getAthSessions(athId);
+  for(const s of ss){
+    const ts = new Date(s.date+'T12:00:00').getTime();
+    if(ts < sinceTs) continue;
+    (s.exercises||[]).forEach(ex => {
+      (ex.sets||[]).forEach((st,i) => {
+        if(st.pr){
+          const prId = `${s.date}_${ex.name}_${i}`.replace(/\W+/g,'_');
+          out.push({
+            id: prId,
+            exercise: ex.name,
+            kg: st.kg,
+            reps: st.reps,
+            delta: st.deltaKg || null,
+            ts,
+          });
+        }
       });
     });
   }
+  return out;
 }
+
+// Milestones simples sin estado persistido: chequea estado actual + fecha
+// del ultimo cambio. La validacion de "nuevo en 24h" la hace el filtro de ts.
+function getRecentMilestones(athId, sinceTs){
+  const out = [];
+  const ss = getAthSessions(athId);
+  if(!ss.length) return out;
+
+  // 1) Conteo de sesiones cae justo en multiplo de 50.
+  const total = ss.length;
+  const lastTs = new Date(ss[0].date+'T12:00:00').getTime();
+  if(lastTs >= sinceTs && total > 0 && total % 50 === 0){
+    out.push({ label:`${total} sesiones cumplidas`, context:'milestone', ts: lastTs });
+  }
+
+  // 2) Rachas: 7, 21, 50, 100. Solo se muestra si la racha actual coincide
+  // exactamente y la ultima sesion fue en las ultimas 24h.
+  const streak = getStreak(athId);
+  if([7,21,50,100].includes(streak) && lastTs >= sinceTs){
+    out.push({ label:`${streak} días de racha`, context:'racha', ts: lastTs });
+  }
+
+  // 3) Cruce de peso redondo (60/80/100/120/140) en ejercicios mayores.
+  const big = ['banca','sentadilla','peso muerto','press','squat','deadlift','bench'];
+  const rounds = [60,80,100,120,140];
+  for(const s of ss){
+    const ts = new Date(s.date+'T12:00:00').getTime();
+    if(ts < sinceTs) continue;
+    (s.exercises||[]).forEach(ex => {
+      const isBig = big.some(k => (ex.name||'').toLowerCase().includes(k));
+      if(!isBig) return;
+      (ex.sets||[]).forEach(st => {
+        const kg = parseFloat(st.kg) || 0;
+        for(const r of rounds){
+          if(kg >= r){
+            // Solo notificar la primera vez que cruza ese umbral.
+            const prevMax = Math.max(0, ...ss.flatMap(s2 => {
+              if(new Date(s2.date+'T12:00:00').getTime() >= ts) return [];
+              return (s2.exercises||[]).filter(e=>e.name===ex.name).flatMap(e=>(e.sets||[]).map(x=>parseFloat(x.kg)||0));
+            }));
+            if(prevMax < r && kg >= r){
+              out.push({ label:`Cruzó ${r}KG en ${ex.name}`, context:'milestone', ts });
+            }
+          }
+        }
+      });
+    });
+  }
+  return out;
+}
+
+function getHitos(){
+  const since = Date.now() - 24*60*60*1000;
+  const list = [];
+  for(const a of (athletes||[]).filter(x=>!x.inactive && !x.archived && !x.guest)){
+    for(const pr of getRecentPRs(a.id, since)){
+      list.push({
+        type:'pr', athId:a.id, athName:a.name,
+        headline:`${a.name.toUpperCase()} · PR ${(pr.exercise||'').toUpperCase()} · ${pr.kg} KG`,
+        detail: pr.delta ? `+${pr.delta}KG vs último` : 'primer PR registrado',
+        actions:[{ label:'AUDIO', primary:true, onclick:`coachAction('audioWA','${a.id}','pr','${pr.id}')` }],
+        ts: pr.ts,
+      });
+    }
+    for(const m of getRecentMilestones(a.id, since)){
+      list.push({
+        type:'milestone', athId:a.id, athName:a.name,
+        headline:`${a.name.toUpperCase()} · ${m.label}`,
+        detail: m.context || '',
+        actions:[{ label:'AUDIO', primary:true, onclick:`coachAction('audioWA','${a.id}','milestone')` }],
+        ts: m.ts,
+      });
+    }
+  }
+  return list.sort((x,y)=>y.ts-x.ts).slice(0,6);
+}
+
+function renderDashHitos(){
+  const el = document.getElementById('dash-hitos');
+  if(!el) return;
+  const list = getHitos();
+  if(!list.length){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='';
+  el.innerHTML = `<div class="dash-block">
+    <div class="dash-block-head">Hitos · últimas 24h</div>
+    ${list.map(it => dashRowHTML(it)).join('')}
+  </div>`;
+}
+// ── E6 · BLOQUE RIESGO DE CHURN ──
+// Un alumno puede disparar varias reglas pero solo aparece UNA vez en la
+// lista (regla mas severa gana). Severity: A=400, C=300, D=200, B=100.
+function getRiesgo(){
+  const list = [];
+  const seen = new Set();
+  const now = Date.now();
+  const oneDay = 86400000;
+
+  for(const a of (athletes||[]).filter(x=>!x.inactive && !x.archived && !x.guest)){
+    if(seen.has(a.id)) continue;
+
+    const days = daysSinceLastSession(a.id);
+    const freq = getNormalFrequency(a.id);
+    const streak = (typeof getStreak==='function') ? getStreak(a.id) : 0;
+
+    // A) Sin entrenar 7-13 dias, frecuencia normal >= 2/sem.
+    if(days >= 7 && days < 14 && freq >= 2){
+      list.push({
+        athId:a.id, severity: 400,
+        headline:`${a.name.toUpperCase()} · sin entrenar hace ${days} días`,
+        detail:`frecuencia normal ${Math.round(freq)}×/semana`,
+        actions:[
+          { label:'AUDIO', primary:true, onclick:`coachAction('audioWA','${a.id}','dropout')` },
+          { label:'PLAN',  onclick:`coachAction('openAthlete','${a.id}')` },
+        ],
+      });
+      seen.add(a.id); continue;
+    }
+
+    // C) Adherencia bajo > 25% vs mes anterior.
+    const adh = calcAdherenceForMonth(a.id, 0);
+    const prev = calcAdherenceForMonth(a.id, -1);
+    const drop = prev > 0 ? Math.round(((prev - adh) / prev) * 100) : 0;
+    if(drop > 25){
+      list.push({
+        athId:a.id, severity: 300,
+        headline:`${a.name.toUpperCase()} · adherencia bajó ${drop}% este mes`,
+        detail:`pasó de ${prev}% a ${adh}%`,
+        actions:[
+          { label:'PLAN',  primary:true, onclick:`coachAction('openAthlete','${a.id}')` },
+          { label:'AUDIO', onclick:`coachAction('audioWA','${a.id}','dropout')` },
+        ],
+      });
+      seen.add(a.id); continue;
+    }
+
+    // D) Check-in dominical sin responder > 14 dias.
+    const lastCk = a.lastCheckin?.respondedAt;
+    const ckDays = lastCk ? Math.floor((now - new Date(lastCk).getTime()) / oneDay) : 999;
+    if(ckDays > 14 && ckDays !== 999){
+      list.push({
+        athId:a.id, severity: 200,
+        headline:`${a.name.toUpperCase()} · ${ckDays} días sin check-in`,
+        detail:'sin responder al cuestionario dominical',
+        actions:[{ label:'CHAT', primary:true, onclick:`coachAction('audioWA','${a.id}','checkin')` }],
+      });
+      seen.add(a.id); continue;
+    }
+
+    // B) Racha activa que vence en proximas 12h. Una racha vence si pasaron
+    // mas de 23h desde la ultima sesion.
+    if(streak >= 3 && days === 0){
+      const ss = getAthSessions(a.id);
+      if(ss.length){
+        const lastTs = new Date(ss[0].date+'T12:00:00').getTime();
+        const hoursLeft = Math.max(0, 24 - Math.floor((now - lastTs) / 3600000));
+        if(hoursLeft <= 12){
+          list.push({
+            athId:a.id, severity: 100,
+            headline:`${a.name.toUpperCase()} · racha ${streak} días · vence en ${hoursLeft}h`,
+            detail:'recordale entrenar hoy',
+            actions:[{ label:'AUDIO', primary:true, onclick:`coachAction('audioWA','${a.id}','dropout')` }],
+          });
+          seen.add(a.id); continue;
+        }
+      }
+    }
+  }
+  return list.sort((x,y)=>y.severity-x.severity).slice(0,5);
+}
+
+function calcAdherenceForMonth(athId, monthOffset){
+  // Sesiones del mes en curso (offset 0) o mes anterior (-1) sobre objetivo
+  // implicito = frecuencia normal * semanas del mes.
+  const ss = getAthSessions(athId);
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 1);
+  const inMonth = ss.filter(s => {
+    const d = new Date(s.date+'T12:00:00');
+    return d >= start && d < end;
+  });
+  const weeks = Math.max(1, Math.round((end - start) / (7*86400000)));
+  const target = Math.max(1, Math.round(getNormalFrequency(athId) * weeks));
+  return Math.min(100, Math.round((inMonth.length / target) * 100));
+}
+
+function renderDashRiesgo(){
+  const el = document.getElementById('dash-riesgo');
+  if(!el) return;
+  const list = getRiesgo();
+  if(!list.length){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='';
+  el.innerHTML = `<div class="dash-block">
+    <div class="dash-block-head">Riesgo</div>
+    ${list.map(it => dashRowHTML(it,'riesgo')).join('')}
+  </div>`;
+}
+function renderDashCaja(){   /* E7 */ }
+// ── E8 · ESTADO VACIO HONESTO ──
+// Solo se muestra si las 4 secciones intermedias estan vacias. La caja
+// del mes sigue visible debajo.
+function checkDashEmpty(){
+  const el = document.getElementById('dash-empty');
+  if(!el) return;
+
+  const pendingTasks = getOpenTasks().filter(t => !_dashTasksDone.has(t.id)).length;
+  const isEmpty = getAlerts().length === 0
+               && pendingTasks === 0
+               && getHitos().length === 0
+               && getRiesgo().length === 0;
+
+  ['dash-alerts','dash-today','dash-hitos','dash-riesgo'].forEach(id => {
+    const node = document.getElementById(id);
+    if(!node) return;
+    if(isEmpty) node.style.display = 'none';
+  });
+
+  if(isEmpty){
+    el.classList.add('show');
+    el.innerHTML = `
+      <div class="dash-empty-line1">NADA QUE HACER HOY.</div>
+      <div class="dash-empty-line2">EL EQUIPO ESTÁ AL DÍA.</div>
+      <div class="dash-empty-line3">VOLVÉ MAÑANA.</div>`;
+  } else {
+    el.classList.remove('show');
+    el.innerHTML = '';
+  }
+}
+
+
 
 // ── ALUMNOS ──
 function renderAlumnos(){

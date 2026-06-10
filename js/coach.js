@@ -614,7 +614,115 @@ function renderDashHitos(){
     ${list.map(it => dashRowHTML(it)).join('')}
   </div>`;
 }
-function renderDashRiesgo(){ /* E6 */ }
+// ── E6 · BLOQUE RIESGO DE CHURN ──
+// Un alumno puede disparar varias reglas pero solo aparece UNA vez en la
+// lista (regla mas severa gana). Severity: A=400, C=300, D=200, B=100.
+function getRiesgo(){
+  const list = [];
+  const seen = new Set();
+  const now = Date.now();
+  const oneDay = 86400000;
+
+  for(const a of (athletes||[]).filter(x=>!x.inactive && !x.archived && !x.guest)){
+    if(seen.has(a.id)) continue;
+
+    const days = daysSinceLastSession(a.id);
+    const freq = getNormalFrequency(a.id);
+    const streak = (typeof getStreak==='function') ? getStreak(a.id) : 0;
+
+    // A) Sin entrenar 7-13 dias, frecuencia normal >= 2/sem.
+    if(days >= 7 && days < 14 && freq >= 2){
+      list.push({
+        athId:a.id, severity: 400,
+        headline:`${a.name.toUpperCase()} · sin entrenar hace ${days} días`,
+        detail:`frecuencia normal ${Math.round(freq)}×/semana`,
+        actions:[
+          { label:'AUDIO', primary:true, onclick:`coachAction('audioWA','${a.id}','dropout')` },
+          { label:'PLAN',  onclick:`coachAction('openAthlete','${a.id}')` },
+        ],
+      });
+      seen.add(a.id); continue;
+    }
+
+    // C) Adherencia bajo > 25% vs mes anterior.
+    const adh = calcAdherenceForMonth(a.id, 0);
+    const prev = calcAdherenceForMonth(a.id, -1);
+    const drop = prev > 0 ? Math.round(((prev - adh) / prev) * 100) : 0;
+    if(drop > 25){
+      list.push({
+        athId:a.id, severity: 300,
+        headline:`${a.name.toUpperCase()} · adherencia bajó ${drop}% este mes`,
+        detail:`pasó de ${prev}% a ${adh}%`,
+        actions:[
+          { label:'PLAN',  primary:true, onclick:`coachAction('openAthlete','${a.id}')` },
+          { label:'AUDIO', onclick:`coachAction('audioWA','${a.id}','dropout')` },
+        ],
+      });
+      seen.add(a.id); continue;
+    }
+
+    // D) Check-in dominical sin responder > 14 dias.
+    const lastCk = a.lastCheckin?.respondedAt;
+    const ckDays = lastCk ? Math.floor((now - new Date(lastCk).getTime()) / oneDay) : 999;
+    if(ckDays > 14 && ckDays !== 999){
+      list.push({
+        athId:a.id, severity: 200,
+        headline:`${a.name.toUpperCase()} · ${ckDays} días sin check-in`,
+        detail:'sin responder al cuestionario dominical',
+        actions:[{ label:'CHAT', primary:true, onclick:`coachAction('audioWA','${a.id}','checkin')` }],
+      });
+      seen.add(a.id); continue;
+    }
+
+    // B) Racha activa que vence en proximas 12h. Una racha vence si pasaron
+    // mas de 23h desde la ultima sesion.
+    if(streak >= 3 && days === 0){
+      const ss = getAthSessions(a.id);
+      if(ss.length){
+        const lastTs = new Date(ss[0].date+'T12:00:00').getTime();
+        const hoursLeft = Math.max(0, 24 - Math.floor((now - lastTs) / 3600000));
+        if(hoursLeft <= 12){
+          list.push({
+            athId:a.id, severity: 100,
+            headline:`${a.name.toUpperCase()} · racha ${streak} días · vence en ${hoursLeft}h`,
+            detail:'recordale entrenar hoy',
+            actions:[{ label:'AUDIO', primary:true, onclick:`coachAction('audioWA','${a.id}','dropout')` }],
+          });
+          seen.add(a.id); continue;
+        }
+      }
+    }
+  }
+  return list.sort((x,y)=>y.severity-x.severity).slice(0,5);
+}
+
+function calcAdherenceForMonth(athId, monthOffset){
+  // Sesiones del mes en curso (offset 0) o mes anterior (-1) sobre objetivo
+  // implicito = frecuencia normal * semanas del mes.
+  const ss = getAthSessions(athId);
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 1);
+  const inMonth = ss.filter(s => {
+    const d = new Date(s.date+'T12:00:00');
+    return d >= start && d < end;
+  });
+  const weeks = Math.max(1, Math.round((end - start) / (7*86400000)));
+  const target = Math.max(1, Math.round(getNormalFrequency(athId) * weeks));
+  return Math.min(100, Math.round((inMonth.length / target) * 100));
+}
+
+function renderDashRiesgo(){
+  const el = document.getElementById('dash-riesgo');
+  if(!el) return;
+  const list = getRiesgo();
+  if(!list.length){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='';
+  el.innerHTML = `<div class="dash-block">
+    <div class="dash-block-head">Riesgo</div>
+    ${list.map(it => dashRowHTML(it,'riesgo')).join('')}
+  </div>`;
+}
 function renderDashCaja(){   /* E7 */ }
 function checkDashEmpty(){   /* E8 */ }
 

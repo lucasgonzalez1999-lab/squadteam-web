@@ -97,11 +97,12 @@ const SQK = (() => {
         position:relative; width:64px; height:64px;
         animation:sqk-breath 1.8s ease-in-out infinite;
       }
-      /* Escudo TS desde icon-512.png. Recortado al 58% superior con
-         background-position para descartar el wordmark embebido del PNG. */
+      /* Escudo TS procesado en JS al boot: negro -> alpha, croppeado a solo el
+         escudo (sin el wordmark embebido). La URL se inyecta como CSS variable
+         --sqk-logo. Mientras se procesa, fallback a contain del PNG raw. */
       .sqk-loader-shield{
         position:absolute; inset:8px;
-        background:url('icons/icon-512.png') center -6px / 110px 110px no-repeat;
+        background:var(--sqk-logo, url('icons/icon-512.png')) center / contain no-repeat;
         animation:sqk-spin 1.1s linear infinite;
       }
       /* Arco lima trazando alrededor del escudo, sentido opuesto al spin. */
@@ -135,6 +136,64 @@ const SQK = (() => {
       .sqk-loader-fs.show{ opacity:1; }
     `;
     document.head.appendChild(s);
+  }
+
+  // ─── LOGO PROCESSING ───────────────────────────────────────────────────────
+  // El icon-512.png es maskable: tiene fondo negro hardcoded + el wordmark
+  // SQUAD TEAM embebido debajo del escudo. Para el loader queremos SOLO el
+  // escudo, transparente. Procesamos una vez al boot y guardamos la data URL
+  // en una CSS variable global.
+  let _logoProcessed = false;
+  function ensureLogoProcessed(){
+    if(_logoProcessed) return;
+    _logoProcessed = true;
+    const src = new Image();
+    src.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = src.width; c.height = src.height;
+        const cx = c.getContext('2d');
+        cx.drawImage(src, 0, 0);
+        const data = cx.getImageData(0, 0, c.width, c.height);
+        const p = data.data;
+        let minX = c.width, minY = c.height, maxX = 0, maxY = 0;
+        for(let y=0; y<c.height; y++){
+          for(let x=0; x<c.width; x++){
+            const i = (y*c.width + x) * 4;
+            if(p[i] < 24 && p[i+1] < 24 && p[i+2] < 24){
+              p[i+3] = 0;
+            } else if(p[i+3] > 32){
+              if(x < minX) minX = x; if(x > maxX) maxX = x;
+              if(y < minY) minY = y; if(y > maxY) maxY = y;
+            }
+          }
+        }
+        cx.putImageData(data, 0, 0);
+        // Detectar gap entre el escudo y el wordmark (filas vacías >= 6).
+        let symEnd = maxY, gapStart = -1, gapLen = 0;
+        for(let y=minY; y<=maxY; y++){
+          let rowHas = false;
+          for(let x=minX; x<=maxX; x++){
+            if(p[(y*c.width + x)*4 + 3] > 32){ rowHas = true; break; }
+          }
+          if(rowHas){
+            if(gapLen >= 6 && gapStart > minY){ symEnd = gapStart; break; }
+            gapStart = -1; gapLen = 0;
+          } else {
+            if(gapStart < 0) gapStart = y;
+            gapLen++;
+          }
+        }
+        const cw = Math.max(1, maxX - minX);
+        const ch = Math.max(1, symEnd - minY);
+        const out = document.createElement('canvas');
+        out.width = cw; out.height = ch;
+        out.getContext('2d').drawImage(c, minX, minY, cw, ch, 0, 0, cw, ch);
+        const dataUrl = out.toDataURL('image/png');
+        document.documentElement.style.setProperty('--sqk-logo', `url('${dataUrl}')`);
+      } catch(_){}
+    };
+    src.src = 'icons/icon-512.png';
   }
 
   // ─── TOAST STACK ───────────────────────────────────────────────────────────
@@ -410,6 +469,7 @@ const SQK = (() => {
   // HTML reutilizable para reemplazar los "Cargando..." inline.
   function sqLoaderHTML(text){
     ensureStyles();
+    ensureLogoProcessed();
     const t = text || 'Cargando…';
     return `
       <div class="sqk-loader" role="status" aria-label="${escapeHtml(t)}">
@@ -460,6 +520,11 @@ window.sqHideLoader = SQK.hideLoader;
 // Reemplaza el toast viejo manteniendo retro-compat: toast(msg) sigue funcionando
 // pero ahora muestra el toast nuevo apilable.
 window.toast = (msg) => SQK.toast(typeof msg === 'string' ? msg : String(msg ?? ''));
+
+// Pre-procesa el logo al boot para que el primer loader ya tenga el escudo
+// limpio. Si la pagina ya cargó, va directo; si no, espera al DOMContentLoaded.
+if(document.readyState !== 'loading') SQK.loaderHTML('');
+else document.addEventListener('DOMContentLoaded', () => SQK.loaderHTML(''));
 
 // PR celebration: confetti lima + toast cuando un set rompe el PR del ejercicio.
 // El evento sq:pr:broken lo dispara miRutina.js cuando detecta kg > prevPR.

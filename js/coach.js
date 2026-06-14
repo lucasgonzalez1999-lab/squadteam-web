@@ -2182,11 +2182,9 @@ async function loadWaHistory(){
       if(jid) nameMap[jid]=a.name;
     });
 
-    const [waSnap, coachWaSnap, athChatsSnap, coachChatsSnap] = await Promise.all([
+    const [waSnap, coachWaSnap] = await Promise.all([
       window.db.collection('config').doc('athleteWhatsapp').get(),
       window.db.collection('config').doc('coachWhatsapp').get(),
-      window.db.collection('config').doc('athleteChats').get(),
-      window.db.collection('config').doc('coachChats').get(),
     ]);
     const coachName = id => id==='lucas' ? 'Lucas' : id==='tomas' ? 'Tomás' : id;
 
@@ -2198,18 +2196,10 @@ async function loadWaHistory(){
       const d = coachWaSnap.data()||{};
       Object.entries(d).forEach(([coachId,jid])=>{ nameMap[jid]=coachName(coachId)+' (coach)'; });
     }
-    if(athChatsSnap.exists){
-      const d = athChatsSnap.data()||{};
-      Object.entries(d).forEach(([athId,chatId])=>{ if(athById[athId]) nameMap[String(chatId)]=athById[athId].name+' (Telegram)'; });
-    }
-    if(coachChatsSnap.exists){
-      const d = coachChatsSnap.data()||{};
-      Object.entries(d).forEach(([coachId,chatId])=>{ nameMap[String(chatId)]=coachName(coachId)+' (Telegram, coach)'; });
-    }
-
     const histSnap = await window.db.collection('botHistory').get();
     const chats = [];
     histSnap.forEach(doc=>{
+      if(!doc.id.endsWith('@c.us')) return; // solo conversaciones de WhatsApp
       let msgs=[];
       try{ msgs = JSON.parse(doc.data()?.h||'[]'); }catch(e){}
       if(!msgs.length) return;

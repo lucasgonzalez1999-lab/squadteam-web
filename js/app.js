@@ -368,6 +368,7 @@ function showAdm(id, btn) {
   btn?.classList.add('on');
   if(id==='db' && typeof renderDB==='function') renderDB();
   if(id==='sheets' && typeof renderSheetsPanel==='function') renderSheetsPanel();
+  if(id==='wa' && typeof renderWaHistory==='function') renderWaHistory();
 }
 
 function renderAll() {

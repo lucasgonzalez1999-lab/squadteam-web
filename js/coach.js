@@ -2134,6 +2134,116 @@ async function renderDiag(){
   </div>`;
 }
 
+// ── HISTORIAL DE CONVERSACIONES (WhatsApp / Telegram) ──
+function escapeHtmlWa(s){
+  return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function phoneToJidWeb(phone){
+  if(!phone) return null;
+  let d=String(phone).replace(/\D/g,'');
+  if(!d) return null;
+  if(d.startsWith('598')){ /* ya tiene codigo de pais */ }
+  else if(d.startsWith('0')) d='598'+d.slice(1);
+  else if(d.length<=9) d='598'+d;
+  return d+'@c.us';
+}
+
+async function renderWaHistory(){
+  const pnl = document.getElementById('adm-pnl-wa');
+  if(!pnl) return;
+  pnl.innerHTML = `
+    <div class="card" style="margin-top:16px">
+      <div class="sec-head" style="margin-bottom:14px">
+        <div class="sec-title">📱 Historial de conversaciones</div>
+        <button onclick="loadWaHistory()" style="font-size:12px;color:var(--acc);background:none;border:none;cursor:pointer;font-weight:600">↻ Actualizar</button>
+      </div>
+      <select id="wa-history-select" onchange="renderWaHistoryMsgs(this.value)"
+        style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:10px">
+        <option value="">Cargando...</option>
+      </select>
+      <div id="wa-history-msgs" style="height:340px;overflow-y:auto;background:#f9fafb;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px">
+        <div style="text-align:center;padding:12px;color:var(--sub);font-size:12px">Cargando conversaciones...</div>
+      </div>
+    </div>`;
+  loadWaHistory();
+}
+
+async function loadWaHistory(){
+  const sel = document.getElementById('wa-history-select');
+  const box = document.getElementById('wa-history-msgs');
+  if(!sel || !box) return;
+
+  try{
+    const nameMap = {};
+    const athById = {};
+    (athletes||[]).forEach(a=>{
+      athById[a.id]=a;
+      const jid = phoneToJidWeb(a.phone);
+      if(jid) nameMap[jid]=a.name;
+    });
+
+    const [waSnap, coachWaSnap, athChatsSnap, coachChatsSnap] = await Promise.all([
+      window.db.collection('config').doc('athleteWhatsapp').get(),
+      window.db.collection('config').doc('coachWhatsapp').get(),
+      window.db.collection('config').doc('athleteChats').get(),
+      window.db.collection('config').doc('coachChats').get(),
+    ]);
+    const coachName = id => id==='lucas' ? 'Lucas' : id==='tomas' ? 'Tomás' : id;
+
+    if(waSnap.exists){
+      const d = waSnap.data()||{};
+      Object.entries(d).forEach(([athId,jid])=>{ if(athById[athId]) nameMap[jid]=athById[athId].name; });
+    }
+    if(coachWaSnap.exists){
+      const d = coachWaSnap.data()||{};
+      Object.entries(d).forEach(([coachId,jid])=>{ nameMap[jid]=coachName(coachId)+' (coach)'; });
+    }
+    if(athChatsSnap.exists){
+      const d = athChatsSnap.data()||{};
+      Object.entries(d).forEach(([athId,chatId])=>{ if(athById[athId]) nameMap[String(chatId)]=athById[athId].name+' (Telegram)'; });
+    }
+    if(coachChatsSnap.exists){
+      const d = coachChatsSnap.data()||{};
+      Object.entries(d).forEach(([coachId,chatId])=>{ nameMap[String(chatId)]=coachName(coachId)+' (Telegram, coach)'; });
+    }
+
+    const histSnap = await window.db.collection('botHistory').get();
+    const chats = [];
+    histSnap.forEach(doc=>{
+      let msgs=[];
+      try{ msgs = JSON.parse(doc.data()?.h||'[]'); }catch(e){}
+      if(!msgs.length) return;
+      chats.push({ chatId: doc.id, name: nameMap[doc.id]||doc.id, msgs });
+    });
+    chats.sort((a,b)=>a.name.localeCompare(b.name));
+
+    window._waHistoryChats = chats;
+    sel.innerHTML = chats.length
+      ? chats.map((c,i)=>`<option value="${i}">${escapeHtmlWa(c.name)} (${c.msgs.length})</option>`).join('')
+      : '<option value="">Sin conversaciones</option>';
+    renderWaHistoryMsgs(chats.length ? 0 : '');
+  }catch(e){
+    sel.innerHTML = '<option value="">Error al cargar</option>';
+    box.innerHTML = '<div style="text-align:center;padding:12px;color:var(--sub);font-size:12px">Error al cargar el historial.</div>';
+  }
+}
+
+function renderWaHistoryMsgs(idx){
+  const box = document.getElementById('wa-history-msgs');
+  if(!box) return;
+  const chats = window._waHistoryChats||[];
+  const chat = chats[idx];
+  if(!chat){
+    box.innerHTML = '<div style="text-align:center;padding:12px;color:var(--sub);font-size:12px">Sin mensajes.</div>';
+    return;
+  }
+  box.innerHTML = chat.msgs.map(m=>{
+    const isUser = m.role==='user';
+    return `<div style="align-self:${isUser?'flex-end':'flex-start'};background:${isUser?'var(--acc)':'#fff'};color:${isUser?'#fff':'var(--text)'};padding:8px 12px;border-radius:${isUser?'10px 10px 2px 10px':'10px 10px 10px 2px'};font-size:13px;max-width:80%;border:${isUser?'none':'1px solid var(--border)'};white-space:pre-wrap;word-break:break-word">${escapeHtmlWa(m.text)}</div>`;
+  }).join('');
+  box.scrollTop = box.scrollHeight;
+}
+
 function exportJSON(){const d={athletes,sessions,ts:new Date().toISOString()};const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='squadteam_backup.json';a.click();}
 function importJSON(){const i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.athletes){athletes=d.athletes;DB.set('athletes',athletes);}if(d.sessions){sessions=d.sessions;DB.set('sessions',sessions);}toast('Datos importados');renderAll();}catch(ex){toast('Error al importar');}};r.readAsText(f);};i.click();}
 

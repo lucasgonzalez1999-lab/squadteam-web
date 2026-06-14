@@ -2158,10 +2158,10 @@ async function renderWaHistory(){
         <button onclick="loadWaHistory()" style="font-size:12px;color:var(--acc);background:none;border:none;cursor:pointer;font-weight:600">↻ Actualizar</button>
       </div>
       <select id="wa-history-select" onchange="renderWaHistoryMsgs(this.value)"
-        style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:10px">
+        style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:10px;background:var(--surf2);color:var(--text)">
         <option value="">Cargando...</option>
       </select>
-      <div id="wa-history-msgs" style="height:340px;overflow-y:auto;background:#f9fafb;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px">
+      <div id="wa-history-msgs" style="height:340px;overflow-y:auto;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px">
         <div style="text-align:center;padding:12px;color:var(--sub);font-size:12px">Cargando conversaciones...</div>
       </div>
     </div>`;
@@ -2229,7 +2229,7 @@ function renderWaHistoryMsgs(idx){
   }
   box.innerHTML = chat.msgs.map(m=>{
     const isUser = m.role==='user';
-    return `<div style="align-self:${isUser?'flex-end':'flex-start'};background:${isUser?'var(--acc)':'#fff'};color:${isUser?'#fff':'var(--text)'};padding:8px 12px;border-radius:${isUser?'10px 10px 2px 10px':'10px 10px 10px 2px'};font-size:13px;max-width:80%;border:${isUser?'none':'1px solid var(--border)'};white-space:pre-wrap;word-break:break-word">${escapeHtmlWa(m.text)}</div>`;
+    return `<div style="align-self:${isUser?'flex-end':'flex-start'};background:${isUser?'var(--acc)':'var(--surf3)'};color:${isUser?'var(--bg)':'var(--text)'};padding:8px 12px;border-radius:${isUser?'10px 10px 2px 10px':'10px 10px 10px 2px'};font-size:13px;max-width:80%;border:${isUser?'none':'1px solid var(--border)'};white-space:pre-wrap;word-break:break-word">${escapeHtmlWa(m.text)}</div>`;
   }).join('');
   box.scrollTop = box.scrollHeight;
 }
